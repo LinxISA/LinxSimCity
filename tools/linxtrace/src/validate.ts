@@ -5,6 +5,8 @@ import {
   parseEvent,
   parseIndex,
   parseManifest,
+  parseStrings,
+  type CheckpointState,
   type EventEnvelope,
   type TraceIndex,
   type TraceManifest,
@@ -14,10 +16,15 @@ import {
   validateTopology,
   type TopologyDescriptor,
 } from "@linxsimcity/topology";
-import { gunzipSync } from "fflate";
+import { Gunzip } from "fflate";
 import { z } from "zod";
 
-import { openBundle, type BundleSource } from "./io.js";
+import {
+  openBundle,
+  readEntryLimited,
+  ResourceLimitError,
+  type BundleSource,
+} from "./io.js";
 
 const REQUIRED_FILES = [
   "manifest.json",
@@ -25,6 +32,11 @@ const REQUIRED_FILES = [
   "strings.json",
   "index.json",
 ] as const;
+const MAX_METADATA_ENTRY_BYTES = 16 * 1024 * 1024;
+const MAX_COMPRESSED_CHUNK_BYTES = 256 * 1024 * 1024;
+const MAX_UNCOMPRESSED_CHUNK_BYTES = 1024 * 1024 * 1024;
+const MAX_CHUNKS = 100_000;
+const MAX_EVENTS = 100_000_000;
 
 const TopologySchema = z.strictObject({
   schemaVersion: z.string().min(1),
@@ -124,6 +136,16 @@ function zodDiagnostic(path: string, error: z.ZodError): ValidationDiagnostic {
   );
 }
 
+function errorDiagnostic(path: string, error: unknown): ValidationDiagnostic {
+  return diagnostic(
+    error instanceof ResourceLimitError
+      ? "resource_limit"
+      : "schema_validation",
+    path,
+    error instanceof Error ? error.message : "validation failed",
+  );
+}
+
 async function parseRequired<T>(
   bundle: BundleSource,
   path: string,
@@ -131,29 +153,91 @@ async function parseRequired<T>(
   errors: ValidationDiagnostic[],
 ): Promise<T | undefined> {
   try {
-    return parser(parseJson(await bundle.read(path), path));
+    return parser(
+      parseJson(
+        await readEntryLimited(bundle, path, MAX_METADATA_ENTRY_BYTES),
+        path,
+      ),
+    );
   } catch (error) {
     errors.push(
       error instanceof z.ZodError
         ? zodDiagnostic(path, error)
-        : diagnostic(
-            "schema_validation",
-            path,
-            error instanceof Error ? error.message : "validation failed",
-          ),
+        : errorDiagnostic(path, error),
     );
     return undefined;
   }
 }
 
-function checkOrder(
-  events: readonly EventEnvelope[],
-  previous: EventEnvelope | undefined,
-  startIndex: number,
+function checkpointPathFor(cycle: number, span: number): string {
+  return `checkpoints/${Math.floor(cycle / span)
+    .toString()
+    .padStart(6, "0")}.json.gz`;
+}
+
+function validateCheckpoint(
+  checkpoint: CheckpointState,
+  path: string,
+  firstEvent: EventEnvelope | undefined,
+  manifest: TraceManifest,
   errors: ValidationDiagnostic[],
-): EventEnvelope | undefined {
+): void {
+  const expectedCycle =
+    Math.floor((firstEvent?.cycle ?? 0) / manifest.checkpointCycleSpan) *
+    manifest.checkpointCycleSpan;
+  if (
+    checkpoint.cycle !== expectedCycle ||
+    checkpoint.seq !== 0 ||
+    (firstEvent !== undefined && checkpoint.cycle > firstEvent.cycle)
+  ) {
+    errors.push(
+      diagnostic(
+        "checkpoint_bounds_mismatch",
+        path,
+        `checkpoint must be (${expectedCycle}, 0) and must not be later than its first event`,
+      ),
+    );
+  }
+}
+
+interface ChunkResult {
+  first?: EventEnvelope;
+  last?: EventEnvelope;
+  eventCount: number;
+  compressedBytes: number;
+  sha256: string;
+}
+
+async function validateChunk(
+  bundle: BundleSource,
+  path: string,
+  topology: TopologyDescriptor,
+  previous: EventEnvelope | undefined,
+  globalEventOffset: number,
+  errors: ValidationDiagnostic[],
+): Promise<ChunkResult> {
+  const hash = createHash("sha256");
+  const decoder = new TextDecoder();
+  let compressedBytes = 0;
+  let uncompressedBytes = 0;
+  let buffer = "";
+  let eventCount = 0;
+  let first: EventEnvelope | undefined;
   let last = previous;
-  events.forEach((event, index) => {
+
+  const parseLine = (line: string): void => {
+    if (line.length === 0) return;
+    let event: EventEnvelope;
+    try {
+      event = parseEvent(JSON.parse(line));
+    } catch (error) {
+      errors.push(
+        error instanceof z.ZodError
+          ? zodDiagnostic(`${path}:${eventCount + 1}`, error)
+          : errorDiagnostic(`${path}:${eventCount + 1}`, error),
+      );
+      return;
+    }
     if (
       last &&
       (event.cycle < last.cycle ||
@@ -162,28 +246,129 @@ function checkOrder(
       errors.push(
         diagnostic(
           "event_order",
-          `events[${startIndex + index}]`,
+          `events[${globalEventOffset + eventCount}]`,
           `(cycle, seq) (${event.cycle}, ${event.seq}) is not strictly greater than (${last.cycle}, ${last.seq})`,
         ),
       );
     }
+    const references = validateEventReferences(topology, [event]);
+    for (const reference of references.errors) {
+      errors.push({
+        ...reference,
+        path: `events[${globalEventOffset + eventCount}].entity_id`,
+      });
+    }
+    first ??= event;
     last = event;
+    eventCount++;
+  };
+
+  let gunzipError: unknown;
+  const gunzip = new Gunzip((data, final) => {
+    try {
+      uncompressedBytes += data.byteLength;
+      if (uncompressedBytes > MAX_UNCOMPRESSED_CHUNK_BYTES) {
+        throw new ResourceLimitError(
+          `${path} exceeds the ${MAX_UNCOMPRESSED_CHUNK_BYTES}-byte uncompressed resource limit`,
+        );
+      }
+      buffer += decoder.decode(data, { stream: !final });
+      const lines = buffer.split(/\r?\n/);
+      buffer = lines.pop() ?? "";
+      for (const line of lines) parseLine(line);
+      if (final && buffer.length > 0) {
+        parseLine(buffer);
+        buffer = "";
+      }
+    } catch (error) {
+      gunzipError = error;
+      throw error;
+    }
   });
-  return last;
+
+  try {
+    await bundle.readChunks(path, (chunk) => {
+      compressedBytes += chunk.byteLength;
+      if (compressedBytes > MAX_COMPRESSED_CHUNK_BYTES) {
+        throw new ResourceLimitError(
+          `${path} exceeds the ${MAX_COMPRESSED_CHUNK_BYTES}-byte compressed resource limit`,
+        );
+      }
+      hash.update(chunk);
+      gunzip.push(chunk, false);
+    });
+    gunzip.push(new Uint8Array(), true);
+  } catch (error) {
+    throw gunzipError ?? error;
+  }
+
+  return {
+    ...(first === undefined ? {} : { first }),
+    ...(last === undefined || last === previous ? {} : { last }),
+    eventCount,
+    compressedBytes,
+    sha256: hash.digest("hex"),
+  };
 }
 
-async function readChunkEvents(
+async function readCheckpoint(
+  bundle: BundleSource,
+  path: string,
+): Promise<CheckpointState> {
+  const compressed = await readEntryLimited(
+    bundle,
+    path,
+    MAX_METADATA_ENTRY_BYTES,
+  );
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  const gunzip = new Gunzip((data) => {
+    total += data.byteLength;
+    if (total > MAX_METADATA_ENTRY_BYTES) {
+      throw new ResourceLimitError(
+        `${path} exceeds the ${MAX_METADATA_ENTRY_BYTES}-byte uncompressed resource limit`,
+      );
+    }
+    chunks.push(data);
+  });
+  gunzip.push(compressed, true);
+  const output = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    output.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return parseCheckpoint(parseJson(output, path));
+}
+
+async function validateChunks(
   bundle: BundleSource,
   index: TraceIndex,
   manifest: TraceManifest,
+  topology: TopologyDescriptor,
   errors: ValidationDiagnostic[],
-): Promise<EventEnvelope[]> {
-  const allEvents: EventEnvelope[] = [];
-  let previous: EventEnvelope | undefined;
+): Promise<{
+  eventCount: number;
+  first?: EventEnvelope;
+  last?: EventEnvelope;
+}> {
+  let eventCount = 0;
+  let first: EventEnvelope | undefined;
+  let last: EventEnvelope | undefined;
   const seenPaths = new Set<string>();
 
   for (const [chunkNumber, chunk] of index.chunks.entries()) {
     const chunkPath = `index.json.chunks[${chunkNumber}]`;
+    if (chunk.compressedBytes > MAX_COMPRESSED_CHUNK_BYTES) {
+      errors.push(
+        diagnostic(
+          "resource_limit",
+          `${chunkPath}.compressedBytes`,
+          `declared size exceeds ${MAX_COMPRESSED_CHUNK_BYTES} bytes`,
+        ),
+      );
+      continue;
+    }
     if (seenPaths.has(chunk.path)) {
       errors.push(
         diagnostic("duplicate_chunk_path", `${chunkPath}.path`, chunk.path),
@@ -191,7 +376,6 @@ async function readChunkEvents(
       continue;
     }
     seenPaths.add(chunk.path);
-
     if (!bundle.has(chunk.path)) {
       errors.push(
         diagnostic(
@@ -203,71 +387,64 @@ async function readChunkEvents(
       continue;
     }
 
-    let compressed: Uint8Array;
-    let lines: string[];
+    let result: ChunkResult;
     try {
-      compressed = await bundle.read(chunk.path);
-      lines = new TextDecoder()
-        .decode(gunzipSync(compressed))
-        .split(/\r?\n/)
-        .filter((line) => line.length > 0);
+      result = await validateChunk(
+        bundle,
+        chunk.path,
+        topology,
+        last,
+        eventCount,
+        errors,
+      );
     } catch (error) {
       errors.push(
         diagnostic(
-          "chunk_decompression",
+          error instanceof ResourceLimitError
+            ? "resource_limit"
+            : "chunk_decompression",
           chunk.path,
-          error instanceof Error ? error.message : "gzip decompression failed",
+          error instanceof Error ? error.message : "chunk validation failed",
         ),
       );
       continue;
     }
 
-    const digest = createHash("sha256").update(compressed).digest("hex");
-    if (digest !== chunk.sha256) {
+    first ??= result.first;
+    last = result.last ?? last;
+    eventCount += result.eventCount;
+    if (eventCount > MAX_EVENTS) {
+      errors.push(
+        diagnostic(
+          "resource_limit",
+          "manifest.json.eventCount",
+          `event count exceeds ${MAX_EVENTS}`,
+        ),
+      );
+      break;
+    }
+    if (result.sha256 !== chunk.sha256) {
       errors.push(
         diagnostic(
           "chunk_hash_mismatch",
           `${chunkPath}.sha256`,
-          `expected ${chunk.sha256}, received ${digest}`,
+          `expected ${chunk.sha256}, received ${result.sha256}`,
         ),
       );
     }
-    if (compressed.byteLength !== chunk.compressedBytes) {
+    if (result.compressedBytes !== chunk.compressedBytes) {
       errors.push(
         diagnostic(
           "chunk_size_mismatch",
           `${chunkPath}.compressedBytes`,
-          `expected ${chunk.compressedBytes}, received ${compressed.byteLength}`,
+          `expected ${chunk.compressedBytes}, received ${result.compressedBytes}`,
         ),
       );
     }
-
-    const events: EventEnvelope[] = [];
-    lines.forEach((line, lineNumber) => {
-      try {
-        events.push(parseEvent(JSON.parse(line)));
-      } catch (error) {
-        errors.push(
-          error instanceof z.ZodError
-            ? zodDiagnostic(`${chunk.path}:${lineNumber + 1}`, error)
-            : diagnostic(
-                "schema_validation",
-                `${chunk.path}:${lineNumber + 1}`,
-                error instanceof Error ? error.message : "invalid event JSON",
-              ),
-        );
-      }
-    });
-
-    previous = checkOrder(events, previous, allEvents.length, errors);
-    allEvents.push(...events);
-
-    const first = events[0];
-    const last = events.at(-1);
     if (
-      events.length !== chunk.eventCount ||
-      first?.cycle !== chunk.firstCycle ||
-      last?.cycle !== chunk.lastCycle
+      result.eventCount !== chunk.eventCount ||
+      result.first?.cycle !== chunk.firstCycle ||
+      result.last?.cycle !== chunk.lastCycle
     ) {
       errors.push(
         diagnostic(
@@ -278,9 +455,40 @@ async function readChunkEvents(
       );
     }
     if (
-      first &&
-      (first.cycle < manifest.firstCycle ||
-        (last?.cycle ?? first.cycle) > manifest.lastCycle)
+      result.first &&
+      Math.floor(result.first.cycle / manifest.chunkCycleSpan) !==
+        Math.floor(
+          (result.last?.cycle ?? result.first.cycle) / manifest.chunkCycleSpan,
+        )
+    ) {
+      errors.push(
+        diagnostic(
+          "chunk_bucket_mismatch",
+          chunkPath,
+          `chunk events cross a ${manifest.chunkCycleSpan}-cycle bucket`,
+        ),
+      );
+    }
+    if (result.first) {
+      const expectedChunkPath = `chunks/${Math.floor(
+        result.first.cycle / manifest.chunkCycleSpan,
+      )
+        .toString()
+        .padStart(6, "0")}.jsonl.gz`;
+      if (chunk.path !== expectedChunkPath) {
+        errors.push(
+          diagnostic(
+            "chunk_bucket_mismatch",
+            `${chunkPath}.path`,
+            `expected ${expectedChunkPath}, received ${chunk.path}`,
+          ),
+        );
+      }
+    }
+    if (
+      result.first &&
+      (result.first.cycle < manifest.firstCycle ||
+        (result.last?.cycle ?? result.first.cycle) > manifest.lastCycle)
     ) {
       errors.push(
         diagnostic(
@@ -291,6 +499,19 @@ async function readChunkEvents(
       );
     }
 
+    const expectedCheckpointPath = checkpointPathFor(
+      result.first?.cycle ?? chunk.firstCycle,
+      manifest.checkpointCycleSpan,
+    );
+    if (chunk.checkpointPath !== expectedCheckpointPath) {
+      errors.push(
+        diagnostic(
+          "checkpoint_path_mismatch",
+          `${chunkPath}.checkpointPath`,
+          `expected ${expectedCheckpointPath}, received ${chunk.checkpointPath}`,
+        ),
+      );
+    }
     if (!bundle.has(chunk.checkpointPath)) {
       errors.push(
         diagnostic(
@@ -301,27 +522,24 @@ async function readChunkEvents(
       );
     } else {
       try {
-        parseCheckpoint(
-          parseJson(
-            gunzipSync(await bundle.read(chunk.checkpointPath)),
-            chunk.checkpointPath,
-          ),
+        validateCheckpoint(
+          await readCheckpoint(bundle, chunk.checkpointPath),
+          chunk.checkpointPath,
+          result.first,
+          manifest,
+          errors,
         );
       } catch (error) {
-        errors.push(
-          error instanceof z.ZodError
-            ? zodDiagnostic(chunk.checkpointPath, error)
-            : diagnostic(
-                "checkpoint_validation",
-                chunk.checkpointPath,
-                error instanceof Error ? error.message : "invalid checkpoint",
-              ),
-        );
+        errors.push(errorDiagnostic(chunk.checkpointPath, error));
       }
     }
   }
 
-  return allEvents;
+  return {
+    eventCount,
+    ...(first === undefined ? {} : { first }),
+    ...(last === undefined ? {} : { last }),
+  };
 }
 
 export async function validateBundle(path: string): Promise<ValidationReport> {
@@ -343,9 +561,7 @@ export async function validateBundle(path: string): Promise<ValidationReport> {
         );
       }
     }
-    if (errors.length > 0) {
-      return { valid: false, errors, warnings, stats };
-    }
+    if (errors.length > 0) return { valid: false, errors, warnings, stats };
 
     const [manifest, topology, index] = await Promise.all([
       parseRequired(bundle, "manifest.json", parseManifest, errors),
@@ -356,9 +572,8 @@ export async function validateBundle(path: string): Promise<ValidationReport> {
         errors,
       ),
       parseRequired(bundle, "index.json", parseIndex, errors),
-      parseRequired(bundle, "strings.json", (value) => value, errors),
+      parseRequired(bundle, "strings.json", parseStrings, errors),
     ]);
-
     if (!manifest || !topology || !index) {
       return { valid: false, errors, warnings, stats };
     }
@@ -372,41 +587,58 @@ export async function validateBundle(path: string): Promise<ValidationReport> {
       events: manifest.eventCount,
       chunks: manifest.chunkCount,
     });
+    if (manifest.chunkCount > MAX_CHUNKS || index.chunks.length > MAX_CHUNKS) {
+      errors.push(
+        diagnostic(
+          "resource_limit",
+          "manifest.json.chunkCount",
+          `chunk count exceeds ${MAX_CHUNKS}`,
+        ),
+      );
+      return { valid: false, errors, warnings, stats };
+    }
+    if (manifest.eventCount > MAX_EVENTS) {
+      errors.push(
+        diagnostic(
+          "resource_limit",
+          "manifest.json.eventCount",
+          `event count exceeds ${MAX_EVENTS}`,
+        ),
+      );
+      return { valid: false, errors, warnings, stats };
+    }
 
     const topologyResult = validateTopology(topology);
     errors.push(...topologyResult.errors);
     warnings.push(...topologyResult.warnings);
-
-    if (index.schemaVersion !== manifest.schemaVersion) {
-      errors.push(
-        diagnostic(
-          "schema_version_mismatch",
-          "index.json.schemaVersion",
-          `index schema ${index.schemaVersion} does not match manifest schema ${manifest.schemaVersion}`,
-        ),
-      );
-    }
-    if (topology.schemaVersion !== manifest.schemaVersion) {
-      errors.push(
-        diagnostic(
-          "schema_version_mismatch",
-          "topology.json.schemaVersion",
-          `topology schema ${topology.schemaVersion} does not match manifest schema ${manifest.schemaVersion}`,
-        ),
-      );
+    for (const [file, version] of [
+      ["index.json", index.schemaVersion],
+      ["topology.json", topology.schemaVersion],
+    ] as const) {
+      if (version !== manifest.schemaVersion) {
+        errors.push(
+          diagnostic(
+            "schema_version_mismatch",
+            `${file}.schemaVersion`,
+            `${file} schema ${version} does not match manifest schema ${manifest.schemaVersion}`,
+          ),
+        );
+      }
     }
 
-    const events = await readChunkEvents(bundle, index, manifest, errors);
-    const references = validateEventReferences(topology, events);
-    errors.push(...references.errors);
-    warnings.push(...references.warnings);
-
+    const events = await validateChunks(
+      bundle,
+      index,
+      manifest,
+      topology,
+      errors,
+    );
     if (
       manifest.chunkCount !== index.chunks.length ||
-      manifest.eventCount !== events.length ||
-      (events.length > 0 &&
-        (events[0]?.cycle !== manifest.firstCycle ||
-          events.at(-1)?.cycle !== manifest.lastCycle))
+      manifest.eventCount !== events.eventCount ||
+      (events.first !== undefined &&
+        (events.first.cycle !== manifest.firstCycle ||
+          events.last?.cycle !== manifest.lastCycle))
     ) {
       errors.push(
         diagnostic(
@@ -416,12 +648,11 @@ export async function validateBundle(path: string): Promise<ValidationReport> {
         ),
       );
     }
-
     return { valid: errors.length === 0, errors, warnings, stats };
   } catch (error) {
     errors.push(
       diagnostic(
-        "bundle_io",
+        error instanceof ResourceLimitError ? "resource_limit" : "bundle_io",
         path,
         error instanceof Error ? error.message : "could not read bundle",
       ),

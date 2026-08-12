@@ -7,6 +7,7 @@ import { z } from "zod";
 import {
   CheckpointStateSchema,
   EventSchema,
+  StringsTableSchema,
   TraceIndexSchema,
   TraceManifestSchema,
 } from "./schemas.js";
@@ -20,6 +21,7 @@ export function createTraceJsonSchema(): Record<string, unknown> {
     event: EventSchema,
     index: TraceIndexSchema,
     checkpoint: CheckpointStateSchema,
+    strings: StringsTableSchema,
   });
 
   return {

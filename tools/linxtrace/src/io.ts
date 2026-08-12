@@ -1,38 +1,79 @@
-import { readFile, readdir, stat } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { open, readdir, stat, type FileHandle } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 
-import {
-  Uint8ArrayReader,
-  Uint8ArrayWriter,
-  ZipReader,
-  type Entry,
-} from "@zip.js/zip.js";
+import { Reader, ZipReader, type Entry, type FileEntry } from "@zip.js/zip.js";
+
+const MAX_BUNDLE_ENTRIES = 200_000;
 
 export interface BundleSource {
   readonly entries: readonly string[];
   has(path: string): boolean;
-  read(path: string): Promise<Uint8Array>;
+  size(path: string): Promise<number>;
+  readChunks(path: string, onChunk: (chunk: Uint8Array) => void): Promise<void>;
   close(): Promise<void>;
+}
+
+export class ResourceLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "ResourceLimitError";
+  }
 }
 
 function normalizeEntryPath(path: string): string {
   return path.split(sep).join("/");
 }
 
-async function collectFiles(root: string, directory = root): Promise<string[]> {
+async function collectFiles(
+  root: string,
+  directory = root,
+  files: string[] = [],
+): Promise<string[]> {
   const names = await readdir(directory, { withFileTypes: true });
-  const nested = await Promise.all(
-    names.map(async (entry) => {
-      const absolute = resolve(directory, entry.name);
-      if (entry.isDirectory()) {
-        return collectFiles(root, absolute);
+  for (const entry of names) {
+    const absolute = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      await collectFiles(root, absolute, files);
+    } else if (entry.isFile()) {
+      files.push(normalizeEntryPath(relative(root, absolute)));
+      if (files.length > MAX_BUNDLE_ENTRIES) {
+        throw new ResourceLimitError(
+          `bundle exceeds the ${MAX_BUNDLE_ENTRIES}-entry resource limit`,
+        );
       }
-      return entry.isFile()
-        ? [normalizeEntryPath(relative(root, absolute))]
-        : [];
-    }),
-  );
-  return nested.flat().sort();
+    }
+  }
+  return files.sort();
+}
+
+class NodeFileReader extends Reader<string> {
+  private handle: FileHandle | undefined;
+
+  constructor(private readonly path: string) {
+    super(path);
+  }
+
+  override async init(): Promise<void> {
+    await super.init?.();
+    this.handle = await open(this.path, "r");
+    this.size = (await this.handle.stat()).size;
+  }
+
+  override async readUint8Array(
+    offset: number,
+    length: number,
+  ): Promise<Uint8Array> {
+    if (!this.handle) throw new Error("ZIP file reader is not initialized");
+    const bytes = new Uint8Array(length);
+    const { bytesRead } = await this.handle.read(bytes, 0, length, offset);
+    return bytes.subarray(0, bytesRead);
+  }
+
+  async close(): Promise<void> {
+    await this.handle?.close();
+    this.handle = undefined;
+  }
 }
 
 class DirectoryBundleSource implements BundleSource {
@@ -45,11 +86,22 @@ class DirectoryBundleSource implements BundleSource {
     return this.entries.includes(path);
   }
 
-  async read(path: string): Promise<Uint8Array> {
-    if (!this.has(path)) {
-      throw new Error(`bundle entry is missing: ${path}`);
+  private resolveEntry(path: string): string {
+    if (!this.has(path)) throw new Error(`bundle entry is missing: ${path}`);
+    return resolve(this.root, path);
+  }
+
+  async size(path: string): Promise<number> {
+    return (await stat(this.resolveEntry(path))).size;
+  }
+
+  async readChunks(
+    path: string,
+    onChunk: (chunk: Uint8Array) => void,
+  ): Promise<void> {
+    for await (const chunk of createReadStream(this.resolveEntry(path))) {
+      onChunk(chunk);
     }
-    return readFile(resolve(this.root, path));
   }
 
   async close(): Promise<void> {}
@@ -57,10 +109,11 @@ class DirectoryBundleSource implements BundleSource {
 
 class ZipBundleSource implements BundleSource {
   readonly entries: readonly string[];
-  private readonly files: Map<string, Entry>;
+  private readonly files: Map<string, FileEntry>;
 
   constructor(
-    private readonly reader: ZipReader<Uint8Array>,
+    private readonly reader: ZipReader<string>,
+    private readonly fileReader: NodeFileReader,
     entries: readonly Entry[],
   ) {
     this.files = new Map();
@@ -78,17 +131,60 @@ class ZipBundleSource implements BundleSource {
     return this.files.has(path);
   }
 
-  async read(path: string): Promise<Uint8Array> {
+  private entry(path: string): FileEntry {
     const entry = this.files.get(path);
-    if (!entry || entry.directory) {
-      throw new Error(`bundle entry is missing: ${path}`);
-    }
-    return entry.getData(new Uint8ArrayWriter());
+    if (!entry) throw new Error(`bundle entry is missing: ${path}`);
+    return entry;
+  }
+
+  async size(path: string): Promise<number> {
+    return this.entry(path).uncompressedSize;
+  }
+
+  async readChunks(
+    path: string,
+    onChunk: (chunk: Uint8Array) => void,
+  ): Promise<void> {
+    await this.entry(path).getData(
+      new WritableStream<Uint8Array>({ write: onChunk }),
+    );
   }
 
   async close(): Promise<void> {
     await this.reader.close();
+    await this.fileReader.close();
   }
+}
+
+export async function readEntryLimited(
+  bundle: BundleSource,
+  path: string,
+  limit: number,
+): Promise<Uint8Array> {
+  const declaredSize = await bundle.size(path);
+  if (declaredSize > limit) {
+    throw new ResourceLimitError(
+      `${path} exceeds the ${limit}-byte resource limit`,
+    );
+  }
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  await bundle.readChunks(path, (chunk) => {
+    total += chunk.byteLength;
+    if (total > limit) {
+      throw new ResourceLimitError(
+        `${path} exceeds the ${limit}-byte resource limit`,
+      );
+    }
+    chunks.push(chunk);
+  });
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return bytes;
 }
 
 export async function openBundle(path: string): Promise<BundleSource> {
@@ -101,12 +197,22 @@ export async function openBundle(path: string): Promise<BundleSource> {
     throw new Error(`bundle path is neither a directory nor a file: ${path}`);
   }
 
-  const bytes = await readFile(path);
-  const reader = new ZipReader(new Uint8ArrayReader(bytes));
+  const fileReader = new NodeFileReader(path);
+  const reader = new ZipReader(fileReader);
   try {
-    return new ZipBundleSource(reader, await reader.getEntries());
+    const entries: Entry[] = [];
+    for await (const entry of reader.getEntriesGenerator()) {
+      entries.push(entry);
+      if (entries.length > MAX_BUNDLE_ENTRIES) {
+        throw new ResourceLimitError(
+          `bundle exceeds the ${MAX_BUNDLE_ENTRIES}-entry resource limit`,
+        );
+      }
+    }
+    return new ZipBundleSource(reader, fileReader, entries);
   } catch (error) {
     await reader.close();
+    await fileReader.close();
     throw error;
   }
 }

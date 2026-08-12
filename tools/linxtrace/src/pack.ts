@@ -1,29 +1,54 @@
-import { readFile, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { createReadStream, createWriteStream } from "node:fs";
+import { mkdir } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { Readable, Writable } from "node:stream";
+import { finished } from "node:stream/promises";
 
-import { Uint8ArrayReader, Uint8ArrayWriter, ZipWriter } from "@zip.js/zip.js";
+import { ZipWriter } from "@zip.js/zip.js";
 
 import { listDirectoryFiles } from "./io.js";
+
+function assertOutputOutsideSource(
+  directory: string,
+  outputPath: string,
+): void {
+  const source = resolve(directory);
+  const output = resolve(outputPath);
+  const fromSource = relative(source, output);
+  if (
+    fromSource === "" ||
+    (!fromSource.startsWith("..") && !isAbsolute(fromSource))
+  ) {
+    throw new Error("pack output must be outside the source directory");
+  }
+}
 
 export async function packBundle(
   directory: string,
   outputPath: string,
 ): Promise<void> {
+  assertOutputOutsideSource(directory, outputPath);
   const files = await listDirectoryFiles(directory);
-  const output = new Uint8ArrayWriter();
-  const writer = new ZipWriter(output, { keepOrder: true });
+  await mkdir(dirname(resolve(outputPath)), { recursive: true });
+
+  const output = createWriteStream(outputPath, { flags: "w" });
+  const writable = Writable.toWeb(output) as WritableStream<Uint8Array>;
+  const writer = new ZipWriter(writable, { keepOrder: true });
 
   try {
     for (const path of files) {
-      const bytes = await readFile(join(directory, path));
-      await writer.add(path, new Uint8ArrayReader(bytes), {
+      const readable = Readable.toWeb(
+        createReadStream(join(directory, path)),
+      ) as ReadableStream<Uint8Array>;
+      await writer.add(path, readable, {
         compressionMethod: path.endsWith(".gz") ? 0 : 8,
         lastModDate: new Date(0),
       });
     }
-    await writeFile(outputPath, await writer.close());
+    await writer.close();
+    await finished(output);
   } catch (error) {
-    await writer.close().catch(() => undefined);
+    output.destroy();
     throw error;
   }
 }

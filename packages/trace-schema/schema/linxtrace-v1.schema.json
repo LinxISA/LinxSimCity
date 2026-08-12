@@ -1338,9 +1338,14 @@
       },
       "required": ["cycle", "seq", "entities"],
       "additionalProperties": false
+    },
+    "strings": {
+      "type": "object",
+      "propertyNames": { "type": "string", "minLength": 1 },
+      "additionalProperties": { "type": "string" }
     }
   },
-  "required": ["manifest", "event", "index", "checkpoint"],
+  "required": ["manifest", "event", "index", "checkpoint", "strings"],
   "additionalProperties": false,
   "$id": "https://linxisa.github.io/LinxSimCity/schema/linxtrace-v1.schema.json",
   "title": "LinxTrace v1 contract"

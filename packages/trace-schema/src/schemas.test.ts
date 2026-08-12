@@ -8,6 +8,7 @@ import {
   parseEvent,
   parseIndex,
   parseManifest,
+  parseStrings,
 } from "./index.js";
 
 describe("trace event schema", () => {
@@ -229,6 +230,22 @@ describe("manifest and index schemas", () => {
   });
 });
 
+describe("strings table schema", () => {
+  test("accepts a dictionary of stable IDs to string values", () => {
+    expect(parseStrings({ opcode_0: "add", stall_1: "queue full" })).toEqual({
+      opcode_0: "add",
+      stall_1: "queue full",
+    });
+  });
+
+  test.each([null, [], 7, { opcode_0: 7 }, { nested: { value: "add" } }])(
+    "rejects a non-string dictionary: %j",
+    (value) => {
+      expect(() => parseStrings(value)).toThrow();
+    },
+  );
+});
+
 describe("schema compatibility", () => {
   test("accepts schema major version 1", () => {
     expect(() => assertCompatibleVersion("1.9.7")).not.toThrow();
@@ -260,6 +277,7 @@ test("exports the canonical JSON Schema document", () => {
           schemaVersion?: { pattern?: string };
         };
       };
+      strings?: { additionalProperties?: { type?: string } };
     };
   };
 
@@ -271,4 +289,5 @@ test("exports the canonical JSON Schema document", () => {
   expect(schema.properties?.manifest?.properties?.schemaVersion?.pattern).toBe(
     "^1\\.\\d+\\.\\d+$",
   );
+  expect(schema.properties?.strings?.additionalProperties?.type).toBe("string");
 });

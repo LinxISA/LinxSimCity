@@ -8,6 +8,7 @@ import {
   type EventEnvelope,
   type TraceIndex,
   type TraceManifest,
+  type StringsTable,
 } from "./types.js";
 
 const nonNegativeSafeInteger = z.number().int().safe().nonnegative();
@@ -90,6 +91,8 @@ export const TraceIndexSchema = z.strictObject({
   chunks: z.array(ChunkIndexEntrySchema),
 });
 
+export const StringsTableSchema = z.record(nonEmptyString, z.string());
+
 export const CheckpointStateSchema = z.strictObject({
   cycle: nonNegativeSafeInteger,
   seq: nonNegativeSafeInteger,
@@ -110,4 +113,8 @@ export function parseIndex(value: unknown): TraceIndex {
 
 export function parseCheckpoint(value: unknown): CheckpointState {
   return CheckpointStateSchema.parse(value);
+}
+
+export function parseStrings(value: unknown): StringsTable {
+  return StringsTableSchema.parse(value);
 }

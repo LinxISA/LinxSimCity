@@ -1,5 +1,12 @@
 import { createHash } from "node:crypto";
-import { mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import {
+  access,
+  mkdir,
+  readFile,
+  rm,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -337,5 +344,110 @@ describe("linxtrace CLI", () => {
     expect(JSON.parse(result.stdout).errors).toContainEqual(
       expect.objectContaining({ code: "schema_version_mismatch" }),
     );
+  });
+
+  test("rejects a chunk whose events cross a chunk-cycle bucket", async () => {
+    const bundle = join(testRoot, "cross-bucket.trace-dir");
+    await writeBundle(bundle);
+    const manifestPath = join(bundle, "manifest.json");
+    const manifest = await readJson(manifestPath);
+    manifest.chunkCycleSpan = 4;
+    await writeJson(manifestPath, manifest);
+
+    const result = runCli("validate", bundle, "--json");
+
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stdout).errors).toContainEqual(
+      expect.objectContaining({ code: "chunk_bucket_mismatch" }),
+    );
+  });
+
+  test("rejects a future checkpoint", async () => {
+    const bundle = join(testRoot, "future-checkpoint.trace-dir");
+    await writeBundle(bundle);
+    await writeFile(
+      join(bundle, "checkpoints/000000.json.gz"),
+      gzipSync(JSON.stringify({ cycle: 5, seq: 0, entities: {} }), {
+        mtime: 0,
+      }),
+    );
+
+    const result = runCli("validate", bundle, "--json");
+
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stdout).errors).toContainEqual(
+      expect.objectContaining({ code: "checkpoint_bounds_mismatch" }),
+    );
+  });
+
+  test("rejects a checkpoint path from the wrong scheduled bucket", async () => {
+    const bundle = join(testRoot, "wrong-checkpoint.trace-dir");
+    await writeBundle(bundle);
+    await writeFile(
+      join(bundle, "checkpoints/000001.json.gz"),
+      gzipSync(JSON.stringify({ cycle: 0, seq: 0, entities: {} }), {
+        mtime: 0,
+      }),
+    );
+    const indexPath = join(bundle, "index.json");
+    const index = await readJson(indexPath);
+    const chunks = index.chunks as Record<string, unknown>[];
+    chunks[0]!.checkpointPath = "checkpoints/000001.json.gz";
+    await writeJson(indexPath, index);
+
+    const result = runCli("validate", bundle, "--json");
+
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stdout).errors).toContainEqual(
+      expect.objectContaining({ code: "checkpoint_path_mismatch" }),
+    );
+  });
+
+  test("rejects strings.json values outside the canonical string dictionary", async () => {
+    const bundle = join(testRoot, "bad-strings.trace-dir");
+    await writeBundle(bundle);
+    await writeFile(join(bundle, "strings.json"), "[]");
+
+    const result = runCli("validate", bundle, "--json");
+
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stdout).errors).toContainEqual(
+      expect.objectContaining({
+        code: "schema_validation",
+        path: "strings.json",
+      }),
+    );
+  });
+
+  test("rejects an oversized declared chunk before reading it", async () => {
+    const bundle = join(testRoot, "oversized.trace-dir");
+    await writeBundle(bundle);
+    const indexPath = join(bundle, "index.json");
+    const index = await readJson(indexPath);
+    const chunks = index.chunks as Record<string, unknown>[];
+    chunks[0]!.compressedBytes = 300 * 1024 * 1024;
+    await writeJson(indexPath, index);
+
+    const result = runCli("validate", bundle, "--json");
+
+    expect(result.status).toBe(2);
+    expect(JSON.parse(result.stdout).errors).toContainEqual(
+      expect.objectContaining({ code: "resource_limit" }),
+    );
+  });
+
+  test("pack rejects an output path inside the source on repeated attempts", async () => {
+    const bundle = join(testRoot, "minimal.trace-dir");
+    const output = join(bundle, "nested", "minimal.linxtrace");
+    await writeBundle(bundle);
+
+    const first = runCli("pack", bundle, output);
+    const second = runCli("pack", bundle, output);
+
+    expect(first.status).toBe(1);
+    expect(second.status).toBe(1);
+    expect(first.stderr).toContain("outside the source directory");
+    expect(second.stderr).toContain("outside the source directory");
+    await expect(access(output)).rejects.toThrow();
   });
 });

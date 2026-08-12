@@ -94,6 +94,8 @@ export interface TraceIndex {
   chunks: ChunkIndexEntry[];
 }
 
+export type StringsTable = Record<string, string>;
+
 export interface CheckpointState {
   cycle: number;
   seq: number;
