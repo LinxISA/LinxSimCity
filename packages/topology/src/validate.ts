@@ -69,6 +69,21 @@ export function validateTopology(
 
   topology.entities.forEach((entity, entityIndex) => {
     const entityPath = `entities[${entityIndex}]`;
+    const instanceIndex = entity.instance.index;
+    const validInstanceIndex =
+      typeof instanceIndex === "number" &&
+      Number.isSafeInteger(instanceIndex) &&
+      instanceIndex >= 0;
+
+    if (instanceIndex !== undefined && !validInstanceIndex) {
+      errors.push(
+        error(
+          "instance_out_of_range",
+          `${entityPath}.instance.index`,
+          `instance index ${instanceIndex} must be a non-negative safe integer`,
+        ),
+      );
+    }
 
     if (entity.parentId !== undefined && !entityById.has(entity.parentId)) {
       errors.push(
@@ -85,22 +100,8 @@ export function validateTopology(
     }
 
     const parent = entityById.get(entity.parentId);
-    const instanceIndex = entity.instance.index;
     if (
-      instanceIndex !== undefined &&
-      (typeof instanceIndex !== "number" ||
-        !Number.isSafeInteger(instanceIndex) ||
-        instanceIndex < 0)
-    ) {
-      errors.push(
-        error(
-          "instance_out_of_range",
-          `${entityPath}.instance.index`,
-          `instance index ${instanceIndex} must be a non-negative safe integer`,
-        ),
-      );
-    } else if (
-      typeof instanceIndex === "number" &&
+      validInstanceIndex &&
       parent?.capacity !== undefined &&
       instanceIndex >= parent.capacity
     ) {

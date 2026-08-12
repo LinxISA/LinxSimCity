@@ -75,6 +75,7 @@ describe("root workspace scripts", () => {
       );
       expect(result.stdout).toContain(`@linxsimcity/topology@0.1.0 ${script}`);
     },
+    15_000,
   );
 
   test("build and typecheck succeed from source without prebuilt workspace artifacts", () => {

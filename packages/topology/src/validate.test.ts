@@ -100,15 +100,8 @@ describe("validateTopology", () => {
         schemaVersion: "1.0.0",
         entities: [
           {
-            id: "queue",
-            kind: "module",
-            label: "Queue",
-            instance: {},
-          },
-          {
             id: "queue.slot",
             kind: "queue-slot",
-            parentId: "queue",
             label: "Queue slot",
             instance: { index },
           },
@@ -118,7 +111,7 @@ describe("validateTopology", () => {
       expect(result.errors).toMatchObject([
         {
           code: "instance_out_of_range",
-          path: "entities[1].instance.index",
+          path: "entities[0].instance.index",
         },
       ]);
     },
