@@ -14,8 +14,8 @@
 #include <optional>
 #include <sstream>
 #include <stdexcept>
-#include <tuple>
 #include <type_traits>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -32,6 +32,11 @@ struct ChunkIndexEntry {
   std::uint64_t compressedBytes;
   std::string sha256;
   std::string checkpointPath;
+};
+
+struct CheckpointEntry {
+  std::uint64_t cycle;
+  std::uint64_t seq;
 };
 
 std::string NumberedPath(const char *directory, std::uint64_t number,
@@ -257,16 +262,16 @@ public:
                                         "checkpoints");
     const auto number = *chunkNumber;
     const auto chunkPath = NumberedPath("chunks", number, ".jsonl.gz");
-    const auto checkpointPath = NumberedPath("checkpoints", number, ".json.gz");
+    const auto checkpointNumber =
+        chunkEvents.front().cycle / options.checkpointCycleSpan;
+    const auto checkpointPath =
+        NumberedPath("checkpoints", checkpointNumber, ".json.gz");
     std::string content;
     for (const auto &event : chunkEvents) {
       content += SerializeEvent(event);
       content.push_back('\n');
     }
     WriteGzip(options.outputDirectory / chunkPath, content);
-    WriteGzip(
-        options.outputDirectory / checkpointPath,
-        SerializeCheckpoint(chunkEvents.back().cycle, chunkEvents.back().seq));
     const auto compressed = ReadFile(options.outputDirectory / chunkPath);
     chunks.push_back({chunkPath, chunkEvents.front().cycle,
                       chunkEvents.back().cycle,
@@ -275,6 +280,36 @@ public:
                       internal::Sha256(compressed), checkpointPath});
     chunkEvents.clear();
     chunkNumber.reset();
+  }
+
+  void ScheduleCheckpoint(const Event &event) {
+    const auto number = event.cycle / options.checkpointCycleSpan;
+    if (!checkpoints.empty() && checkpoints.rbegin()->first >= number) {
+      return;
+    }
+    auto next = checkpoints.empty() ? number : checkpoints.rbegin()->first;
+    if (!checkpoints.empty()) {
+      if (next == std::numeric_limits<std::uint64_t>::max()) {
+        return;
+      }
+      ++next;
+    }
+    for (;;) {
+      checkpoints.emplace(
+          next, CheckpointEntry{next * options.checkpointCycleSpan, 0});
+      if (next == number) {
+        break;
+      }
+      ++next;
+    }
+  }
+
+  void WriteCheckpoints() const {
+    for (const auto &[number, checkpoint] : checkpoints) {
+      const auto path = NumberedPath("checkpoints", number, ".json.gz");
+      WriteGzip(options.outputDirectory / path,
+                SerializeCheckpoint(checkpoint.cycle, checkpoint.seq));
+    }
   }
 
   void WriteManifest() const {
@@ -338,6 +373,7 @@ public:
 
   WriterOptions options;
   TopologyDescriptor topology;
+  std::unordered_set<std::string> entityIds;
   bool closed{false};
   std::optional<std::uint64_t> currentCycle;
   std::uint64_t nextSeq{0};
@@ -348,6 +384,7 @@ public:
   std::optional<std::uint64_t> chunkNumber;
   std::vector<Event> chunkEvents;
   std::vector<ChunkIndexEntry> chunks;
+  std::map<std::uint64_t, CheckpointEntry> checkpoints;
 };
 
 BundleWriter::BundleWriter(WriterOptions options)
@@ -363,7 +400,6 @@ BundleWriter::~BundleWriter() {
 }
 
 BundleWriter::BundleWriter(BundleWriter &&) noexcept = default;
-BundleWriter &BundleWriter::operator=(BundleWriter &&) noexcept = default;
 
 void BundleWriter::SetTopology(TopologyDescriptor topology) {
   if (impl_->closed) {
@@ -372,7 +408,12 @@ void BundleWriter::SetTopology(TopologyDescriptor topology) {
   if (impl_->eventCount != 0) {
     throw std::logic_error("topology cannot change after events are emitted");
   }
+  std::unordered_set<std::string> entityIds;
+  for (const auto &entity : topology.entities) {
+    entityIds.insert(entity.id);
+  }
   impl_->topology = std::move(topology);
+  impl_->entityIds = std::move(entityIds);
 }
 
 void BundleWriter::BeginCycle(std::uint64_t cycle) {
@@ -396,6 +437,10 @@ void BundleWriter::Emit(Event event) {
   if (event.cycle != *impl_->currentCycle) {
     throw std::invalid_argument("event cycle does not match active cycle");
   }
+  if (impl_->entityIds.find(event.entityId) == impl_->entityIds.end()) {
+    throw std::invalid_argument("event entityId does not exist in topology: " +
+                                event.entityId);
+  }
   event.seq = impl_->nextSeq;
   const auto order = std::make_pair(event.cycle, event.seq);
   if (impl_->lastOrder && order <= *impl_->lastOrder) {
@@ -408,6 +453,7 @@ void BundleWriter::Emit(Event event) {
   if (impl_->chunkNumber && number != *impl_->chunkNumber) {
     impl_->FlushChunk();
   }
+  impl_->ScheduleCheckpoint(event);
   impl_->chunkNumber = number;
   impl_->chunkEvents.push_back(std::move(event));
   impl_->lastOrder = order;
@@ -436,6 +482,7 @@ void BundleWriter::Close() {
   std::filesystem::create_directories(impl_->options.outputDirectory /
                                       "checkpoints");
   impl_->FlushChunk();
+  impl_->WriteCheckpoints();
   WriteFile(impl_->options.outputDirectory / "topology.json",
             SerializeTopology(impl_->topology));
   WriteFile(impl_->options.outputDirectory / "strings.json", "{}");

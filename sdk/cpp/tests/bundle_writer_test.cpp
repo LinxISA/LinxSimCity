@@ -13,6 +13,7 @@
 #include <sstream>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 
 namespace fs = std::filesystem;
 using linxsimcity::trace::BundleWriter;
@@ -21,6 +22,9 @@ using linxsimcity::trace::TopologyBuilder;
 using linxsimcity::trace::TopologyEntity;
 using linxsimcity::trace::TraceOrderError;
 using linxsimcity::trace::WriterOptions;
+
+static_assert(std::is_move_constructible_v<BundleWriter>);
+static_assert(!std::is_move_assignable_v<BundleWriter>);
 
 namespace {
 
@@ -160,7 +164,7 @@ void TestChunkBoundaryAndIndexIntegrity() {
             "index SHA-256 is inaccurate");
     Require(fs::is_regular_file(checkpointPath), "indexed checkpoint missing");
     const auto checkpoint = ParseJson(ReadGzip(checkpointPath));
-    Require(checkpoint["cycle"].GetUint64() == 4095 + i,
+    Require(checkpoint["cycle"].GetUint64() == i * 4096,
             "checkpoint cycle is inaccurate");
     Require(checkpoint["seq"].GetUint64() == 0, "checkpoint seq is inaccurate");
   }
@@ -189,6 +193,97 @@ void TestCloseIsIdempotent() {
   fs::remove_all(output);
 }
 
+void TestMoveConstructionPreservesBufferedTrace() {
+  const auto output = TempDirectory("move");
+  BundleWriter source(WriterOptions{output});
+  source.SetTopology(OneEntityTopology().Build());
+  source.BeginCycle(7);
+  source.Emit(MakeEvent(7));
+  source.EndCycle();
+
+  BundleWriter destination(std::move(source));
+  destination.Close();
+
+  const auto chunk = ReadGzip(output / "chunks/000000.jsonl.gz");
+  Require(chunk.find(R"("cycle":7)") != std::string::npos,
+          "move construction lost buffered trace data");
+  fs::remove_all(output);
+}
+
+void TestCheckpointScheduleIsIndependentFromChunks() {
+  const auto output = TempDirectory("checkpoint-span");
+  BundleWriter writer(WriterOptions{output, "pipeline", 4096, 2048});
+  writer.SetTopology(OneEntityTopology().Build());
+  for (const std::uint64_t cycle : {0, 4096}) {
+    writer.BeginCycle(cycle);
+    writer.Emit(MakeEvent(cycle));
+    writer.EndCycle();
+  }
+  writer.Close();
+
+  const auto initialCheckpoint = output / "checkpoints/000000.json.gz";
+  const auto middleCheckpoint = output / "checkpoints/000001.json.gz";
+  const auto finalCheckpoint = output / "checkpoints/000002.json.gz";
+  Require(fs::is_regular_file(initialCheckpoint),
+          "initial checkpoint boundary missing");
+  Require(fs::is_regular_file(middleCheckpoint),
+          "2048-cycle checkpoint boundary missing");
+  Require(fs::is_regular_file(finalCheckpoint),
+          "4096-cycle checkpoint boundary missing");
+  const auto middleMetadata = ParseJson(ReadGzip(middleCheckpoint));
+  const auto finalMetadata = ParseJson(ReadGzip(finalCheckpoint));
+  Require(middleMetadata["cycle"].GetUint64() == 2048,
+          "middle checkpoint metadata is not on its cycle boundary");
+  Require(finalMetadata["cycle"].GetUint64() == 4096,
+          "final checkpoint metadata is not on its cycle boundary");
+
+  const auto index = ParseJson(ReadFile(output / "index.json"));
+  Require(std::string(index["chunks"][0]["checkpointPath"].GetString()) ==
+              "checkpoints/000000.json.gz",
+          "first chunk does not reference its nearest preceding checkpoint");
+  Require(std::string(index["chunks"][1]["checkpointPath"].GetString()) ==
+              "checkpoints/000002.json.gz",
+          "second chunk does not reference its nearest preceding checkpoint");
+  const auto manifest = ParseJson(ReadFile(output / "manifest.json"));
+  Require(manifest["checkpointCycleSpan"].GetUint64() == 2048,
+          "manifest checkpoint span does not match scheduling behavior");
+  fs::remove_all(output);
+}
+
+void TestUnknownEntityDoesNotMutateWriterState() {
+  const auto output = TempDirectory("entity-reference");
+  BundleWriter writer(WriterOptions{output});
+  writer.SetTopology(OneEntityTopology().Build());
+  writer.BeginCycle(11);
+
+  auto unknown = MakeEvent(11);
+  unknown.entityId = "pe0.missing";
+  bool threw = false;
+  try {
+    writer.Emit(std::move(unknown));
+  } catch (const std::invalid_argument &) {
+    threw = true;
+  }
+  Require(threw, "event with unknown entity ID must be rejected");
+
+  writer.Emit(MakeEvent(11));
+  writer.Emit(MakeEvent(11, "pipeline.leave"));
+  writer.EndCycle();
+  writer.Close();
+
+  const auto chunk = ReadGzip(output / "chunks/000000.jsonl.gz");
+  Require(chunk.find("pe0.missing") == std::string::npos,
+          "rejected entity event was buffered");
+  Require(chunk.find(R"("seq":0)") != std::string::npos,
+          "rejection consumed the first sequence number");
+  Require(chunk.find(R"("seq":1)") != std::string::npos,
+          "writer was not usable after entity rejection");
+  const auto manifest = ParseJson(ReadFile(output / "manifest.json"));
+  Require(manifest["eventCount"].GetUint64() == 2,
+          "rejected event mutated the event count");
+  fs::remove_all(output);
+}
+
 } // namespace
 
 int main() {
@@ -196,6 +291,9 @@ int main() {
     TestContractAndStrictOrdering();
     TestChunkBoundaryAndIndexIntegrity();
     TestCloseIsIdempotent();
+    TestMoveConstructionPreservesBufferedTrace();
+    TestCheckpointScheduleIsIndependentFromChunks();
+    TestUnknownEntityDoesNotMutateWriterState();
   } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
     return 1;

@@ -30,7 +30,7 @@ public:
   BundleWriter(const BundleWriter &) = delete;
   BundleWriter &operator=(const BundleWriter &) = delete;
   BundleWriter(BundleWriter &&) noexcept;
-  BundleWriter &operator=(BundleWriter &&) noexcept;
+  BundleWriter &operator=(BundleWriter &&) = delete;
 
   void SetTopology(TopologyDescriptor topology) override;
   void BeginCycle(std::uint64_t cycle) override;
