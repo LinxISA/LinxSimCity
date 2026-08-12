@@ -29,7 +29,7 @@ const schemaVersion = z
   });
 
 const genericPayloadSchema = z.looseObject({});
-const cellReadPayloadSchema = z.object({
+const cellReadPayloadSchema = z.looseObject({
   request_id: nonNegativeSafeInteger.optional(),
   source: nonEmptyString.optional(),
   bytes: positiveSafeInteger.optional(),

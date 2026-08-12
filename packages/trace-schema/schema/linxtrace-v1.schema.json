@@ -789,7 +789,7 @@
                 },
                 "result": { "type": "string", "enum": ["grant", "conflict"] }
               },
-              "additionalProperties": false
+              "additionalProperties": {}
             }
           },
           "required": ["cycle", "seq", "type", "scope", "entity_id", "payload"],

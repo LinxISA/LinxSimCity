@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import Ajv from "ajv";
 import { describe, expect, test } from "vitest";
 
 import {
@@ -95,6 +96,35 @@ describe("trace event schema", () => {
 
     expect(event.type).toBe("cell.read");
     expect(event.payload).toMatchObject({ result: "grant" });
+  });
+
+  test("retains future optional CELL read payload fields at runtime and in JSON Schema", () => {
+    const event = {
+      cycle: 7,
+      seq: 2,
+      type: "cell.read",
+      scope: "pe0",
+      entity_id: "pe0.bg.bank0.row3",
+      payload: {
+        request_id: 9,
+        source: "cube",
+        bytes: 128,
+        result: "grant",
+        arbitration_lane: 3,
+      },
+    } as const;
+
+    expect(parseEvent(event).payload).toMatchObject({ arbitration_lane: 3 });
+
+    const schema = JSON.parse(
+      readFileSync(
+        new URL("../schema/linxtrace-v1.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ) as { properties: { event: object } };
+    const validateEvent = new Ajv().compile(schema.properties.event);
+
+    expect(validateEvent(event), validateEvent.errors?.join("\n")).toBe(true);
   });
 
   test.each([
