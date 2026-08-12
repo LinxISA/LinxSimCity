@@ -19,7 +19,9 @@ describe("root workspace scripts", () => {
       const result = runRootScript(script);
 
       expect(result.status, result.stderr).toBe(0);
-      expect(result.stdout).toContain(`workspace-verifier:${script}`);
+      expect(result.stdout).toContain(
+        `@linxsimcity/trace-schema@0.1.0 ${script}`,
+      );
     },
   );
 });

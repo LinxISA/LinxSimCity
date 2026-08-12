@@ -4,7 +4,14 @@
     "allowJs": true,
     "checkJs": true,
     "noEmit": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "types": ["node", "vitest/globals"]
   },
-  "include": ["eslint.config.js", "vitest.config.ts", "vitest.workspace.ts"]
+  "include": [
+    "eslint.config.js",
+    "vitest.config.ts",
+    "vitest.workspace.ts",
+    "packages/**/*.test.ts",
+    "tests/**/*.test.ts"
+  ]
 }
