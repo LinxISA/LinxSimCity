@@ -7,7 +7,7 @@ import { Inspector } from "../inspector/Inspector.js";
 import { playerStore, usePlayerStore } from "../player/player-store.js";
 import { startPlaybackClock } from "../player/playback-clock.js";
 import { Timeline } from "../timeline/Timeline.js";
-import { SceneViewport } from "./SceneViewport.js";
+import { SceneViewport } from "../scene/SceneViewport.js";
 import "./styles.css";
 
 export function App() {

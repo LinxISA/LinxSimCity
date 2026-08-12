@@ -123,6 +123,94 @@ select {
   min-height: 620px;
 }
 
+.scene-viewport canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  min-height: 620px;
+}
+
+.camera-toolbar,
+.scene-stats {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  gap: 5px;
+}
+
+.camera-toolbar {
+  top: 14px;
+  right: 14px;
+  padding: 4px;
+  border: 1px solid rgb(92 166 212 / 18%);
+  border-radius: 9px;
+  background: rgb(3 10 20 / 76%);
+  backdrop-filter: blur(10px);
+}
+
+.camera-toolbar button {
+  padding: 6px 9px;
+  border: 0;
+  border-radius: 6px;
+  color: #6f8499;
+  background: transparent;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.camera-toolbar button.is-active {
+  color: #dff8ff;
+  background: #0d526e;
+}
+
+.scene-stats {
+  right: 14px;
+  bottom: 12px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 72%;
+  pointer-events: none;
+}
+
+.scene-stats span {
+  padding: 5px 7px;
+  border: 1px solid rgb(86 161 207 / 14%);
+  border-radius: 5px;
+  color: #688096;
+  background: rgb(3 10 20 / 78%);
+  font:
+    9px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+}
+
+.scene-label,
+.district-label {
+  display: block;
+  color: #d8ecf7;
+  font:
+    700 8px/1.1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  letter-spacing: 0.03em;
+  text-align: center;
+  text-shadow:
+    0 1px 4px #000,
+    0 0 8px #000;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.district-label {
+  padding: 3px 5px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  background: rgb(3 8 14 / 82%);
+  font-size: 7px;
+  letter-spacing: 0.08em;
+}
+
 .trace-loader {
   position: absolute;
   z-index: 5;
