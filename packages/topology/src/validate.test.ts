@@ -2,6 +2,7 @@ import type { EventEnvelope } from "@linxsimcity/trace-schema";
 import { describe, expect, test } from "vitest";
 
 import {
+  createEventReferenceIndex,
   type TopologyDescriptor,
   validateEventReferences,
   validateTopology,
@@ -177,6 +178,35 @@ describe("validateEventReferences", () => {
         severity: "error",
         code: "missing_entity_reference",
         path: "events[1].entity_id",
+        message: 'event references missing entity "scalar.decode"',
+      },
+    ]);
+  });
+
+  test("reuses a precomputed entity index across streamed event batches", () => {
+    const topology: TopologyDescriptor = {
+      schemaVersion: "1.0.0",
+      entities: [
+        { id: "scalar.fetch", kind: "module", label: "Fetch", instance: {} },
+      ],
+    };
+    const index = createEventReferenceIndex(topology);
+    const validEvent: EventEnvelope = {
+      cycle: 1,
+      seq: 0,
+      type: "pipeline.enter",
+      scope: "scalar",
+      entity_id: "scalar.fetch",
+      payload: {},
+    };
+    const invalidEvent = { ...validEvent, seq: 1, entity_id: "scalar.decode" };
+
+    expect(validateEventReferences(index, [validEvent]).errors).toEqual([]);
+    expect(validateEventReferences(index, [invalidEvent]).errors).toEqual([
+      {
+        severity: "error",
+        code: "missing_entity_reference",
+        path: "events[0].entity_id",
         message: 'event references missing entity "scalar.decode"',
       },
     ]);

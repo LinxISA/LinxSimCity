@@ -12,8 +12,10 @@ import {
   type TraceManifest,
 } from "@linxsimcity/trace-schema";
 import {
+  createEventReferenceIndex,
   validateEventReferences,
   validateTopology,
+  type EventReferenceIndex,
   type TopologyDescriptor,
 } from "@linxsimcity/topology";
 import { Gunzip } from "fflate";
@@ -219,7 +221,7 @@ interface ChunkResult {
 async function validateChunk(
   bundle: BundleSource,
   path: string,
-  topology: TopologyDescriptor,
+  eventReferences: EventReferenceIndex,
   previous: EventEnvelope | undefined,
   globalEventOffset: number,
   budget: ResourceBudget,
@@ -261,7 +263,7 @@ async function validateChunk(
         ),
       );
     }
-    const references = validateEventReferences(topology, [event]);
+    const references = validateEventReferences(eventReferences, [event]);
     for (const reference of references.errors) {
       errors.push({
         ...reference,
@@ -368,6 +370,7 @@ async function validateChunks(
   first?: EventEnvelope;
   last?: EventEnvelope;
 }> {
+  const eventReferences = createEventReferenceIndex(topology);
   let eventCount = 0;
   let first: EventEnvelope | undefined;
   let last: EventEnvelope | undefined;
@@ -412,7 +415,7 @@ async function validateChunks(
       result = await validateChunk(
         bundle,
         chunk.path,
-        topology,
+        eventReferences,
         last,
         eventCount,
         budget,

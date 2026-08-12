@@ -118,11 +118,26 @@ export function validateTopology(
   return { errors, warnings: [] };
 }
 
-export function validateEventReferences(
+export interface EventReferenceIndex {
+  readonly entityIds: ReadonlySet<string>;
+}
+
+export function createEventReferenceIndex(
   topology: TopologyDescriptor,
+): EventReferenceIndex {
+  return {
+    entityIds: new Set(topology.entities.map(({ id }) => id)),
+  };
+}
+
+export function validateEventReferences(
+  topologyOrIndex: TopologyDescriptor | EventReferenceIndex,
   events: readonly EventEnvelope[],
 ): ValidationResult {
-  const entityIds = new Set(topology.entities.map(({ id }) => id));
+  const entityIds =
+    "entityIds" in topologyOrIndex
+      ? topologyOrIndex.entityIds
+      : createEventReferenceIndex(topologyOrIndex).entityIds;
   const errors = events.flatMap((event, eventIndex) =>
     entityIds.has(event.entity_id)
       ? []
