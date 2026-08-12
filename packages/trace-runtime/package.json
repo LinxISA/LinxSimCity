@@ -1,0 +1,27 @@
+{
+  "name": "@linxsimcity/trace-runtime",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "prebuild": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/topology",
+    "build": "tsc --project tsconfig.json",
+    "pretypecheck": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/topology",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@linxsimcity/topology": "0.1.0",
+    "@linxsimcity/trace-schema": "0.1.0",
+    "@zip.js/zip.js": "2.8.43",
+    "comlink": "4.4.2",
+    "fflate": "0.8.3"
+  }
+}
