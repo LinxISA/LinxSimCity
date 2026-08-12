@@ -159,6 +159,36 @@ test("validation aborts at an event-budget crossing within a chunk", async () =>
   );
 });
 
+test("malformed records still consume event budget before schema parsing", async () => {
+  const bundle = await writeMultiChunkBundle(await testDirectory());
+  const chunk = gzipSync(
+    `${JSON.stringify({
+      cycle: 0,
+      seq: 0,
+      type: "pipeline.enter",
+      scope: "pe0",
+      entity_id: "pe0.fetch",
+      payload: {},
+    })}\n{not-json}\n`,
+    { mtime: 0 },
+  );
+  await writeFile(join(bundle.directory, "chunks/000000.jsonl.gz"), chunk);
+
+  const report = await validateBundle(bundle.directory, {
+    limits: { events: 1 },
+  });
+
+  expect(report.errors).toContainEqual(
+    expect.objectContaining({ code: "resource_limit" }),
+  );
+  expect(report.errors).not.toContainEqual(
+    expect.objectContaining({
+      code: "schema_validation",
+      path: expect.stringContaining("chunks/000000.jsonl.gz:2"),
+    }),
+  );
+});
+
 test("validation applies compressed budget bundle-wide and caches checkpoints", async () => {
   const bundle = await writeMultiChunkBundle(await testDirectory());
   const exactBudget =
@@ -176,6 +206,47 @@ test("validation applies compressed budget bundle-wide and caches checkpoints", 
   expect(overBudget.errors).toContainEqual(
     expect.objectContaining({ code: "resource_limit" }),
   );
+});
+
+test("an invalid shared checkpoint is read and charged only once", async () => {
+  const bundle = await writeMultiChunkBundle(await testDirectory());
+  const malformedCheckpoint = gzipSync("{not-json}", { mtime: 0 });
+  await writeFile(
+    join(bundle.directory, "checkpoints/000000.json.gz"),
+    malformedCheckpoint,
+  );
+  const exactBudget =
+    bundle.compressedBytes.reduce((sum, bytes) => sum + bytes, 0) +
+    malformedCheckpoint.byteLength;
+
+  const report = await validateBundle(bundle.directory, {
+    limits: { totalCompressedBytes: exactBudget },
+  });
+
+  expect(report.errors).not.toContainEqual(
+    expect.objectContaining({ code: "resource_limit" }),
+  );
+  expect(
+    report.errors.filter(
+      ({ path, code }) =>
+        path === "checkpoints/000000.json.gz" && code === "schema_validation",
+    ),
+  ).toHaveLength(1);
+});
+
+test("checkpoint resource exhaustion terminates validation", async () => {
+  const bundle = await writeMultiChunkBundle(await testDirectory());
+  const firstChunkBytes = bundle.compressedBytes[0]!;
+
+  const report = await validateBundle(bundle.directory, {
+    limits: {
+      totalCompressedBytes: firstChunkBytes + bundle.checkpointBytes - 1,
+    },
+  });
+
+  expect(
+    report.errors.filter(({ code }) => code === "resource_limit"),
+  ).toHaveLength(1);
 });
 
 test("index uses one event budget across all chunks", async () => {

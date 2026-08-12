@@ -236,6 +236,7 @@ async function validateChunk(
 
   const parseLine = (line: string): void => {
     if (line.length === 0) return;
+    budget.consumeEvent(path);
     let event: EventEnvelope;
     try {
       event = parseEvent(JSON.parse(line));
@@ -247,7 +248,6 @@ async function validateChunk(
       );
       return;
     }
-    budget.consumeEvent(path);
     if (
       last &&
       (event.cycle < last.cycle ||
@@ -372,7 +372,10 @@ async function validateChunks(
   let first: EventEnvelope | undefined;
   let last: EventEnvelope | undefined;
   const seenPaths = new Set<string>();
-  const checkpoints = new Map<string, CheckpointState>();
+  type CheckpointResult =
+    | { status: "valid"; checkpoint: CheckpointState }
+    | { status: "invalid"; diagnostic: ValidationDiagnostic };
+  const checkpoints = new Map<string, CheckpointResult>();
 
   for (const [chunkNumber, chunk] of index.chunks.entries()) {
     const chunkPath = `index.json.chunks[${chunkNumber}]`;
@@ -531,24 +534,41 @@ async function validateChunks(
       );
     } else {
       try {
-        let checkpoint = checkpoints.get(chunk.checkpointPath);
-        if (!checkpoint) {
-          checkpoint = await readCheckpoint(
-            bundle,
-            chunk.checkpointPath,
-            budget,
-          );
-          checkpoints.set(chunk.checkpointPath, checkpoint);
+        let checkpointResult = checkpoints.get(chunk.checkpointPath);
+        if (!checkpointResult) {
+          try {
+            checkpointResult = {
+              status: "valid",
+              checkpoint: await readCheckpoint(
+                bundle,
+                chunk.checkpointPath,
+                budget,
+              ),
+            };
+          } catch (error) {
+            if (error instanceof ResourceLimitError) throw error;
+            checkpointResult = {
+              status: "invalid",
+              diagnostic: errorDiagnostic(chunk.checkpointPath, error),
+            };
+          }
+          checkpoints.set(chunk.checkpointPath, checkpointResult);
+          if (checkpointResult.status === "invalid") {
+            errors.push(checkpointResult.diagnostic);
+          }
         }
-        validateCheckpoint(
-          checkpoint,
-          chunk.checkpointPath,
-          result.first,
-          manifest,
-          errors,
-        );
+        if (checkpointResult.status === "valid") {
+          validateCheckpoint(
+            checkpointResult.checkpoint,
+            chunk.checkpointPath,
+            result.first,
+            manifest,
+            errors,
+          );
+        }
       } catch (error) {
         errors.push(errorDiagnostic(chunk.checkpointPath, error));
+        if (error instanceof ResourceLimitError) break;
       }
     }
   }
