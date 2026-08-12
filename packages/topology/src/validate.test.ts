@@ -93,6 +93,37 @@ describe("validateTopology", () => {
     ]);
   });
 
+  test.each(["999", -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects a present non-index instance value: %s",
+    (index) => {
+      const result = validateTopology({
+        schemaVersion: "1.0.0",
+        entities: [
+          {
+            id: "queue",
+            kind: "module",
+            label: "Queue",
+            instance: {},
+          },
+          {
+            id: "queue.slot",
+            kind: "queue-slot",
+            parentId: "queue",
+            label: "Queue slot",
+            instance: { index },
+          },
+        ],
+      });
+
+      expect(result.errors).toMatchObject([
+        {
+          code: "instance_out_of_range",
+          path: "entities[1].instance.index",
+        },
+      ]);
+    },
+  );
+
   test("accepts a valid descriptor with placement, ports, and attributes", () => {
     const topology: TopologyDescriptor = {
       schemaVersion: "1.0.0",

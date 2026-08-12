@@ -1,5 +1,15 @@
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import {
+  cpSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  symlinkSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { basename, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, test } from "vitest";
 
@@ -12,6 +22,47 @@ function runRootScript(script: "build" | "typecheck") {
   });
 }
 
+function copySourceOnlyRepository(destination: string) {
+  for (const path of [
+    "eslint.config.js",
+    "package-lock.json",
+    "package.json",
+    "packages",
+    "tests",
+    "tsconfig.base.json",
+    "tsconfig.json",
+    "vitest.config.ts",
+    "vitest.workspace.ts",
+  ]) {
+    cpSync(join(repositoryRoot, path), join(destination, path), {
+      recursive: true,
+      filter: (source) => basename(source) !== "dist",
+    });
+  }
+}
+
+function linkInstalledDependencies(destination: string) {
+  const sourceNodeModules = join(repositoryRoot, "node_modules");
+  const targetNodeModules = join(destination, "node_modules");
+  mkdirSync(targetNodeModules);
+
+  for (const entry of readdirSync(sourceNodeModules)) {
+    if (entry === "@linxsimcity") {
+      continue;
+    }
+    symlinkSync(join(sourceNodeModules, entry), join(targetNodeModules, entry));
+  }
+
+  const workspaceLinks = join(targetNodeModules, "@linxsimcity");
+  mkdirSync(workspaceLinks);
+  for (const workspace of ["topology", "trace-schema"]) {
+    symlinkSync(
+      join(destination, "packages", workspace),
+      join(workspaceLinks, workspace),
+    );
+  }
+}
+
 describe("root workspace scripts", () => {
   test.each(["build", "typecheck"] as const)(
     "%s invokes matching workspace scripts",
@@ -22,8 +73,45 @@ describe("root workspace scripts", () => {
       expect(result.stdout).toContain(
         `@linxsimcity/trace-schema@0.1.0 ${script}`,
       );
+      expect(result.stdout).toContain(`@linxsimcity/topology@0.1.0 ${script}`);
     },
   );
+
+  test("build and typecheck succeed from source without prebuilt workspace artifacts", () => {
+    const cleanRepository = mkdtempSync(
+      join(tmpdir(), "linxsimcity-source-only-"),
+    );
+
+    try {
+      copySourceOnlyRepository(cleanRepository);
+      linkInstalledDependencies(cleanRepository);
+
+      const build = spawnSync("npm", ["run", "build"], {
+        cwd: cleanRepository,
+        encoding: "utf8",
+      });
+      expect(build.status, `${build.stdout}\n${build.stderr}`).toBe(0);
+
+      rmSync(join(cleanRepository, "packages", "topology", "dist"), {
+        recursive: true,
+        force: true,
+      });
+      rmSync(join(cleanRepository, "packages", "trace-schema", "dist"), {
+        recursive: true,
+        force: true,
+      });
+
+      const typecheck = spawnSync("npm", ["run", "typecheck"], {
+        cwd: cleanRepository,
+        encoding: "utf8",
+      });
+      expect(typecheck.status, `${typecheck.stdout}\n${typecheck.stderr}`).toBe(
+        0,
+      );
+    } finally {
+      rmSync(cleanRepository, { recursive: true, force: true });
+    }
+  }, 20_000);
 });
 
 test("registry lock entries retain tarball resolution and integrity", () => {

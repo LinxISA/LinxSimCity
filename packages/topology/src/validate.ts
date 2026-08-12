@@ -87,11 +87,22 @@ export function validateTopology(
     const parent = entityById.get(entity.parentId);
     const instanceIndex = entity.instance.index;
     if (
-      parent?.capacity !== undefined &&
+      instanceIndex !== undefined &&
+      (typeof instanceIndex !== "number" ||
+        !Number.isSafeInteger(instanceIndex) ||
+        instanceIndex < 0)
+    ) {
+      errors.push(
+        error(
+          "instance_out_of_range",
+          `${entityPath}.instance.index`,
+          `instance index ${instanceIndex} must be a non-negative safe integer`,
+        ),
+      );
+    } else if (
       typeof instanceIndex === "number" &&
-      (!Number.isSafeInteger(instanceIndex) ||
-        instanceIndex < 0 ||
-        instanceIndex >= parent.capacity)
+      parent?.capacity !== undefined &&
+      instanceIndex >= parent.capacity
     ) {
       errors.push(
         error(

@@ -15,7 +15,9 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "npm run build --workspace @linxsimcity/trace-schema",
     "build": "tsc --project tsconfig.json",
+    "pretypecheck": "npm run build --workspace @linxsimcity/trace-schema",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
