@@ -38,6 +38,10 @@ target_include_directories(linxsimcity_trace_sdk
 target_include_directories(linxsimcity_trace_sdk SYSTEM PRIVATE "${RAPIDJSON_INCLUDE_DIR}")
 target_link_libraries(linxsimcity_trace_sdk PUBLIC ZLIB::ZLIB)
 
+add_executable(write_synthetic examples/write_synthetic.cpp)
+target_compile_features(write_synthetic PRIVATE cxx_std_17)
+target_link_libraries(write_synthetic PRIVATE LinxSimCity::trace_sdk)
+
 if(BUILD_TESTING)
   add_executable(bundle_writer_test tests/bundle_writer_test.cpp)
   target_compile_features(bundle_writer_test PRIVATE cxx_std_17)

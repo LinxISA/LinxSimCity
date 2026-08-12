@@ -13,6 +13,8 @@ jobs:
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npm run check
+      - run: npm run build
+      - run: node tools/linxtrace/dist/main.js validate fixtures/synthetic/minimal.trace-dir
   cpp:
     runs-on: ubuntu-latest
     steps:
@@ -20,3 +22,4 @@ jobs:
       - run: cmake -S sdk/cpp -B build/sdk -DBUILD_TESTING=ON
       - run: cmake --build build/sdk --parallel
       - run: ctest --test-dir build/sdk --output-on-failure
+      - run: ./build/sdk/write_synthetic build/ci-synthetic.trace-dir

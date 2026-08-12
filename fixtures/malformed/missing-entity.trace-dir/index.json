@@ -1,0 +1,14 @@
+{
+  "schemaVersion": "1.0.0",
+  "chunks": [
+    {
+      "path": "chunks/000000.jsonl.gz",
+      "firstCycle": 0,
+      "lastCycle": 255,
+      "eventCount": 267,
+      "compressedBytes": 3039,
+      "sha256": "b85ec690c0a35820d0a2d8de4c552414d8b7274cddc6af3b50d22db2cbd93340",
+      "checkpointPath": "checkpoints/000000.json.gz"
+    }
+  ]
+}
