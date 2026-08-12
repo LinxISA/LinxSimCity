@@ -1,6 +1,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { format } from "prettier";
 import { z } from "zod";
 
 import {
@@ -33,7 +34,7 @@ const outputPath = fileURLToPath(
 );
 
 mkdirSync(dirname(outputPath), { recursive: true });
-writeFileSync(
-  outputPath,
-  `${JSON.stringify(createTraceJsonSchema(), null, 2)}\n`,
-);
+const formattedSchema = await format(JSON.stringify(createTraceJsonSchema()), {
+  parser: "json",
+});
+writeFileSync(outputPath, formattedSchema);

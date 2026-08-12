@@ -5,14 +5,8 @@
     "manifest": {
       "type": "object",
       "properties": {
-        "schemaVersion": {
-          "type": "string",
-          "pattern": "^1\\.\\d+\\.\\d+$"
-        },
-        "modelVersion": {
-          "type": "string",
-          "minLength": 1
-        },
+        "schemaVersion": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
+        "modelVersion": { "type": "string", "minLength": 1 },
         "profile": {
           "type": "string",
           "enum": ["overview", "pipeline", "forensic"]
@@ -76,18 +70,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.fetch"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.fetch" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -110,18 +95,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.decode"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.decode" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -144,18 +120,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.rename"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.rename" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -178,18 +145,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.dispatch"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.dispatch" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -212,18 +170,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.issue"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.issue" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -246,18 +195,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.complete"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.complete" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -280,18 +220,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.retire"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.retire" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -314,18 +245,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "instruction.squash"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "instruction.squash" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -348,18 +270,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "pipeline.enter"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "pipeline.enter" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -382,18 +295,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "pipeline.leave"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "pipeline.leave" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -416,18 +320,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "pipeline.stall"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "pipeline.stall" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -450,18 +345,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "queue.allocate"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "queue.allocate" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -484,18 +370,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "queue.release"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "queue.release" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -518,18 +395,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "queue.occupancy"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "queue.occupancy" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -552,18 +420,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "queue.full"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "queue.full" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -586,18 +445,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "rob.allocate"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "rob.allocate" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -620,18 +470,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "rob.head"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "rob.head" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -654,18 +495,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "rob.tail"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "rob.tail" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -688,18 +520,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "rob.retire"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "rob.retire" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -722,18 +545,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "rob.flush"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "rob.flush" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -756,18 +570,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "register.read"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "register.read" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -790,18 +595,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "register.write"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "register.write" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -824,18 +620,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "register.ready"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "register.ready" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -858,18 +645,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cache.access"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cache.access" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -892,18 +670,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cache.hit"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cache.hit" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -926,18 +695,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cache.miss"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cache.miss" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -960,18 +720,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cache.fill"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cache.fill" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -994,18 +745,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cache.writeback"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cache.writeback" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1028,18 +770,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cell.read"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cell.read" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {
@@ -1048,19 +781,13 @@
                   "minimum": 0,
                   "maximum": 9007199254740991
                 },
-                "source": {
-                  "type": "string",
-                  "minLength": 1
-                },
+                "source": { "type": "string", "minLength": 1 },
                 "bytes": {
                   "type": "integer",
                   "exclusiveMinimum": 0,
                   "maximum": 9007199254740991
                 },
-                "result": {
-                  "type": "string",
-                  "enum": ["grant", "conflict"]
-                }
+                "result": { "type": "string", "enum": ["grant", "conflict"] }
               },
               "additionalProperties": false
             }
@@ -1081,18 +808,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cell.write"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cell.write" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1115,18 +833,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cell.grant"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cell.grant" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1149,18 +858,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cell.conflict"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cell.conflict" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1183,18 +883,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "crossbar.request"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "crossbar.request" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1217,18 +908,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "crossbar.grant"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "crossbar.grant" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1251,18 +933,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cube.dispatch"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cube.dispatch" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1285,18 +958,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cube.stage"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cube.stage" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1319,18 +983,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cube.complete"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cube.complete" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1353,18 +1008,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "cube.writeback"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "cube.writeback" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1387,18 +1033,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "vector.dispatch"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "vector.dispatch" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1421,18 +1058,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "vector.stage"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "vector.stage" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1455,18 +1083,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "vector.complete"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "vector.complete" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1489,18 +1108,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "vector.writeback"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "vector.writeback" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1523,18 +1133,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "memory.request"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "memory.request" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1557,18 +1158,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "memory.response"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "memory.response" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1591,18 +1183,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "pipe.transfer"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "pipe.transfer" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1625,18 +1208,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "flush.begin"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "flush.begin" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1659,18 +1233,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "flush.end"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "flush.end" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1693,18 +1258,9 @@
               "minimum": 0,
               "maximum": 9007199254740991
             },
-            "type": {
-              "type": "string",
-              "const": "marker.user"
-            },
-            "scope": {
-              "type": "string",
-              "minLength": 1
-            },
-            "entity_id": {
-              "type": "string",
-              "minLength": 1
-            },
+            "type": { "type": "string", "const": "marker.user" },
+            "scope": { "type": "string", "minLength": 1 },
+            "entity_id": { "type": "string", "minLength": 1 },
             "payload": {
               "type": "object",
               "properties": {},
@@ -1719,19 +1275,13 @@
     "index": {
       "type": "object",
       "properties": {
-        "schemaVersion": {
-          "type": "string",
-          "pattern": "^1\\.\\d+\\.\\d+$"
-        },
+        "schemaVersion": { "type": "string", "pattern": "^1\\.\\d+\\.\\d+$" },
         "chunks": {
           "type": "array",
           "items": {
             "type": "object",
             "properties": {
-              "path": {
-                "type": "string",
-                "minLength": 1
-              },
+              "path": { "type": "string", "minLength": 1 },
               "firstCycle": {
                 "type": "integer",
                 "minimum": 0,
@@ -1752,14 +1302,8 @@
                 "minimum": 0,
                 "maximum": 9007199254740991
               },
-              "sha256": {
-                "type": "string",
-                "pattern": "^[a-f0-9]{64}$"
-              },
-              "checkpointPath": {
-                "type": "string",
-                "minLength": 1
-              }
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "checkpointPath": { "type": "string", "minLength": 1 }
             },
             "required": [
               "path",
@@ -1785,16 +1329,10 @@
           "minimum": 0,
           "maximum": 9007199254740991
         },
-        "seq": {
-          "type": "integer",
-          "minimum": 0,
-          "maximum": 9007199254740991
-        },
+        "seq": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
         "entities": {
           "type": "object",
-          "propertyNames": {
-            "type": "string"
-          },
+          "propertyNames": { "type": "string" },
           "additionalProperties": {}
         }
       },
