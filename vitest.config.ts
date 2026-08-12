@@ -1,1 +1,1 @@
-export { default } from "./vitest.workspace.ts";
+export { default } from "./vitest.workspace.js";
