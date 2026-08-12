@@ -4,3 +4,7 @@ export * from "./reducer/checkpoint.js";
 export * from "./reducer/reduce-event.js";
 export * from "./reducer/seek.js";
 export * from "./reducer/state.js";
+export * from "./worker/client.js";
+export * from "./worker/errors.js";
+export * from "./worker/protocol.js";
+export * from "./worker/trace-worker.js";
