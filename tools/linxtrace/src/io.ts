@@ -160,6 +160,7 @@ export async function readEntryLimited(
   bundle: BundleSource,
   path: string,
   limit: number,
+  onChunk?: (chunk: Uint8Array) => void,
 ): Promise<Uint8Array> {
   const declaredSize = await bundle.size(path);
   if (declaredSize > limit) {
@@ -170,6 +171,7 @@ export async function readEntryLimited(
   const chunks: Uint8Array[] = [];
   let total = 0;
   await bundle.readChunks(path, (chunk) => {
+    onChunk?.(chunk);
     total += chunk.byteLength;
     if (total > limit) {
       throw new ResourceLimitError(

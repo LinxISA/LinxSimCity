@@ -25,6 +25,7 @@ import {
   ResourceLimitError,
   type BundleSource,
 } from "./io.js";
+import { ResourceBudget, type ResourceLimitOverrides } from "./limits.js";
 
 const REQUIRED_FILES = [
   "manifest.json",
@@ -32,11 +33,12 @@ const REQUIRED_FILES = [
   "strings.json",
   "index.json",
 ] as const;
-const MAX_METADATA_ENTRY_BYTES = 16 * 1024 * 1024;
 const MAX_COMPRESSED_CHUNK_BYTES = 256 * 1024 * 1024;
 const MAX_UNCOMPRESSED_CHUNK_BYTES = 1024 * 1024 * 1024;
-const MAX_CHUNKS = 100_000;
-const MAX_EVENTS = 100_000_000;
+
+export interface ValidationOptions {
+  limits?: ResourceLimitOverrides;
+}
 
 const TopologySchema = z.strictObject({
   schemaVersion: z.string().min(1),
@@ -150,12 +152,18 @@ async function parseRequired<T>(
   bundle: BundleSource,
   path: string,
   parser: (value: unknown) => T,
+  budget: ResourceBudget,
   errors: ValidationDiagnostic[],
 ): Promise<T | undefined> {
   try {
     return parser(
       parseJson(
-        await readEntryLimited(bundle, path, MAX_METADATA_ENTRY_BYTES),
+        await readEntryLimited(
+          bundle,
+          path,
+          budget.limits.metadataEntryBytes,
+          (chunk) => budget.consumeMetadata(chunk.byteLength, path),
+        ),
         path,
       ),
     );
@@ -214,6 +222,7 @@ async function validateChunk(
   topology: TopologyDescriptor,
   previous: EventEnvelope | undefined,
   globalEventOffset: number,
+  budget: ResourceBudget,
   errors: ValidationDiagnostic[],
 ): Promise<ChunkResult> {
   const hash = createHash("sha256");
@@ -238,6 +247,7 @@ async function validateChunk(
       );
       return;
     }
+    budget.consumeEvent(path);
     if (
       last &&
       (event.cycle < last.cycle ||
@@ -272,6 +282,7 @@ async function validateChunk(
           `${path} exceeds the ${MAX_UNCOMPRESSED_CHUNK_BYTES}-byte uncompressed resource limit`,
         );
       }
+      budget.consumeUncompressed(data.byteLength, path);
       buffer += decoder.decode(data, { stream: !final });
       const lines = buffer.split(/\r?\n/);
       buffer = lines.pop() ?? "";
@@ -294,6 +305,7 @@ async function validateChunk(
           `${path} exceeds the ${MAX_COMPRESSED_CHUNK_BYTES}-byte compressed resource limit`,
         );
       }
+      budget.consumeCompressed(chunk.byteLength, path);
       hash.update(chunk);
       gunzip.push(chunk, false);
     });
@@ -314,21 +326,24 @@ async function validateChunk(
 async function readCheckpoint(
   bundle: BundleSource,
   path: string,
+  budget: ResourceBudget,
 ): Promise<CheckpointState> {
   const compressed = await readEntryLimited(
     bundle,
     path,
-    MAX_METADATA_ENTRY_BYTES,
+    budget.limits.metadataEntryBytes,
+    (chunk) => budget.consumeCompressed(chunk.byteLength, path),
   );
   const chunks: Uint8Array[] = [];
   let total = 0;
   const gunzip = new Gunzip((data) => {
     total += data.byteLength;
-    if (total > MAX_METADATA_ENTRY_BYTES) {
+    if (total > budget.limits.metadataEntryBytes) {
       throw new ResourceLimitError(
-        `${path} exceeds the ${MAX_METADATA_ENTRY_BYTES}-byte uncompressed resource limit`,
+        `${path} exceeds the ${budget.limits.metadataEntryBytes}-byte uncompressed resource limit`,
       );
     }
+    budget.consumeUncompressed(data.byteLength, path);
     chunks.push(data);
   });
   gunzip.push(compressed, true);
@@ -346,6 +361,7 @@ async function validateChunks(
   index: TraceIndex,
   manifest: TraceManifest,
   topology: TopologyDescriptor,
+  budget: ResourceBudget,
   errors: ValidationDiagnostic[],
 ): Promise<{
   eventCount: number;
@@ -356,6 +372,7 @@ async function validateChunks(
   let first: EventEnvelope | undefined;
   let last: EventEnvelope | undefined;
   const seenPaths = new Set<string>();
+  const checkpoints = new Map<string, CheckpointState>();
 
   for (const [chunkNumber, chunk] of index.chunks.entries()) {
     const chunkPath = `index.json.chunks[${chunkNumber}]`;
@@ -395,6 +412,7 @@ async function validateChunks(
         topology,
         last,
         eventCount,
+        budget,
         errors,
       );
     } catch (error) {
@@ -407,22 +425,13 @@ async function validateChunks(
           error instanceof Error ? error.message : "chunk validation failed",
         ),
       );
+      if (error instanceof ResourceLimitError) break;
       continue;
     }
 
     first ??= result.first;
     last = result.last ?? last;
     eventCount += result.eventCount;
-    if (eventCount > MAX_EVENTS) {
-      errors.push(
-        diagnostic(
-          "resource_limit",
-          "manifest.json.eventCount",
-          `event count exceeds ${MAX_EVENTS}`,
-        ),
-      );
-      break;
-    }
     if (result.sha256 !== chunk.sha256) {
       errors.push(
         diagnostic(
@@ -522,8 +531,17 @@ async function validateChunks(
       );
     } else {
       try {
+        let checkpoint = checkpoints.get(chunk.checkpointPath);
+        if (!checkpoint) {
+          checkpoint = await readCheckpoint(
+            bundle,
+            chunk.checkpointPath,
+            budget,
+          );
+          checkpoints.set(chunk.checkpointPath, checkpoint);
+        }
         validateCheckpoint(
-          await readCheckpoint(bundle, chunk.checkpointPath),
+          checkpoint,
           chunk.checkpointPath,
           result.first,
           manifest,
@@ -542,11 +560,15 @@ async function validateChunks(
   };
 }
 
-export async function validateBundle(path: string): Promise<ValidationReport> {
+export async function validateBundle(
+  path: string,
+  options: ValidationOptions = {},
+): Promise<ValidationReport> {
   const errors: ValidationDiagnostic[] = [];
   const warnings: ValidationDiagnostic[] = [];
   const stats: ValidationStats = { cycles: 0, events: 0, chunks: 0 };
   let bundle: BundleSource | undefined;
+  const budget = new ResourceBudget(options.limits);
 
   try {
     bundle = await openBundle(path);
@@ -564,15 +586,16 @@ export async function validateBundle(path: string): Promise<ValidationReport> {
     if (errors.length > 0) return { valid: false, errors, warnings, stats };
 
     const [manifest, topology, index] = await Promise.all([
-      parseRequired(bundle, "manifest.json", parseManifest, errors),
+      parseRequired(bundle, "manifest.json", parseManifest, budget, errors),
       parseRequired(
         bundle,
         "topology.json",
         (value) => TopologySchema.parse(value) as TopologyDescriptor,
+        budget,
         errors,
       ),
-      parseRequired(bundle, "index.json", parseIndex, errors),
-      parseRequired(bundle, "strings.json", parseStrings, errors),
+      parseRequired(bundle, "index.json", parseIndex, budget, errors),
+      parseRequired(bundle, "strings.json", parseStrings, budget, errors),
     ]);
     if (!manifest || !topology || !index) {
       return { valid: false, errors, warnings, stats };
@@ -587,24 +610,16 @@ export async function validateBundle(path: string): Promise<ValidationReport> {
       events: manifest.eventCount,
       chunks: manifest.chunkCount,
     });
-    if (manifest.chunkCount > MAX_CHUNKS || index.chunks.length > MAX_CHUNKS) {
-      errors.push(
-        diagnostic(
-          "resource_limit",
-          "manifest.json.chunkCount",
-          `chunk count exceeds ${MAX_CHUNKS}`,
-        ),
-      );
-      return { valid: false, errors, warnings, stats };
-    }
-    if (manifest.eventCount > MAX_EVENTS) {
-      errors.push(
-        diagnostic(
-          "resource_limit",
-          "manifest.json.eventCount",
-          `event count exceeds ${MAX_EVENTS}`,
-        ),
-      );
+    try {
+      budget.assertChunks(manifest.chunkCount, "manifest.json.chunkCount");
+      budget.assertChunks(index.chunks.length, "index.json.chunks");
+      if (manifest.eventCount > budget.limits.events) {
+        throw new ResourceLimitError(
+          `manifest.json.eventCount exceeds the ${budget.limits.events} limit`,
+        );
+      }
+    } catch (error) {
+      errors.push(errorDiagnostic("manifest.json", error));
       return { valid: false, errors, warnings, stats };
     }
 
@@ -631,6 +646,7 @@ export async function validateBundle(path: string): Promise<ValidationReport> {
       index,
       manifest,
       topology,
+      budget,
       errors,
     );
     if (

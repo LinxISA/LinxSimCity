@@ -12,22 +12,33 @@ import {
 import { Gunzip } from "fflate";
 
 import { listDirectoryFiles, ResourceLimitError } from "./io.js";
+import { ResourceBudget, type ResourceLimitOverrides } from "./limits.js";
 
-const MAX_METADATA_BYTES = 16 * 1024 * 1024;
 const MAX_COMPRESSED_CHUNK_BYTES = 256 * 1024 * 1024;
 const MAX_UNCOMPRESSED_CHUNK_BYTES = 1024 * 1024 * 1024;
-const MAX_EVENTS = 100_000_000;
 
-async function readJsonMetadata(path: string): Promise<unknown> {
-  if ((await stat(path)).size > MAX_METADATA_BYTES) {
+export interface IndexOptions {
+  limits?: ResourceLimitOverrides;
+}
+
+async function readJsonMetadata(
+  path: string,
+  budget: ResourceBudget,
+): Promise<unknown> {
+  const size = (await stat(path)).size;
+  if (size > budget.limits.metadataEntryBytes) {
     throw new ResourceLimitError(
-      `${path} exceeds the ${MAX_METADATA_BYTES}-byte metadata limit`,
+      `${path} exceeds the ${budget.limits.metadataEntryBytes}-byte metadata limit`,
     );
   }
+  budget.consumeMetadata(size, path);
   return JSON.parse(await readFile(path, "utf8"));
 }
 
-async function inspectChunk(path: string): Promise<{
+async function inspectChunk(
+  path: string,
+  budget: ResourceBudget,
+): Promise<{
   first: EventEnvelope;
   last: EventEnvelope;
   eventCount: number;
@@ -46,12 +57,10 @@ async function inspectChunk(path: string): Promise<{
   const parseLine = (line: string): void => {
     if (!line) return;
     const event = parseEvent(JSON.parse(line));
+    budget.consumeEvent(path);
     first ??= event;
     last = event;
     eventCount++;
-    if (eventCount > MAX_EVENTS) {
-      throw new ResourceLimitError(`event count exceeds ${MAX_EVENTS}`);
-    }
   };
   const gunzip = new Gunzip((data, final) => {
     uncompressedBytes += data.byteLength;
@@ -60,6 +69,7 @@ async function inspectChunk(path: string): Promise<{
         `${path} exceeds the ${MAX_UNCOMPRESSED_CHUNK_BYTES}-byte uncompressed limit`,
       );
     }
+    budget.consumeUncompressed(data.byteLength, path);
     buffer += decoder.decode(data, { stream: !final });
     const lines = buffer.split(/\r?\n/);
     buffer = lines.pop() ?? "";
@@ -74,6 +84,7 @@ async function inspectChunk(path: string): Promise<{
         `${path} exceeds the ${MAX_COMPRESSED_CHUNK_BYTES}-byte compressed limit`,
       );
     }
+    budget.consumeCompressed(chunk.byteLength, path);
     hash.update(chunk);
     gunzip.push(chunk, false);
   }
@@ -88,17 +99,23 @@ async function inspectChunk(path: string): Promise<{
   };
 }
 
-export async function rebuildIndex(directory: string): Promise<void> {
+export async function rebuildIndex(
+  directory: string,
+  options: IndexOptions = {},
+): Promise<void> {
+  const budget = new ResourceBudget(options.limits);
   const manifest = parseManifest(
-    await readJsonMetadata(join(directory, "manifest.json")),
+    await readJsonMetadata(join(directory, "manifest.json"), budget),
   );
   const files = await listDirectoryFiles(directory);
+  const chunkPaths = files.filter((file) =>
+    /^chunks\/.*\.jsonl\.gz$/.test(file),
+  );
+  budget.assertChunks(chunkPaths.length, "chunks");
   const chunks: ChunkIndexEntry[] = [];
 
-  for (const path of files.filter((file) =>
-    /^chunks\/.*\.jsonl\.gz$/.test(file),
-  )) {
-    const chunk = await inspectChunk(join(directory, path));
+  for (const path of chunkPaths) {
+    const chunk = await inspectChunk(join(directory, path), budget);
     const checkpointNumber = Math.floor(
       chunk.first.cycle / manifest.checkpointCycleSpan,
     );

@@ -4,6 +4,7 @@ import {
   mkdir,
   readFile,
   rm,
+  symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
@@ -448,6 +449,20 @@ describe("linxtrace CLI", () => {
     expect(second.status).toBe(1);
     expect(first.stderr).toContain("outside the source directory");
     expect(second.stderr).toContain("outside the source directory");
+    await expect(access(output)).rejects.toThrow();
+  });
+
+  test("pack rejects an outside symlink alias that resolves into the source", async () => {
+    const bundle = join(testRoot, "minimal.trace-dir");
+    const alias = join(testRoot, "source-alias");
+    await writeBundle(bundle);
+    await symlink(bundle, alias, "dir");
+    const output = join(alias, "nested", "minimal.linxtrace");
+
+    const result = runCli("pack", bundle, output);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("outside the source directory");
     await expect(access(output)).rejects.toThrow();
   });
 });

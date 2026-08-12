@@ -1,6 +1,13 @@
 import { createReadStream, createWriteStream } from "node:fs";
-import { mkdir } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { mkdir, realpath } from "node:fs/promises";
+import {
+  basename,
+  dirname,
+  isAbsolute,
+  join,
+  relative,
+  resolve,
+} from "node:path";
 import { Readable, Writable } from "node:stream";
 import { finished } from "node:stream/promises";
 
@@ -8,12 +15,34 @@ import { ZipWriter } from "@zip.js/zip.js";
 
 import { listDirectoryFiles } from "./io.js";
 
-function assertOutputOutsideSource(
+async function canonicalizePotentialPath(path: string): Promise<string> {
+  let ancestor = resolve(path);
+  const suffix: string[] = [];
+  for (;;) {
+    try {
+      return resolve(await realpath(ancestor), ...suffix.toReversed());
+    } catch (error) {
+      if (
+        !(error instanceof Error) ||
+        !("code" in error) ||
+        error.code !== "ENOENT"
+      ) {
+        throw error;
+      }
+      const parent = dirname(ancestor);
+      if (parent === ancestor) throw error;
+      suffix.push(basename(ancestor));
+      ancestor = parent;
+    }
+  }
+}
+
+async function assertOutputOutsideSource(
   directory: string,
   outputPath: string,
-): void {
-  const source = resolve(directory);
-  const output = resolve(outputPath);
+): Promise<void> {
+  const source = await realpath(directory);
+  const output = await canonicalizePotentialPath(outputPath);
   const fromSource = relative(source, output);
   if (
     fromSource === "" ||
@@ -27,7 +56,7 @@ export async function packBundle(
   directory: string,
   outputPath: string,
 ): Promise<void> {
-  assertOutputOutsideSource(directory, outputPath);
+  await assertOutputOutsideSource(directory, outputPath);
   const files = await listDirectoryFiles(directory);
   await mkdir(dirname(resolve(outputPath)), { recursive: true });
 
