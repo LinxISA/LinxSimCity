@@ -24,6 +24,7 @@ export class TraceClientError extends Error {
 }
 
 export function normalizeWorkerError(error: unknown): WorkerDiagnostic {
+  if (error instanceof TraceClientError) return error.diagnostic;
   if (error instanceof TraceBundleError) {
     return { code: error.code, message: error.message, fatal: true };
   }
