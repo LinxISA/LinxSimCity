@@ -220,6 +220,36 @@ select {
   transform: translateX(-50%);
 }
 
+.trace-loader-compact {
+  top: 14px;
+  left: 14px;
+  width: auto;
+  transform: none;
+}
+
+.trace-loader-compact input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.trace-compact-button {
+  padding: 8px 11px;
+  border: 1px solid rgb(103 216 255 / 28%);
+  border-radius: 8px;
+  color: #b9eaff;
+  background: rgb(3 13 25 / 84%);
+  box-shadow: 0 8px 24px rgb(0 0 0 / 30%);
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+}
+
+.trace-compact-button:hover {
+  border-color: #67d8ff;
+  color: #fff;
+}
+
 .trace-dropzone {
   position: relative;
   display: grid;

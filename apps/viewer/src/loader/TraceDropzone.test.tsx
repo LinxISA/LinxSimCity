@@ -39,3 +39,12 @@ test("shows load progress without hiding the picker", () => {
   expect(screen.getByText(/validating trace/i)).toBeTruthy();
   expect(screen.getByLabelText(/choose trace/i)).toBeTruthy();
 });
+
+test("keeps a compact local trace picker available after loading", () => {
+  render(<TraceDropzone onLoad={vi.fn()} status="playing" compact={true} />);
+  expect(
+    screen.getByRole("button", { name: /open local trace/i }),
+  ).toBeTruthy();
+  expect(screen.getByLabelText(/choose trace file/i)).toBeTruthy();
+  expect(screen.queryByTestId("trace-dropzone")).toBeNull();
+});

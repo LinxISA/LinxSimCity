@@ -14,7 +14,6 @@ export function App() {
   const status = usePlayerStore((state) => state.status);
   const info = usePlayerStore((state) => state.info);
   const snapshot = usePlayerStore((state) => state.snapshot);
-  const unload = usePlayerStore((state) => state.unload);
   const cycle = usePlayerStore((state) => state.cycle);
   const rate = usePlayerStore((state) => state.rate);
   const mode = usePlayerStore((state) => state.mode);
@@ -26,9 +25,13 @@ export function App() {
   const step = usePlayerStore((state) => state.step);
   const setRate = usePlayerStore((state) => state.setRate);
   const setMode = usePlayerStore((state) => state.setMode);
-  const { loadFile, diagnostic } = useTraceLoader();
+  const { loadFile, startDefaultTrace, retryLoad, diagnostic } =
+    useTraceLoader();
 
   useEffect(() => startPlaybackClock(playerStore), []);
+  useEffect(() => {
+    void startDefaultTrace();
+  }, [startDefaultTrace]);
 
   return (
     <main className="app-shell">
@@ -43,15 +46,17 @@ export function App() {
       </header>
       <section className="workspace">
         <div className="scene-column">
-          {!snapshot ? (
-            <TraceDropzone onLoad={loadFile} status={status} />
-          ) : null}
+          <TraceDropzone
+            compact={Boolean(snapshot)}
+            onLoad={loadFile}
+            status={status}
+          />
           {diagnostic ? (
             <DiagnosticsPanel
               diagnostic={diagnostic}
               schemaVersion={info?.manifest.schemaVersion}
               modelVersion={info?.manifest.modelVersion}
-              onRetry={() => void unload()}
+              onRetry={() => void retryLoad()}
             />
           ) : null}
           <SceneViewport snapshot={snapshot} topology={info?.topology} />

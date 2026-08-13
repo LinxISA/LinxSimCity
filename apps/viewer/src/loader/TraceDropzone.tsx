@@ -1,14 +1,26 @@
-import { useId, useState, type ChangeEvent, type DragEvent } from "react";
+import {
+  useId,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type DragEvent,
+} from "react";
 
 import type { PlayerStatus } from "../player/types.js";
 
 interface TraceDropzoneProps {
   readonly onLoad: (file: File) => Promise<unknown> | void;
   readonly status: PlayerStatus;
+  readonly compact?: boolean | undefined;
 }
 
-export function TraceDropzone({ onLoad, status }: TraceDropzoneProps) {
+export function TraceDropzone({
+  onLoad,
+  status,
+  compact = false,
+}: TraceDropzoneProps) {
   const inputId = useId();
+  const input = useRef<HTMLInputElement>(null);
   const [localError, setLocalError] = useState<string>();
   const [dragging, setDragging] = useState(false);
 
@@ -34,6 +46,33 @@ export function TraceDropzone({ onLoad, status }: TraceDropzoneProps) {
     setDragging(false);
     acceptFile(event.dataTransfer.files[0]);
   };
+
+  if (compact) {
+    return (
+      <div className="trace-loader trace-loader-compact">
+        <button
+          className="trace-compact-button"
+          type="button"
+          onClick={() => input.current?.click()}
+        >
+          Open local trace
+        </button>
+        <input
+          ref={input}
+          id={inputId}
+          aria-label="Choose trace file"
+          type="file"
+          accept=".linxtrace"
+          onChange={onChange}
+        />
+        {localError ? (
+          <p className="inline-error" role="alert">
+            {localError}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div className="trace-loader">
