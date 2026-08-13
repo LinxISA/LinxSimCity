@@ -75,62 +75,76 @@ function resetTransientEntities(
   }
 }
 
+export function reduceEvents(
+  snapshot: ViewerSnapshot,
+  events: readonly EventEnvelope[],
+): ViewerSnapshot {
+  if (events.length === 0) return snapshot;
+
+  const entities = new Map(snapshot.entities);
+  let current = { ...snapshot, entities };
+  for (const event of events) {
+    if (event.cycle < current.cycle) {
+      throw new Error(
+        `event cycle ${event.cycle} precedes snapshot cycle ${current.cycle}`,
+      );
+    }
+
+    const changed = new Set<string>();
+    const crossedCycle = event.cycle !== current.cycle;
+    if (crossedCycle) resetTransientEntities(current, entities, changed);
+
+    const currentEntity = entities.get(event.entity_id);
+    if (!currentEntity) {
+      throw new Error(`event references missing entity: ${event.entity_id}`);
+    }
+
+    const transientStatus = TRANSIENT_STATUS.get(event.type);
+    const steadyStatus = STEADY_STATUS.get(event.type);
+    const status = transientStatus ?? steadyStatus ?? "active";
+    const payload = payloadRecord(event.payload);
+    const occupancy =
+      typeof payload.occupancy === "number"
+        ? payload.occupancy
+        : currentEntity.occupancy;
+    const stage =
+      typeof payload.stage === "string" ? payload.stage : currentEntity.stage;
+    entities.set(event.entity_id, {
+      ...currentEntity,
+      status,
+      steadyStatus: steadyStatus ?? currentEntity.steadyStatus,
+      occupancy,
+      stage,
+      lastEvent: event,
+      data: { ...currentEntity.data, ...payload },
+    });
+    changed.add(event.entity_id);
+
+    const transientEntityIds = crossedCycle
+      ? new Set<string>()
+      : new Set(current.transientEntityIds);
+    if (transientStatus !== undefined || steadyStatus === undefined) {
+      transientEntityIds.add(event.entity_id);
+    } else {
+      transientEntityIds.delete(event.entity_id);
+    }
+
+    current = {
+      ...current,
+      cycle: event.cycle,
+      entities,
+      activeEvents: crossedCycle ? [event] : [...current.activeEvents, event],
+      changedEntityIds: [...changed].sort(),
+      transientEntityIds,
+    };
+  }
+
+  return current;
+}
+
 export function reduceEvent(
   snapshot: ViewerSnapshot,
   event: EventEnvelope,
 ): ViewerSnapshot {
-  if (event.cycle < snapshot.cycle) {
-    throw new Error(
-      `event cycle ${event.cycle} precedes snapshot cycle ${snapshot.cycle}`,
-    );
-  }
-
-  const entities = new Map(snapshot.entities);
-  const changed = new Set<string>();
-  const crossedCycle = event.cycle !== snapshot.cycle;
-  if (crossedCycle) resetTransientEntities(snapshot, entities, changed);
-
-  const current = entities.get(event.entity_id);
-  if (!current) {
-    throw new Error(`event references missing entity: ${event.entity_id}`);
-  }
-
-  const transientStatus = TRANSIENT_STATUS.get(event.type);
-  const steadyStatus = STEADY_STATUS.get(event.type);
-  const status = transientStatus ?? steadyStatus ?? "active";
-  const payload = payloadRecord(event.payload);
-  const occupancy =
-    typeof payload.occupancy === "number"
-      ? payload.occupancy
-      : current.occupancy;
-  const stage =
-    typeof payload.stage === "string" ? payload.stage : current.stage;
-  entities.set(event.entity_id, {
-    ...current,
-    status,
-    steadyStatus: steadyStatus ?? current.steadyStatus,
-    occupancy,
-    stage,
-    lastEvent: event,
-    data: { ...current.data, ...payload },
-  });
-  changed.add(event.entity_id);
-
-  const transientEntityIds = crossedCycle
-    ? new Set<string>()
-    : new Set(snapshot.transientEntityIds);
-  if (transientStatus !== undefined || steadyStatus === undefined) {
-    transientEntityIds.add(event.entity_id);
-  } else {
-    transientEntityIds.delete(event.entity_id);
-  }
-
-  return {
-    ...snapshot,
-    cycle: event.cycle,
-    entities,
-    activeEvents: crossedCycle ? [event] : [...snapshot.activeEvents, event],
-    changedEntityIds: [...changed].sort(),
-    transientEntityIds,
-  };
+  return reduceEvents(snapshot, [event]);
 }

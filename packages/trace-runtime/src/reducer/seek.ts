@@ -2,7 +2,7 @@ import type { ChunkIndexEntry } from "@linxsimcity/trace-schema";
 
 import type { TraceBundleReaderInterface } from "../bundle/types.js";
 import { restoreCheckpoint } from "./checkpoint.js";
-import { reduceEvent } from "./reduce-event.js";
+import { reduceEvents } from "./reduce-event.js";
 import {
   initialSnapshot,
   withSnapshotCycle,
@@ -69,10 +69,10 @@ export async function seekToCycle(
       chunk.lastCycle >= checkpoint.cycle && chunk.firstCycle <= targetCycle,
   );
   for (const chunk of replayChunks) {
-    for (const event of await reader.readChunk(chunk)) {
-      if (event.cycle < checkpoint.cycle || event.cycle > targetCycle) continue;
-      snapshot = reduceEvent(snapshot, event);
-    }
+    const events = (await reader.readChunk(chunk)).filter(
+      (event) => event.cycle >= checkpoint.cycle && event.cycle <= targetCycle,
+    );
+    snapshot = reduceEvents(snapshot, events);
   }
   return withSnapshotCycle(snapshot, targetCycle);
 }
