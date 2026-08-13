@@ -20,6 +20,7 @@ export function useTraceLoader() {
   const [defaultDiagnostic, setDefaultDiagnostic] =
     useState<WorkerDiagnostic>();
   const controller = useRef<DefaultTraceController>(undefined);
+  const lifecycleGeneration = useRef(0);
 
   controller.current ??= createDefaultTraceController({
     baseUrl: import.meta.env.BASE_URL,
@@ -33,12 +34,16 @@ export function useTraceLoader() {
     },
   });
 
-  useEffect(
-    () => () => {
-      controller.current?.cancel();
-    },
-    [],
-  );
+  useEffect(() => {
+    const mountedGeneration = ++lifecycleGeneration.current;
+    return () => {
+      queueMicrotask(() => {
+        if (lifecycleGeneration.current === mountedGeneration) {
+          controller.current?.cancel();
+        }
+      });
+    };
+  }, []);
 
   const startDefaultTrace = useCallback(() => controller.current!.start(), []);
   const loadFile = useCallback(

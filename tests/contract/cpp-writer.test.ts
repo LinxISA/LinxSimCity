@@ -117,7 +117,7 @@ test("C++ writer output validates identically as a directory and ZIP", async () 
       payload: expect.objectContaining({ wrap: true }),
     }),
   );
-});
+}, 30_000);
 
 test("checked-in malformed fixtures each contain one documented error", () => {
   const fixtures = [

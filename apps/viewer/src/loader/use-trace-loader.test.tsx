@@ -2,6 +2,7 @@
 
 import type { WorkerDiagnostic } from "@linxsimcity/trace-runtime";
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 import { useTraceLoader } from "./use-trace-loader.js";
@@ -28,7 +29,7 @@ function deferred<T>() {
 }
 
 function okResponse(): Response {
-  return new Response(new Blob(["zip"]), { status: 200 });
+  return new Response("zip", { status: 200 });
 }
 
 beforeEach(() => {
@@ -109,6 +110,32 @@ test("unmounting cancels a pending default trace before a remount loads local da
   expect(storeState.loadTrace).toHaveBeenCalledTimes(1);
   expect(storeState.loadTrace).toHaveBeenCalledWith(localFile);
   expect(storeState.play).not.toHaveBeenCalled();
+});
+
+test("StrictMode effect replay shares one default trace request", async () => {
+  const pendingResponse = deferred<Response>();
+  const fetchTrace = vi.fn(async () => pendingResponse.promise);
+  const effectSetup = vi.fn();
+  vi.stubGlobal("fetch", fetchTrace);
+
+  renderHook(
+    () => {
+      const loader = useTraceLoader();
+      useEffect(() => {
+        effectSetup();
+        void loader.startDefaultTrace();
+      }, [loader.startDefaultTrace]);
+      return loader;
+    },
+    { reactStrictMode: true },
+  );
+
+  await act(async () => {});
+  expect(effectSetup).toHaveBeenCalledTimes(2);
+  expect(fetchTrace).toHaveBeenCalledTimes(1);
+  pendingResponse.resolve(okResponse());
+  await waitFor(() => expect(storeState.play).toHaveBeenCalledTimes(1));
+  expect(storeState.loadTrace).toHaveBeenCalledTimes(1);
 });
 
 test("a default fetch error is visible and retry reloads the demo", async () => {

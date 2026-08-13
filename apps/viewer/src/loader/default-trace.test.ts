@@ -16,7 +16,7 @@ function deferred<T>() {
 }
 
 function okResponse(): Response {
-  return new Response(new Blob(["zip"]), {
+  return new Response("zip", {
     status: 200,
     headers: { "content-type": "application/zip" },
   });
