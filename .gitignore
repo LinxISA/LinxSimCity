@@ -4,4 +4,5 @@ dist/
 build/
 coverage/
 *.linxtrace
+!apps/viewer/public/traces/supernpubench-fa-250-blocks.linxtrace
 .DS_Store
