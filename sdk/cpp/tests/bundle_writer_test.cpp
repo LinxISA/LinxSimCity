@@ -19,7 +19,12 @@ namespace fs = std::filesystem;
 using linxsimcity::trace::BundleWriter;
 using linxsimcity::trace::Event;
 using linxsimcity::trace::TopologyBuilder;
+using linxsimcity::trace::TopologyDistrict;
 using linxsimcity::trace::TopologyEntity;
+using linxsimcity::trace::TopologyLayout;
+using linxsimcity::trace::TopologyPlacement;
+using linxsimcity::trace::TopologyPort;
+using linxsimcity::trace::TopologyRoute;
 using linxsimcity::trace::TraceOrderError;
 using linxsimcity::trace::WriterOptions;
 
@@ -124,6 +129,74 @@ void TestContractAndStrictOrdering() {
   Require(lines.find(R"("seq":1)") != std::string::npos,
           "second assigned seq missing");
   ParseJson(ReadGzip(output / "checkpoints/000000.json.gz"));
+  fs::remove_all(output);
+}
+
+void TestPhysicalTopologyAndCapabilitiesSerializeExactly() {
+  const auto output = TempDirectory("physical-topology");
+  WriterOptions options{output};
+  options.capabilities = {"instruction-causality-v1", "physical-layout-v1"};
+  BundleWriter writer(std::move(options));
+
+  auto topology = OneEntityTopology().Build();
+  topology.schemaVersion = "1.1.0";
+  TopologyLayout layout;
+  layout.districts.push_back(
+      TopologyDistrict{"scalar", {0.0, 2.0, 0.0}, {20.0, 4.0, 12.0}});
+  topology.layout = std::move(layout);
+
+  auto &fetch = topology.entities.front();
+  TopologyPlacement placement;
+  placement.district = "scalar";
+  placement.thread = 0;
+  placement.position = {-5.0, 1.0, 0.0};
+  placement.size = {4.0, 2.0, 3.0};
+  placement.rotation = {0.0, 0.0, 0.0};
+  placement.lodGroup = "scalar-pipeline";
+  fetch.placement = std::move(placement);
+  TopologyPort fetchPort;
+  fetchPort.id = "pe0.fetch.out";
+  fetchPort.direction = "out";
+  fetchPort.widthBytes = 16;
+  fetchPort.position = linxsimcity::trace::TopologyVector3{-3.0, 1.0, 0.0};
+  fetch.ports.push_back(std::move(fetchPort));
+
+  TopologyEntity pipe;
+  pipe.id = "pipe.scalar.fetch";
+  pipe.kind = "pipe";
+  pipe.label = "Fetch route";
+  pipe.route = TopologyRoute{"orthogonal",
+                             "pe0.fetch.out",
+                             "pe0.fetch.out",
+                             {{-3.0, 1.0, 0.0}, {0.0, 1.0, 0.0}}};
+  topology.entities.push_back(std::move(pipe));
+
+  writer.SetTopology(std::move(topology));
+  writer.Close();
+
+  const auto topologyJson = ParseJson(ReadFile(output / "topology.json"));
+  Require(topologyJson["layout"]["schema"] == "linx-city-v1",
+          "layout schema missing");
+  Require(topologyJson["layout"]["districts"][0]["size"][2].GetDouble() == 12.0,
+          "district size missing");
+  Require(topologyJson["entities"][0]["placement"]["thread"].GetUint64() == 0,
+          "placement thread missing");
+  Require(topologyJson["entities"][0]["placement"]["position"][0].GetDouble() ==
+              -5.0,
+          "placement position missing");
+  Require(topologyJson["entities"][0]["ports"][0]["position"][0].GetDouble() ==
+              -3.0,
+          "port position missing");
+  Require(topologyJson["entities"][1]["route"]["style"] == "orthogonal",
+          "route style missing");
+  Require(topologyJson["entities"][1]["route"]["points"].Size() == 2,
+          "route points missing");
+
+  const auto manifest = ParseJson(ReadFile(output / "manifest.json"));
+  Require(manifest["capabilities"].Size() == 2,
+          "manifest capabilities missing");
+  Require(manifest["capabilities"][1] == "physical-layout-v1",
+          "manifest capability order changed");
   fs::remove_all(output);
 }
 
@@ -289,6 +362,7 @@ void TestUnknownEntityDoesNotMutateWriterState() {
 int main() {
   try {
     TestContractAndStrictOrdering();
+    TestPhysicalTopologyAndCapabilitiesSerializeExactly();
     TestChunkBoundaryAndIndexIntegrity();
     TestCloseIsIdempotent();
     TestMoveConstructionPreservesBufferedTrace();

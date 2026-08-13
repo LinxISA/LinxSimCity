@@ -121,12 +121,47 @@ void WriteValueMap(Writer &writer,
   writer.EndObject();
 }
 
+template <typename Writer>
+void WriteVector3(Writer &writer, const TopologyVector3 &value) {
+  writer.StartArray();
+  for (const auto coordinate : value) {
+    writer.Double(coordinate);
+  }
+  writer.EndArray();
+}
+
 std::string SerializeTopology(const TopologyDescriptor &topology) {
   rapidjson::StringBuffer buffer;
   rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
   writer.StartObject();
   writer.Key("schemaVersion");
   writer.String(topology.schemaVersion.c_str());
+  if (topology.layout) {
+    writer.Key("layout");
+    writer.StartObject();
+    writer.Key("schema");
+    writer.String(topology.layout->schema.c_str());
+    writer.Key("units");
+    writer.String(topology.layout->units.c_str());
+    writer.Key("upAxis");
+    writer.String(topology.layout->upAxis.c_str());
+    writer.Key("forwardAxis");
+    writer.String(topology.layout->forwardAxis.c_str());
+    writer.Key("districts");
+    writer.StartArray();
+    for (const auto &district : topology.layout->districts) {
+      writer.StartObject();
+      writer.Key("id");
+      writer.String(district.id.c_str());
+      writer.Key("position");
+      WriteVector3(writer, district.position);
+      writer.Key("size");
+      WriteVector3(writer, district.size);
+      writer.EndObject();
+    }
+    writer.EndArray();
+    writer.EndObject();
+  }
   writer.Key("entities");
   writer.StartArray();
   for (const auto &entity : topology.entities) {
@@ -160,6 +195,10 @@ std::string SerializeTopology(const TopologyDescriptor &topology) {
           writer.Key("widthBytes");
           writer.Uint64(*port.widthBytes);
         }
+        if (port.position) {
+          writer.Key("position");
+          WriteVector3(writer, *port.position);
+        }
         writer.EndObject();
       }
       writer.EndArray();
@@ -169,6 +208,22 @@ std::string SerializeTopology(const TopologyDescriptor &topology) {
       writer.StartObject();
       writer.Key("district");
       writer.String(entity.placement->district.c_str());
+      if (entity.placement->thread) {
+        writer.Key("thread");
+        writer.Uint64(*entity.placement->thread);
+      }
+      if (entity.placement->position) {
+        writer.Key("position");
+        WriteVector3(writer, *entity.placement->position);
+      }
+      if (entity.placement->size) {
+        writer.Key("size");
+        WriteVector3(writer, *entity.placement->size);
+      }
+      if (entity.placement->rotation) {
+        writer.Key("rotation");
+        WriteVector3(writer, *entity.placement->rotation);
+      }
       if (entity.placement->order) {
         writer.Key("order");
         writer.Uint64(*entity.placement->order);
@@ -181,6 +236,27 @@ std::string SerializeTopology(const TopologyDescriptor &topology) {
         writer.Key("column");
         writer.Uint64(*entity.placement->column);
       }
+      if (entity.placement->lodGroup) {
+        writer.Key("lodGroup");
+        writer.String(entity.placement->lodGroup->c_str());
+      }
+      writer.EndObject();
+    }
+    if (entity.route) {
+      writer.Key("route");
+      writer.StartObject();
+      writer.Key("style");
+      writer.String(entity.route->style.c_str());
+      writer.Key("fromPortId");
+      writer.String(entity.route->fromPortId.c_str());
+      writer.Key("toPortId");
+      writer.String(entity.route->toPortId.c_str());
+      writer.Key("points");
+      writer.StartArray();
+      for (const auto &point : entity.route->points) {
+        WriteVector3(writer, point);
+      }
+      writer.EndArray();
       writer.EndObject();
     }
     if (!entity.attributes.empty()) {
@@ -334,6 +410,14 @@ public:
     writer.Uint64(options.chunkCycleSpan);
     writer.Key("checkpointCycleSpan");
     writer.Uint64(options.checkpointCycleSpan);
+    if (!options.capabilities.empty()) {
+      writer.Key("capabilities");
+      writer.StartArray();
+      for (const auto &capability : options.capabilities) {
+        writer.String(capability.c_str());
+      }
+      writer.EndArray();
+    }
     writer.EndObject();
     WriteFile(options.outputDirectory / "manifest.json",
               {buffer.GetString(), buffer.GetSize()});

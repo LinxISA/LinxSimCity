@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <vector>
 
 namespace linxsimcity::trace {
 
@@ -20,6 +21,7 @@ struct WriterOptions {
   std::string profile{"pipeline"};
   std::uint64_t chunkCycleSpan{4096};
   std::uint64_t checkpointCycleSpan{4096};
+  std::vector<std::string> capabilities;
 };
 
 class BundleWriter final : public TraceSink {

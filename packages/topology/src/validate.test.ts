@@ -9,6 +9,203 @@ import {
 } from "./index.js";
 
 describe("validateTopology", () => {
+  const physicalTopology = (): TopologyDescriptor => ({
+    schemaVersion: "1.1.0",
+    layout: {
+      schema: "linx-city-v1",
+      units: "scene-unit",
+      upAxis: "y",
+      forwardAxis: "-z",
+      districts: [
+        {
+          id: "scalar",
+          position: [0, 2, 0],
+          size: [20, 4, 12],
+        },
+      ],
+    },
+    entities: [
+      {
+        id: "pe0.issue",
+        kind: "module",
+        label: "Issue",
+        instance: { index: 0 },
+        placement: {
+          district: "scalar",
+          thread: 0,
+          position: [-5, 1, 0],
+          size: [4, 2, 3],
+          rotation: [0, 0, 0],
+          lodGroup: "scalar-pipeline",
+        },
+        ports: [
+          {
+            id: "pe0.issue.out1",
+            direction: "out",
+            position: [-3, 1, 0],
+          },
+        ],
+      },
+      {
+        id: "pe0.int0",
+        kind: "module",
+        label: "INT0",
+        instance: { index: 0 },
+        placement: {
+          district: "scalar",
+          thread: 0,
+          position: [5, 1, 0],
+          size: [4, 2, 3],
+          rotation: [0, 0, 0],
+        },
+        ports: [
+          {
+            id: "pe0.int0.in",
+            direction: "in",
+            position: [3, 1, 0],
+          },
+        ],
+      },
+      {
+        id: "pipe.scalar.int0",
+        kind: "pipe",
+        label: "Issue to INT0",
+        instance: { index: 0 },
+        route: {
+          style: "orthogonal",
+          fromPortId: "pe0.issue.out1",
+          toPortId: "pe0.int0.in",
+          points: [
+            [-3, 1, 0],
+            [0, 1, 0],
+            [0, 1, 2],
+            [3, 1, 2],
+            [3, 1, 0],
+          ],
+        },
+      },
+    ],
+  });
+
+  test("accepts finite physical placement and an orthogonal route", () => {
+    expect(validateTopology(physicalTopology())).toEqual({
+      errors: [],
+      warnings: [],
+    });
+  });
+
+  test("rejects invalid district and entity geometry", () => {
+    const topology = physicalTopology();
+    topology.layout!.districts[0]!.size = [20, 0, 12];
+    topology.entities[0]!.placement!.position = [Number.NaN, 1, 0];
+    topology.entities[1]!.placement!.size = [4, -2, 3];
+
+    expect(validateTopology(topology).errors).toMatchObject([
+      { code: "invalid_layout", path: "layout.districts[0].size[1]" },
+      {
+        code: "invalid_placement",
+        path: "entities[0].placement.position[0]",
+      },
+      {
+        code: "invalid_placement",
+        path: "entities[1].placement.size[1]",
+      },
+    ]);
+  });
+
+  test("rejects an entity outside its declared district", () => {
+    const topology = physicalTopology();
+    topology.entities[1]!.placement!.position = [10, 1, 0];
+
+    expect(validateTopology(topology).errors).toMatchObject([
+      {
+        code: "placement_out_of_bounds",
+        path: "entities[1].placement",
+      },
+    ]);
+  });
+
+  test("requires globally unique port IDs and existing route endpoints", () => {
+    const topology = physicalTopology();
+    topology.entities[1]!.ports![0]!.id = "pe0.issue.out1";
+    topology.entities[2]!.route!.toPortId = "pe0.missing.in";
+
+    expect(validateTopology(topology).errors).toMatchObject([
+      {
+        code: "duplicate_entity_id",
+        path: "entities[1].ports[0].id",
+      },
+      {
+        code: "missing_port_reference",
+        path: "entities[2].route.toPortId",
+      },
+    ]);
+  });
+
+  test("rejects an unsupported physical coordinate contract", () => {
+    const topology = physicalTopology() as unknown as {
+      layout: {
+        schema: string;
+        units: string;
+        upAxis: string;
+        forwardAxis: string;
+      };
+    } & TopologyDescriptor;
+    topology.layout.schema = "unknown-city";
+    topology.layout.units = "millimeter";
+    topology.layout.upAxis = "z";
+    topology.layout.forwardAxis = "+z";
+
+    expect(validateTopology(topology).errors).toMatchObject([
+      { code: "invalid_layout", path: "layout.schema" },
+      { code: "invalid_layout", path: "layout.units" },
+      { code: "invalid_layout", path: "layout.upAxis" },
+      { code: "invalid_layout", path: "layout.forwardAxis" },
+    ]);
+  });
+
+  test("requires route endpoints to meet their physical port positions", () => {
+    const topology = physicalTopology();
+    topology.entities[2]!.route!.points[0] = [-2, 1, 0];
+    topology.entities[2]!.route!.points[4] = [3, 1, 1];
+
+    expect(validateTopology(topology).errors).toMatchObject([
+      {
+        code: "invalid_route",
+        path: "entities[2].route.points[0]",
+      },
+      {
+        code: "invalid_route",
+        path: "entities[2].route.points[4]",
+      },
+    ]);
+  });
+
+  test("rejects diagonal and zero-length route segments", () => {
+    const topology = physicalTopology();
+    topology.entities[2]!.route!.points = [
+      [-3, 1, 0],
+      [0, 1, 2],
+      [0, 1, 2],
+      [3, 1, 0],
+    ];
+
+    expect(validateTopology(topology).errors).toMatchObject([
+      {
+        code: "invalid_route",
+        path: "entities[2].route.points[1]",
+      },
+      {
+        code: "invalid_route",
+        path: "entities[2].route.points[2]",
+      },
+      {
+        code: "invalid_route",
+        path: "entities[2].route.points[3]",
+      },
+    ]);
+  });
+
   test("reports duplicate entity IDs", () => {
     const result = validateTopology({
       schemaVersion: "1.0.0",

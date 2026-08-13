@@ -77,6 +77,7 @@ export interface TraceManifest {
   chunkCount: number;
   chunkCycleSpan: number;
   checkpointCycleSpan: number;
+  capabilities?: string[] | undefined;
 }
 
 export interface ChunkIndexEntry {

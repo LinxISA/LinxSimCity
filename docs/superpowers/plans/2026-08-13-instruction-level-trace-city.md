@@ -92,6 +92,7 @@ tests/linx_trace/
 - Modify: `packages/trace-schema/src/schemas.ts`
 - Modify: `packages/trace-schema/src/schemas.test.ts`
 - Modify: `packages/trace-schema/src/index.ts`
+- Modify: `packages/trace-schema/package.json`
 - Regenerate: `packages/trace-schema/schema/linxtrace-v1.schema.json`
 
 **Interfaces:**
@@ -100,7 +101,7 @@ tests/linx_trace/
 - Produces manifest capability strings `instruction-causality-v1`, `physical-layout-v1`, `shared-cache-v1`, `cell-128b-v1`, and `tlsu-detail-v1`.
 - Produces matching C++ topology/layout/route structures and `WriterOptions.capabilities`, so SuperScalarModel serializes the same JSON contract without an intermediate rewrite.
 
-- [ ] **Step 1: Write failing topology validation tests**
+- [x] **Step 1: Write failing topology validation tests**
 
 Add TypeScript and C++ cases that accept finite `position/size/rotation`, port positions, and an orthogonal route, then reject zero/negative size, non-finite coordinates, unknown route endpoints, and a diagonal segment. The C++ bundle test must serialize layout, port positions, routes, and manifest capabilities with the exact TypeScript field names:
 
@@ -177,7 +178,7 @@ expect(
 ).toEqual([]);
 ```
 
-- [ ] **Step 2: Run topology tests and confirm RED**
+- [x] **Step 2: Run topology tests and confirm RED**
 
 Run:
 
@@ -189,7 +190,7 @@ ctest --test-dir build/sdk -R bundle_writer --output-on-failure
 
 Expected: FAIL because layout, coordinates, port positions, and routes are not defined or validated.
 
-- [ ] **Step 3: Implement physical topology types and validation**
+- [x] **Step 3: Implement physical topology types and validation**
 
 Use fixed tuples and optional legacy fields:
 
@@ -232,7 +233,7 @@ export interface TopologyPlacement {
 
 Collect globally unique district and port IDs, validate placement districts and route references in later passes, reject visible entity bounds outside their district, and require exactly one changing coordinate per route segment. Mirror the same data structures and camelCase JSON serialization in the C++ SDK, including top-level layout and optional route data on pipe entities.
 
-- [ ] **Step 4: Write failing detailed payload tests**
+- [x] **Step 4: Write failing detailed payload tests**
 
 Assert required causal fields under declared capabilities and backward-compatible loose payloads without those capabilities:
 
@@ -261,13 +262,13 @@ expect(
 
 Also reject negative thread/register indices, missing cache set/way on hit/fill, CELL byte counts outside 1..128, and detailed pipe events without `route_id`.
 
-- [ ] **Step 5: Run schema tests and confirm RED**
+- [x] **Step 5: Run schema tests and confirm RED**
 
 Run: `npx vitest run packages/trace-schema/src/schemas.test.ts`
 
 Expected: FAIL because the detailed payload schemas and capability declarations do not exist.
 
-- [ ] **Step 6: Implement detailed payload types and schemas**
+- [x] **Step 6: Implement detailed payload types and schemas**
 
 Define one shared causal base and event-specific extensions:
 
@@ -294,7 +295,7 @@ export interface DetailedCellPayload extends CausalPayload {
 
 Add optional `capabilities: string[]` to `TraceManifest`, `WriterOptions.capabilities` in the C++ SDK, and an optional capability context to `parseEvent`. Detailed payload validation is strict when the relevant capability is declared and remains backward-compatible when callers omit the context or open a legacy manifest.
 
-- [ ] **Step 7: Regenerate JSON Schema and run focused gates**
+- [x] **Step 7: Regenerate JSON Schema and run focused gates**
 
 Run:
 
@@ -308,7 +309,7 @@ ctest --test-dir build/sdk -R bundle_writer --output-on-failure
 
 Expected: PASS; generated JSON Schema contains layout, capabilities, and detailed event fields.
 
-- [ ] **Step 8: Commit and push Task 1**
+- [x] **Step 8: Commit and push Task 1**
 
 ```sh
 git add packages/topology packages/trace-schema sdk/cpp

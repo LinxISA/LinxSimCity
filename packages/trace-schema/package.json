@@ -17,6 +17,7 @@
   ],
   "scripts": {
     "build": "tsc --project tsconfig.json",
+    "export-schema": "node dist/export-json-schema.js",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
