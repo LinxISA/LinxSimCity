@@ -6,6 +6,8 @@
   "scripts": {
     "prebuild": "npm run build --workspace @linxsimcity/trace-runtime && npm run build --workspace @linxsimcity/scene-modules",
     "build": "vite build",
+    "prebuild:pages": "npm run prebuild",
+    "build:pages": "vite build --base=/LinxSimCity/",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
     "pretypecheck": "npm run build --workspace @linxsimcity/trace-runtime && npm run build --workspace @linxsimcity/scene-modules",

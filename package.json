@@ -13,6 +13,7 @@
   ],
   "scripts": {
     "build": "node scripts/run-workspaces.mjs build",
+    "pages:verify": "npm run build:pages --workspace @linxsimcity/viewer && node scripts/verify-pages-build.mjs",
     "showcase:generate": "node scripts/generate-supernpubench-showcase.mjs",
     "test": "vitest run",
     "typecheck": "node scripts/run-workspaces.mjs typecheck",
