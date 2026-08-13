@@ -7,6 +7,7 @@ import type { TopologyDescriptor } from "@linxsimcity/topology";
 
 import type { TraceBundleSource } from "../bundle/types.js";
 import type { EntityState } from "../reducer/state.js";
+import type { SerializableCausalState } from "../causal/types.js";
 
 export type WorkerTraceSource = TraceBundleSource;
 
@@ -26,6 +27,7 @@ export interface SerializedViewerSnapshot {
     pipeline: boolean;
     forensic: boolean;
   }>;
+  readonly causal: SerializableCausalState;
 }
 
 export interface WorkerDiagnostic {

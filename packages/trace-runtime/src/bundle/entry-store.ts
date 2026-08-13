@@ -8,13 +8,14 @@ import {
 
 import {
   TraceBundleError,
+  type HttpDirectorySource,
   type NodeDirectorySource,
   type NodeFileSource,
   type TraceBundleSource,
 } from "./types.js";
 
 const MAX_ENTRY_COUNT = 200_000;
-const MAX_COMPRESSED_ENTRY_BYTES = 256 * 1024 * 1024;
+export const MAX_COMPRESSED_ENTRY_BYTES = 256 * 1024 * 1024;
 
 export interface EntryStore {
   read(path: string): Promise<Uint8Array>;
@@ -57,6 +58,17 @@ function isNodeFileSource(source: TraceBundleSource): source is NodeFileSource {
     source !== null &&
     "kind" in source &&
     source.kind === "node-file"
+  );
+}
+
+function isHttpDirectorySource(
+  source: TraceBundleSource,
+): source is HttpDirectorySource {
+  return (
+    typeof source === "object" &&
+    source !== null &&
+    "kind" in source &&
+    source.kind === "http-directory"
   );
 }
 
@@ -192,6 +204,10 @@ export class ZipEntryStore implements EntryStore {
 export async function openEntryStore(
   source: TraceBundleSource,
 ): Promise<EntryStore> {
+  if (isHttpDirectorySource(source)) {
+    const { HttpEntryStore } = await import("./http-entry-store.js");
+    return HttpEntryStore.open(source);
+  }
   if (isNodeDirectorySource(source) || isNodeFileSource(source)) {
     const modulePath = "./node-entry-store.js";
     const nodeStore = (await import(

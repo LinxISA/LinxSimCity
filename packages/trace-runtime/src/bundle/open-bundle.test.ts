@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -6,6 +6,7 @@ import { spawnSync } from "node:child_process";
 import { afterAll, beforeAll, expect, test } from "vitest";
 
 import { TraceBundleReader } from "./open-bundle.js";
+import type { HttpDirectorySource } from "./types.js";
 
 const root = resolve(import.meta.dirname, "../../../..");
 const fixture = join(root, "fixtures/synthetic/minimal.trace-dir");
@@ -81,4 +82,127 @@ test("reader rejects traversal entries before opening data", async () => {
       path: join(root, "fixtures/synthetic/minimal.trace-dir/.."),
     }),
   ).rejects.toThrow(/trace bundle|required/i);
+});
+
+function fixtureFetch(
+  calls: Array<{ url: string; signal: AbortSignal | null }>,
+): typeof fetch {
+  return async (input, init) => {
+    const url = new URL(
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url,
+    );
+    calls.push({ url: url.href, signal: init?.signal ?? null });
+    const prefix = "/traces/fa-detail/";
+    if (!url.pathname.startsWith(prefix)) {
+      return new Response("outside logical bundle", { status: 404 });
+    }
+    const path = url.pathname.slice(prefix.length);
+    try {
+      const bytes = await readFile(join(fixture, path));
+      const body = bytes.buffer.slice(
+        bytes.byteOffset,
+        bytes.byteOffset + bytes.byteLength,
+      ) as ArrayBuffer;
+      return new Response(body, {
+        status: 200,
+        headers: { "content-length": String(bytes.byteLength) },
+      });
+    } catch {
+      return new Response("missing", { status: 404 });
+    }
+  };
+}
+
+function httpSource(fetchTrace: typeof fetch): HttpDirectorySource {
+  return {
+    kind: "http-directory",
+    baseUrl: "https://example.test/traces/fa-detail",
+    fetch: fetchTrace,
+  };
+}
+
+test("HTTP directory opens metadata without fetching strings or trace data", async () => {
+  const calls: Array<{ url: string; signal: AbortSignal | null }> = [];
+  const reader = await TraceBundleReader.open(httpSource(fixtureFetch(calls)));
+
+  expect(calls.map(({ url }) => url).sort()).toEqual([
+    "https://example.test/traces/fa-detail/index.json",
+    "https://example.test/traces/fa-detail/manifest.json",
+    "https://example.test/traces/fa-detail/topology.json",
+  ]);
+  expect(calls.every(({ signal }) => signal instanceof AbortSignal)).toBe(true);
+  await reader.readManifest();
+  expect(calls).toHaveLength(3);
+
+  const index = await reader.readIndex();
+  await reader.readChunk(index.chunks[0]!);
+  expect(calls.at(-1)?.url).toBe(
+    "https://example.test/traces/fa-detail/chunks/000000.jsonl.gz",
+  );
+  await reader.close();
+});
+
+test("HTTP directory reports a missing metadata entry", async () => {
+  const fetchTrace: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("manifest.json")) {
+      return new Response("missing", { status: 404 });
+    }
+    return fixtureFetch([])(input);
+  };
+
+  await expect(
+    TraceBundleReader.open(httpSource(fetchTrace)),
+  ).rejects.toMatchObject({ code: "missing_entry" });
+});
+
+test("HTTP directory rejects an oversized entry before reading its body", async () => {
+  const fetchTrace: typeof fetch = async (input) => {
+    const url = String(input);
+    if (url.endsWith("manifest.json")) {
+      return new Response("{}", {
+        status: 200,
+        headers: { "content-length": String(256 * 1024 * 1024 + 1) },
+      });
+    }
+    return fixtureFetch([])(input);
+  };
+
+  await expect(
+    TraceBundleReader.open(httpSource(fetchTrace)),
+  ).rejects.toMatchObject({ code: "resource_limit" });
+});
+
+test("HTTP directory rejects reads after close", async () => {
+  const reader = await TraceBundleReader.open(httpSource(fixtureFetch([])));
+  await reader.close();
+
+  await expect(reader.readStrings()).rejects.toThrow(/closed/i);
+});
+
+test("reader applies manifest capabilities while parsing chunks", async () => {
+  const detailedFixture = join(temporaryDirectory, "detailed.trace-dir");
+  await cp(fixture, detailedFixture, { recursive: true });
+  const manifest = JSON.parse(
+    await readFile(join(detailedFixture, "manifest.json"), "utf8"),
+  ) as Record<string, unknown>;
+  manifest.capabilities = ["instruction-causality-v1"];
+  await writeFile(
+    join(detailedFixture, "manifest.json"),
+    JSON.stringify(manifest),
+  );
+
+  const reader = await TraceBundleReader.open({
+    kind: "node-directory",
+    path: detailedFixture,
+  });
+  const index = await reader.readIndex();
+  await expect(reader.readChunk(index.chunks[0]!)).rejects.toThrow(
+    /invalid event at line 1/i,
+  );
+  await reader.close();
 });

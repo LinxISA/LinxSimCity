@@ -1,6 +1,7 @@
 import type { EventEnvelope, TraceEventType } from "@linxsimcity/trace-schema";
 
 import type { EntityState, ViewerSnapshot } from "./state.js";
+import { reduceCausalEvent } from "../causal/reduce-causal.js";
 
 const TRANSIENT_STATUS = new Map<TraceEventType, string>([
   ["instruction.fetch", "fetch"],
@@ -136,6 +137,7 @@ export function reduceEvents(
       activeEvents: crossedCycle ? [event] : [...current.activeEvents, event],
       changedEntityIds: [...changed].sort(),
       transientEntityIds,
+      causal: reduceCausalEvent(current.causal, event),
     };
   }
 

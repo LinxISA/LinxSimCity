@@ -18,8 +18,18 @@ export interface NodeFileSource {
   readonly path: string;
 }
 
+export interface HttpDirectorySource {
+  readonly kind: "http-directory";
+  readonly baseUrl: string;
+  readonly fetch?: typeof fetch | undefined;
+}
+
 export type TraceBundleSource =
-  File | FileSystemDirectoryHandle | NodeDirectorySource | NodeFileSource;
+  | File
+  | FileSystemDirectoryHandle
+  | NodeDirectorySource
+  | NodeFileSource
+  | HttpDirectorySource;
 
 export interface TraceBundleReaderInterface {
   readManifest(): Promise<TraceManifest>;

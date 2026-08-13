@@ -341,7 +341,7 @@ git push origin feat/implementation
 - Produces `HttpDirectorySource { kind: "http-directory"; baseUrl: string; fetch?: typeof fetch }`.
 - Produces `CausalState`, `InstructionTraceState`, `MemoryRequestState`, `RobState`, `PrfState`, `CacheState`, and `CellRequestState` inside every `ViewerSnapshot`.
 
-- [ ] **Step 1: Write failing HTTP store tests**
+- [x] **Step 1: Write failing HTTP store tests**
 
 Use a fetch spy and assert metadata-first reads, safe relative URL resolution, 404 diagnostics, per-entry byte limits, and no whole-bundle fetch:
 
@@ -358,17 +358,17 @@ expect(fetchTrace).toHaveBeenCalledWith(
 );
 ```
 
-- [ ] **Step 2: Run bundle tests and confirm RED**
+- [x] **Step 2: Run bundle tests and confirm RED**
 
 Run: `npx vitest run packages/trace-runtime/src/bundle/open-bundle.test.ts`
 
 Expected: FAIL because `http-directory` is not a source kind.
 
-- [ ] **Step 3: Implement bounded HTTP entry loading**
+- [x] **Step 3: Implement bounded HTTP entry loading**
 
 Implement `HttpEntryStore.read(path)` using `assertSafeEntryPath`, `new URL(path, normalizedBase)`, a per-request abort controller, content-length precheck, streamed body accumulation with the existing 256 MiB entry bound, and a closed-state guard. Do not cache raw compressed bytes; decoded chunk LRU remains in `BundleReader`.
 
-- [ ] **Step 4: Write failing causal reducer tests**
+- [x] **Step 4: Write failing causal reducer tests**
 
 Feed a single instruction through rename, ROB, PRF read, cache miss/fill, TLSU response, writeback, and retire. Assert one causal instruction and one request connect all referenced resources. Add flush and shared-cache concurrent-thread cases.
 
@@ -384,21 +384,21 @@ expect(snapshot.causal.instructions.get(9812)).toMatchObject({
 });
 ```
 
-- [ ] **Step 5: Run causal tests and confirm RED**
+- [x] **Step 5: Run causal tests and confirm RED**
 
 Run: `npx vitest run packages/trace-runtime/src/causal/reduce-causal.test.ts`
 
 Expected: FAIL because causal state does not exist.
 
-- [ ] **Step 6: Implement immutable causal state transitions**
+- [x] **Step 6: Implement immutable causal state transitions**
 
 Keep sparse maps keyed by instruction/request/entity ID. Update only touched records, retain active route timing, and remove completed transient requests only after their visibility window. A flushed instruction sets `squashed=true` and can never transition to retired.
 
-- [ ] **Step 7: Extend checkpoint serialization and seek equivalence tests**
+- [x] **Step 7: Extend checkpoint serialization and seek equivalence tests**
 
 Serialize causal state into checkpoint entities under reserved keys, restore it in `checkpoint.ts`, and add a test comparing forward reduction with checkpoint-plus-replay at the same cycle.
 
-- [ ] **Step 8: Run focused runtime gates**
+- [x] **Step 8: Run focused runtime gates**
 
 Run:
 
@@ -409,7 +409,7 @@ npm run typecheck --workspace @linxsimcity/trace-runtime
 
 Expected: PASS with ZIP, node directory, browser directory, and HTTP logical bundle support.
 
-- [ ] **Step 9: Commit and push Task 2**
+- [x] **Step 9: Commit and push Task 2**
 
 ```sh
 git add packages/trace-runtime

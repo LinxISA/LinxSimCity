@@ -140,6 +140,7 @@ class BundleReader implements TraceBundleReaderInterface {
       return cached;
     }
 
+    const manifest = await this.readManifest();
     const text = decodeText(
       decompress(await this.store.read(chunk.path), chunk.path),
       chunk.path,
@@ -150,7 +151,9 @@ class BundleReader implements TraceBundleReaderInterface {
       .filter((line) => line.length > 0)
       .map((line, index) => {
         try {
-          return parseEvent(JSON.parse(line));
+          return parseEvent(JSON.parse(line), {
+            capabilities: manifest.capabilities,
+          });
         } catch {
           throw new TraceBundleError(
             "invalid_bundle",

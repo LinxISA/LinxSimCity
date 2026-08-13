@@ -4,6 +4,13 @@ import type {
   TopologyEntityKind,
 } from "@linxsimcity/topology";
 
+import {
+  initialCausalState,
+  serializeCausalState,
+  type CausalState,
+  type SerializableCausalState,
+} from "../causal/types.js";
+
 export interface EntityState {
   readonly id: string;
   readonly label: string;
@@ -13,7 +20,7 @@ export interface EntityState {
   readonly available: boolean;
   readonly occupancy?: number | undefined;
   readonly stage?: string | undefined;
-  readonly lastEvent?: EventEnvelope;
+  readonly lastEvent?: EventEnvelope | undefined;
   readonly data: Readonly<Record<string, unknown>>;
 }
 
@@ -24,6 +31,7 @@ export interface ViewerSnapshot {
   readonly changedEntityIds: readonly string[];
   readonly transientEntityIds: ReadonlySet<string>;
   readonly profileAvailability: Readonly<Record<TraceProfile, boolean>>;
+  readonly causal: CausalState;
 }
 
 export interface SerializableSnapshot {
@@ -31,6 +39,7 @@ export interface SerializableSnapshot {
   readonly entities: readonly EntityState[];
   readonly activeEvents: readonly EventEnvelope[];
   readonly changedEntityIds: readonly string[];
+  readonly causal: SerializableCausalState;
 }
 
 export function initialSnapshot(topology: TopologyDescriptor): ViewerSnapshot {
@@ -53,6 +62,7 @@ export function initialSnapshot(topology: TopologyDescriptor): ViewerSnapshot {
     changedEntityIds: [],
     transientEntityIds: new Set(),
     profileAvailability: { overview: true, pipeline: true, forensic: true },
+    causal: initialCausalState(),
   };
 }
 
@@ -66,6 +76,7 @@ export function snapshotToObject(
     ),
     activeEvents: [...snapshot.activeEvents],
     changedEntityIds: [...snapshot.changedEntityIds].sort(),
+    causal: serializeCausalState(snapshot.causal),
   };
 }
 

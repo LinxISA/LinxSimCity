@@ -143,18 +143,17 @@ describe("validateTopology", () => {
   });
 
   test("rejects an unsupported physical coordinate contract", () => {
-    const topology = physicalTopology() as unknown as {
-      layout: {
-        schema: string;
-        units: string;
-        upAxis: string;
-        forwardAxis: string;
-      };
-    } & TopologyDescriptor;
-    topology.layout.schema = "unknown-city";
-    topology.layout.units = "millimeter";
-    topology.layout.upAxis = "z";
-    topology.layout.forwardAxis = "+z";
+    const topology = physicalTopology();
+    const layout = topology.layout as unknown as {
+      schema: string;
+      units: string;
+      upAxis: string;
+      forwardAxis: string;
+    };
+    layout.schema = "unknown-city";
+    layout.units = "millimeter";
+    layout.upAxis = "z";
+    layout.forwardAxis = "+z";
 
     expect(validateTopology(topology).errors).toMatchObject([
       { code: "invalid_layout", path: "layout.schema" },

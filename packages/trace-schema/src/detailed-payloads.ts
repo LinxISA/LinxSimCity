@@ -87,5 +87,5 @@ export interface DetailedPipePayload extends CausalPayload {
 }
 
 export interface ParseEventOptions {
-  capabilities?: readonly string[];
+  capabilities?: readonly string[] | undefined;
 }

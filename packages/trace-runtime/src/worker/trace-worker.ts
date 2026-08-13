@@ -4,6 +4,7 @@ import { TraceBundleReader } from "../bundle/open-bundle.js";
 import type { TraceBundleReaderInterface } from "../bundle/types.js";
 import { seekToCycle } from "../reducer/seek.js";
 import type { ViewerSnapshot } from "../reducer/state.js";
+import { serializeCausalState } from "../causal/types.js";
 import { SeekSupersededError } from "./errors.js";
 import type {
   LoadedTraceInfo,
@@ -21,6 +22,7 @@ function serialize(snapshot: ViewerSnapshot): SerializedViewerSnapshot {
     activeEvents: snapshot.activeEvents,
     changedEntityIds: [...snapshot.changedEntityIds],
     profileAvailability: snapshot.profileAvailability,
+    causal: serializeCausalState(snapshot.causal),
   };
 }
 
