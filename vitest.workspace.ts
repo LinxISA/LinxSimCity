@@ -6,9 +6,12 @@ export default defineConfig({
       "apps/**/*.test.ts",
       "apps/**/*.test.tsx",
       "packages/**/*.test.ts",
+      "scripts/**/*.test.ts",
       "tools/**/*.test.ts",
       "tests/**/*.test.ts",
     ],
+    fileParallelism: false,
+    maxWorkers: 1,
     passWithNoTests: true,
   },
 });

@@ -12,10 +12,9 @@
     "tools/*"
   ],
   "scripts": {
-    "build": "npm run build --workspaces --if-present",
+    "build": "node scripts/run-workspaces.mjs build",
     "test": "vitest run",
-    "pretypecheck": "npm run build --workspace @linxsimcity/trace-schema",
-    "typecheck": "tsc --project tsconfig.json --noEmit && npm run typecheck --workspaces --if-present",
+    "typecheck": "node scripts/run-workspaces.mjs typecheck",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "check": "npm run typecheck && npm test && npm run lint && npm run format:check"

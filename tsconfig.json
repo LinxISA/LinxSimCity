@@ -9,6 +9,8 @@
   },
   "include": [
     "eslint.config.js",
+    "scripts/**/*.mjs",
+    "scripts/**/*.test.ts",
     "vitest.config.ts",
     "vitest.workspace.ts",
     "packages/**/*.test.ts",

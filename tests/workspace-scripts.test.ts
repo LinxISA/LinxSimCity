@@ -27,8 +27,11 @@ function copySourceOnlyRepository(destination: string) {
     "eslint.config.js",
     "package-lock.json",
     "package.json",
+    "apps",
     "packages",
+    "scripts",
     "tests",
+    "tools",
     "tsconfig.base.json",
     "tsconfig.json",
     "vitest.config.ts",
@@ -53,13 +56,19 @@ function linkInstalledDependencies(destination: string) {
     symlinkSync(join(sourceNodeModules, entry), join(targetNodeModules, entry));
   }
 
-  const workspaceLinks = join(targetNodeModules, "@linxsimcity");
-  mkdirSync(workspaceLinks);
-  for (const workspace of ["topology", "trace-schema"]) {
-    symlinkSync(
-      join(destination, "packages", workspace),
-      join(workspaceLinks, workspace),
-    );
+  for (const workspaceRoot of ["apps", "packages", "tools"]) {
+    const root = join(destination, workspaceRoot);
+    for (const workspace of readdirSync(root)) {
+      const packageRoot = join(root, workspace);
+      const packageJson = JSON.parse(
+        readFileSync(join(packageRoot, "package.json"), "utf8"),
+      ) as { name: string };
+      const [scope, name] = packageJson.name.split("/");
+      if (!scope || !name) continue;
+      const scopeRoot = join(targetNodeModules, scope);
+      mkdirSync(scopeRoot, { recursive: true });
+      symlinkSync(packageRoot, join(scopeRoot, name));
+    }
   }
 }
 
@@ -74,8 +83,18 @@ describe("root workspace scripts", () => {
         `@linxsimcity/trace-schema@0.1.0 ${script}`,
       );
       expect(result.stdout).toContain(`@linxsimcity/topology@0.1.0 ${script}`);
+      expect(
+        result.stdout.match(
+          new RegExp(`@linxsimcity/trace-schema@0\\.1\\.0 ${script}`, "g"),
+        ),
+      ).toHaveLength(1);
+      expect(
+        result.stdout.match(
+          new RegExp(`@linxsimcity/topology@0\\.1\\.0 ${script}`, "g"),
+        ),
+      ).toHaveLength(1);
     },
-    15_000,
+    90_000,
   );
 
   test("build and typecheck succeed from source without prebuilt workspace artifacts", () => {
@@ -112,7 +131,7 @@ describe("root workspace scripts", () => {
     } finally {
       rmSync(cleanRepository, { recursive: true, force: true });
     }
-  }, 20_000);
+  }, 120_000);
 });
 
 test("registry lock entries retain tarball resolution and integrity", () => {
