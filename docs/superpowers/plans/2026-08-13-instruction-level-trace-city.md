@@ -437,7 +437,7 @@ git push origin feat/implementation
 - Consumes Task 1 topology JSON contract.
 - Produces exactly 8192 CELL entities, one shared I-Cache, one shared D-Cache, four PE-local ROB/PRF/IQ sets, physical placements, stable port IDs, and orthogonal routes.
 
-- [ ] **Step 1: Write failing topology-count and route tests**
+- [x] **Step 1: Write failing topology-count and route tests**
 
 Assert:
 
@@ -450,7 +450,7 @@ EXPECT_TRUE(EveryRouteIsOrthogonal(topology));
 EXPECT_TRUE(EveryVisibleEntityHasPlacement(topology));
 ```
 
-- [ ] **Step 2: Build test and confirm RED**
+- [x] **Step 2: Build test and confirm RED**
 
 Run:
 
@@ -461,19 +461,19 @@ ctest --test-dir build-linx-latest -R topology_builder --output-on-failure
 
 Expected: FAIL on the current 2560 rows per bank, private cache IDs, and missing physical layout.
 
-- [ ] **Step 3: Correct capacities and canonical IDs**
+- [x] **Step 3: Correct capacities and canonical IDs**
 
 Set `kCellRowsPerBank=256`, keep `kCellBytes=128`, emit `pe{pe}.bg.bank{bank}.row{row}`, canonicalize ROB IDs as `pe{pe}.sperob.slot{slot}`, and use shared cache IDs `core.shared.l1i.set{set}.way{way}` and `core.shared.l1d.set{set}.way{way}`.
 
-- [ ] **Step 4: Implement physical layout helpers**
+- [x] **Step 4: Implement physical layout helpers**
 
 Create deterministic helpers returning position, size, rotation, port position, and route points. Preserve the approved rectangular district layout, four CUBE PE strips aligned with four Tile quarters, StgBufB below CUBE, horizontal A routes, and vertical B routes.
 
-- [ ] **Step 5: Emit physical layout and routes in topology JSON**
+- [x] **Step 5: Emit physical layout and routes in topology JSON**
 
 Add top-level `layout`; add placement for visible entities; add stable ports for pipeline, caches, PRF, CELL, CUBE, and TLSU; emit each pipe with `fromPortId`, `toPortId`, and orthogonal points.
 
-- [ ] **Step 6: Run topology test and validate with LinxSimCity CLI**
+- [x] **Step 6: Run topology test and validate with LinxSimCity CLI**
 
 Run:
 
@@ -487,7 +487,7 @@ node /Users/zhoubot/Documents/LinxSimCity/.worktrees/implementation/tools/linxtr
 
 Expected: PASS and no missing placement/route/CELL-capacity diagnostics.
 
-- [ ] **Step 7: Commit and push Task 3**
+- [x] **Step 7: Commit and push Task 3**
 
 ```sh
 git add TimingSim/trace/linx tests/linx_trace
