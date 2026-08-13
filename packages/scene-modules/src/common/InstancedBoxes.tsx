@@ -76,13 +76,19 @@ export function InstancedBoxes({
     const changed = new Set(
       discontinuous ? instances.map(({ id }) => id) : snapshot.changedEntityIds,
     );
+    for (const id of states.keys()) changed.add(id);
     if (previousSelected.current) changed.add(previousSelected.current);
     if (selectedEntityId) changed.add(selectedEntityId);
     for (const id of changed) {
       const index = indexById.get(id);
       if (index === undefined) continue;
       color.setHex(
-        colorForState(states.get(id), baseColor, id === selectedEntityId),
+        colorForState(
+          states.get(id),
+          baseColor,
+          id === selectedEntityId,
+          snapshot.cycle,
+        ),
       );
       mesh.current.setColorAt(index, color);
     }

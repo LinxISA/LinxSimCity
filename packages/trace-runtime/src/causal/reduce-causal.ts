@@ -6,6 +6,7 @@ import {
   type CausalState,
   type CellRequestState,
   type InstructionTraceState,
+  type InstructionTransition,
   type MemoryRequestState,
   type PrfState,
   type RobState,
@@ -13,6 +14,7 @@ import {
 
 const INSTRUCTION_VISIBILITY_CYCLES = 16;
 const REQUEST_VISIBILITY_CYCLES = 8;
+const INSTRUCTION_TRANSITION_LIMIT = 24;
 
 function payloadRecord(payload: unknown): Record<string, unknown> {
   return typeof payload === "object" && payload !== null
@@ -48,6 +50,40 @@ function instructionStage(event: EventEnvelope): string | undefined {
   if (event.type === "rob.retire") return "retire";
   if (event.type === "rob.flush") return "squash";
   return undefined;
+}
+
+function isInstructionMotionEvent(event: EventEnvelope): boolean {
+  return (
+    event.type.startsWith("instruction.") ||
+    event.type === "pipeline.enter" ||
+    event.type === "pipeline.leave"
+  );
+}
+
+function appendTransition(
+  transitions: readonly InstructionTransition[],
+  event: EventEnvelope,
+  routeId: string | undefined,
+): readonly InstructionTransition[] {
+  const previous = transitions.at(-1);
+  if (
+    previous?.cycle === event.cycle &&
+    previous.seq === event.seq &&
+    previous.type === event.type &&
+    previous.entityId === event.entity_id
+  ) {
+    return transitions;
+  }
+  return [
+    ...transitions,
+    {
+      cycle: event.cycle,
+      seq: event.seq,
+      type: event.type,
+      entityId: event.entity_id,
+      routeId,
+    },
+  ].slice(-INSTRUCTION_TRANSITION_LIMIT);
 }
 
 function cleanup(state: CausalState, cycle: number): CausalState {
@@ -132,6 +168,9 @@ export function reduceCausalEvent(
       destinationRegisters: previous?.destinationRegisters ?? [],
       requestIds: appendUnique(previous?.requestIds ?? [], requestId),
       routeIds: appendUnique(previous?.routeIds ?? [], routeId),
+      transitions: isInstructionMotionEvent(event)
+        ? appendTransition(previous?.transitions ?? [], event, routeId)
+        : (previous?.transitions ?? []),
       completed,
       retired,
       squashed,

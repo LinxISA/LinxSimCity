@@ -26,7 +26,7 @@ export function SceneCanvas({
         powerPreference: "high-performance",
       }}
       {...(onBlankClick ? { onPointerMissed: onBlankClick } : {})}
-      shadows
+      shadows="percentage"
     >
       <color attach="background" args={["#030812"]} />
       <fog attach="fog" args={["#030812", 100, 210]} />

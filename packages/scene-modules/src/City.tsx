@@ -4,6 +4,7 @@ import type { TopologyDescriptor } from "@linxsimcity/topology";
 import { CellDistrict } from "./cell/CellDistrict.js";
 import { CubeDistrict } from "./cube/CubeDistrict.js";
 import { DataTokenLayer } from "./flow/DataTokenLayer.js";
+import { InstructionTokenLayer } from "./flow/InstructionTokenLayer.js";
 import { ScalarCpu } from "./scalar/ScalarCpu.js";
 import { TlsuDistrict } from "./tlsu/TlsuDistrict.js";
 import { RoutePipe } from "./topology/RoutePipe.js";
@@ -91,9 +92,17 @@ export function City({
       <DataTokenLayer
         events={snapshot?.activeEvents ?? []}
         topology={topology}
+        cycle={snapshot?.cycle ?? 0}
         onSelect={onSelect}
         onSelectInstruction={onSelectInstruction}
       />
+      {snapshot ? (
+        <InstructionTokenLayer
+          snapshot={snapshot}
+          topology={topology}
+          onSelectInstruction={onSelectInstruction}
+        />
+      ) : null}
     </group>
   );
 }

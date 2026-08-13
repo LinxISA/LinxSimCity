@@ -181,6 +181,76 @@ describe("causal trace reduction", () => {
       physReg: 37,
       lastWriteInstructionId: 9812,
     });
+    expect(snapshot.causal.instructions.get(9812)?.transitions).toEqual([
+      {
+        cycle: 10,
+        seq: 0,
+        type: "instruction.rename",
+        entityId: "pe2.rename",
+        routeId: undefined,
+      },
+      {
+        cycle: 18,
+        seq: 1,
+        type: "instruction.complete",
+        entityId: "pe2.execute.int0",
+        routeId: undefined,
+      },
+      {
+        cycle: 20,
+        seq: 1,
+        type: "instruction.retire",
+        entityId: "pe2.commit",
+        routeId: undefined,
+      },
+    ]);
+  });
+
+  test("bounds transition history while retaining the newest physical stages", () => {
+    const transitions = Array.from({ length: 30 }, (_, index) =>
+      event(index, 0, "pipeline.enter", "pe2.execute.int0", {
+        instruction_id: 77,
+        thread_id: 2,
+        route_id: "pipe.pe2.tlsu.l1d",
+        stage_id: `S${index}`,
+      }),
+    );
+
+    const history = reduceEvents(
+      initialSnapshot(topology),
+      transitions,
+    ).causal.instructions.get(77)?.transitions;
+
+    expect(history).toHaveLength(24);
+    expect(history?.[0]).toMatchObject({ cycle: 6, seq: 0 });
+    expect(history?.at(-1)).toMatchObject({ cycle: 29, seq: 0 });
+  });
+
+  test("child cache traffic cannot evict the instruction's physical stage history", () => {
+    const cacheTraffic = Array.from({ length: 30 }, (_, index) =>
+      event(index + 2, 0, "cache.hit", "core.shared.l1d.set3.way1", {
+        instruction_id: 88,
+        request_id: 900 + index,
+        thread_id: 2,
+      }),
+    );
+    const history = reduceEvents(initialSnapshot(topology), [
+      event(1, 0, "instruction.issue", "pe2.execute.int0", {
+        instruction_id: 88,
+        thread_id: 2,
+      }),
+      ...cacheTraffic,
+    ]).causal.instructions.get(88)?.transitions;
+
+    expect(history).toEqual([
+      {
+        cycle: 1,
+        seq: 0,
+        type: "instruction.issue",
+        entityId: "pe2.execute.int0",
+        routeId: undefined,
+      },
+    ]);
   });
 
   test("a squashed instruction can never become retired", () => {

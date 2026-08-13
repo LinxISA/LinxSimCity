@@ -7,6 +7,10 @@ import { Mesh, Vector3 } from "three";
 
 import { orthogonalRoute, type Point3 } from "./orthogonal-route.js";
 import { tokenColor, tokenOverlay } from "./thread-colors.js";
+import {
+  dataTokenProgress,
+  isInstructionLifecycleEvent,
+} from "./instruction-layer.js";
 
 function payloadRecord(event: EventEnvelope): Record<string, unknown> {
   return event.payload as Record<string, unknown>;
@@ -123,20 +127,29 @@ function TokenGeometry({ event }: { readonly event: EventEnvelope }) {
 function DataToken({
   event,
   points,
+  cycle,
   index,
   onSelect,
   onSelectInstruction,
 }: {
   readonly event: EventEnvelope;
   readonly points: readonly Point3[];
+  readonly cycle: number;
   readonly index: number;
   readonly onSelect?: ((entityId: string) => void) | undefined;
   readonly onSelectInstruction?: ((instructionId: number) => void) | undefined;
 }) {
   const mesh = useRef<Mesh>(null);
   const point = useMemo(() => new Vector3(), []);
-  useFrame(({ clock }) => {
-    const progress = (clock.elapsedTime * 0.5 + index * 0.13) % 1;
+  const phase = useRef(Math.min(0.7, index * 0.08));
+  const snapshotCycle = useRef(cycle);
+  if (snapshotCycle.current !== cycle) {
+    snapshotCycle.current = cycle;
+    phase.current = Math.min(0.7, index * 0.08);
+  }
+  useFrame((_, delta) => {
+    phase.current = Math.min(0.74, phase.current + delta * 60);
+    const progress = dataTokenProgress(event, cycle + phase.current);
     mesh.current?.position.copy(routePosition(points, progress, point));
   });
   const color = tokenColor(event);
@@ -155,11 +168,6 @@ function DataToken({
         toneMapped={false}
         wireframe={overlay !== "normal"}
       />
-      <pointLight
-        color={color}
-        intensity={overlay === "normal" ? 2.2 : 4}
-        distance={4}
-      />
     </mesh>
   );
 }
@@ -167,15 +175,18 @@ function DataToken({
 export function DataTokenLayer({
   events,
   topology,
+  cycle,
   onSelect,
   onSelectInstruction,
 }: {
   readonly events: readonly EventEnvelope[];
   readonly topology: TopologyDescriptor;
+  readonly cycle: number;
   readonly onSelect?: ((entityId: string) => void) | undefined;
   readonly onSelectInstruction?: ((instructionId: number) => void) | undefined;
 }) {
   const visible = events.flatMap((event) => {
+    if (isInstructionLifecycleEvent(event)) return [];
     const points = routePointsForEvent(event, topology);
     return points && points.length >= 2 ? [{ event, points }] : [];
   });
@@ -186,6 +197,7 @@ export function DataTokenLayer({
           key={`${event.cycle}-${event.seq}-${event.entity_id}`}
           event={event}
           points={points}
+          cycle={cycle}
           index={index}
           onSelect={onSelect}
           onSelectInstruction={onSelectInstruction}

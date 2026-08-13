@@ -13,13 +13,21 @@ import type {
   WorkerTraceSource,
 } from "./protocol.js";
 
-function serialize(snapshot: ViewerSnapshot): SerializedViewerSnapshot {
+const TRANSIENT_FEEDBACK_CYCLES = 6;
+
+export function serializeViewerSnapshot(
+  snapshot: ViewerSnapshot,
+): SerializedViewerSnapshot {
   return {
     cycle: snapshot.cycle,
     entities: [...snapshot.entities.entries()]
       .filter(
         ([, entity]) =>
-          entity.status !== "idle" || entity.steadyStatus !== "idle",
+          entity.status !== "idle" ||
+          entity.steadyStatus !== "idle" ||
+          (entity.lastEvent !== undefined &&
+            snapshot.cycle - entity.lastEvent.cycle <
+              TRANSIENT_FEEDBACK_CYCLES),
       )
       .sort(([left], [right]) => left.localeCompare(right)),
     activeEvents: snapshot.activeEvents,
@@ -77,7 +85,7 @@ export class TraceWorkerService implements TraceWorkerApi {
     if (requestId !== this.latestSeekRequestId) {
       throw new SeekSupersededError(requestId, this.latestSeekRequestId);
     }
-    return serialize(snapshot);
+    return serializeViewerSnapshot(snapshot);
   }
 
   async eventsAt(cycle: number): Promise<readonly EventEnvelope[]> {

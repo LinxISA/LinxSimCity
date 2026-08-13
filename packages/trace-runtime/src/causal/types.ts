@@ -1,5 +1,13 @@
 import type { TraceEventType, TraceThreadId } from "@linxsimcity/trace-schema";
 
+export interface InstructionTransition {
+  readonly cycle: number;
+  readonly seq: number;
+  readonly type: TraceEventType;
+  readonly entityId: string;
+  readonly routeId: string | undefined;
+}
+
 export interface InstructionTraceState {
   readonly id: number;
   readonly threadId: TraceThreadId;
@@ -11,6 +19,7 @@ export interface InstructionTraceState {
   readonly destinationRegisters: readonly number[];
   readonly requestIds: readonly number[];
   readonly routeIds: readonly string[];
+  readonly transitions: readonly InstructionTransition[];
   readonly completed: boolean;
   readonly retired: boolean;
   readonly squashed: boolean;
@@ -156,13 +165,33 @@ function mapEntries<K, V>(value: unknown, name: string): Map<K, V> {
   return new Map(value as Array<[K, V]>);
 }
 
+function instructionEntries(
+  value: unknown,
+): Map<number, InstructionTraceState> {
+  const entries = mapEntries<number, InstructionTraceState>(
+    value,
+    "instructions",
+  );
+  return new Map(
+    [...entries].map(([id, instruction]) => [
+      id,
+      {
+        ...instruction,
+        transitions: Array.isArray(instruction.transitions)
+          ? instruction.transitions
+          : [],
+      },
+    ]),
+  );
+}
+
 export function deserializeCausalState(value: unknown): CausalState {
   if (typeof value !== "object" || value === null) {
     throw new Error("causal checkpoint must be an object");
   }
   const record = value as Record<string, unknown>;
   return {
-    instructions: mapEntries(record.instructions, "instructions"),
+    instructions: instructionEntries(record.instructions),
     requests: mapEntries(record.requests, "requests"),
     robs: mapEntries(record.robs, "robs"),
     prfs: mapEntries(record.prfs, "prfs"),
