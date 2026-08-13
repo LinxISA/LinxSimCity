@@ -192,7 +192,7 @@ const DetailedCellPayloadSchema = z
     phys_cell_id: nonNegativeSafeInteger,
     pe: threadId,
     bank: z.number().int().min(0).max(7),
-    row: z.number().int().min(0).max(255),
+    row: nonNegativeSafeInteger,
     byte_offset: z.number().int().min(0).max(127),
     bytes: z.number().int().min(1).max(128),
     operation: z.enum(["read", "write"]),
@@ -200,6 +200,8 @@ const DetailedCellPayloadSchema = z
     arbitration: z.enum(["request", "grant", "conflict", "serve"]),
     queue_id: nonEmptyString.optional(),
     wait_cycles: nonNegativeSafeInteger.optional(),
+    winner_request_id: nonNegativeSafeInteger.optional(),
+    loser_request_ids: z.array(nonNegativeSafeInteger).optional(),
   })
   .superRefine((payload, context) => {
     if (payload.byte_offset + payload.bytes > 128) {

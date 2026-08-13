@@ -68,6 +68,8 @@ export interface DetailedCellPayload extends CausalPayload {
   arbitration: "request" | "grant" | "conflict" | "serve";
   queue_id?: string;
   wait_cycles?: number;
+  winner_request_id?: number;
+  loser_request_ids?: number[];
 }
 
 export interface DetailedMemoryPayload extends CausalPayload {

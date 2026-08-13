@@ -54,6 +54,7 @@ describe("trace event schema", () => {
         options,
       ),
     ).toThrow();
+
   });
 
   test("keeps legacy payloads loose without a detailed capability", () => {
@@ -135,6 +136,21 @@ describe("trace event schema", () => {
         { capabilities: ["cell-128b-v1"] },
       ),
     ).toThrow();
+
+    expect(
+      parseEvent(
+        {
+          ...event,
+          entity_id: "pe3.bg.bank7.row2559",
+          payload: {
+            ...event.payload,
+            phys_cell_id: 20479,
+            row: 2559,
+          },
+        },
+        { capabilities: ["cell-128b-v1"] },
+      ).payload,
+    ).toMatchObject({ phys_cell_id: 20479, row: 2559 });
   });
 
   test("requires a physical route for detailed pipe transfers", () => {
