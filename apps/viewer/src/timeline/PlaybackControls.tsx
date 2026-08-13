@@ -4,6 +4,7 @@ interface PlaybackControlsProps {
   readonly status: PlayerStatus;
   readonly rate: PlaybackRate;
   readonly disabled?: boolean;
+  readonly busy?: boolean;
   readonly onPlay: () => void;
   readonly onPause: () => void;
   readonly onStep: (delta: number) => void;
@@ -16,15 +17,18 @@ export function PlaybackControls({
   status,
   rate,
   disabled = false,
+  busy = false,
   onPlay,
   onPause,
   onStep,
   onRate,
 }: PlaybackControlsProps) {
+  const adjustmentDisabled = disabled || busy;
+
   return (
     <div className="playback-controls">
       <button
-        disabled={disabled}
+        disabled={adjustmentDisabled}
         type="button"
         onClick={() => onStep(-1)}
         aria-label="Previous cycle"
@@ -41,7 +45,7 @@ export function PlaybackControls({
         {status === "playing" ? "Ⅱ" : "▶"}
       </button>
       <button
-        disabled={disabled}
+        disabled={adjustmentDisabled}
         type="button"
         onClick={() => onStep(1)}
         aria-label="Next cycle"
@@ -52,7 +56,7 @@ export function PlaybackControls({
         <span>Playback rate</span>
         <select
           aria-label="Playback rate"
-          disabled={disabled}
+          disabled={adjustmentDisabled}
           value={rate}
           onChange={(event) =>
             onRate(Number(event.currentTarget.value) as PlaybackRate)

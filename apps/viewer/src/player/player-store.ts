@@ -64,7 +64,7 @@ export function createPlayerStore(
     },
 
     async seek(cycle) {
-      const { info, status } = get();
+      const { info } = get();
       if (!info) return;
       const target = Math.max(
         info.manifest.firstCycle,
@@ -75,11 +75,12 @@ export function createPlayerStore(
       try {
         const snapshot = await getWorker().seek(target, requestId);
         if (get().nextRequestId !== requestId + 1) return;
+        const status = get().status === "playing" ? "playing" : "ready";
         set({
           snapshot,
           cycle: snapshot.cycle,
           seekPending: false,
-          status: status === "playing" ? "playing" : "ready",
+          status,
         });
       } catch (error) {
         if (error instanceof SeekSupersededError) {

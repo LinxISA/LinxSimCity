@@ -54,6 +54,29 @@ test("cycle input clamps and playback rate is selectable", async () => {
   expect(props.onRate).toHaveBeenCalledWith(4);
 });
 
+test("pause stays available while a playback seek is pending", async () => {
+  const props = renderTimeline({ status: "playing", seekPending: true });
+
+  const pause = screen.getByRole<HTMLButtonElement>("button", {
+    name: "Pause",
+  });
+  expect(pause.disabled).toBe(false);
+  expect(
+    screen.getByRole<HTMLButtonElement>("button", { name: "Previous cycle" })
+      .disabled,
+  ).toBe(true);
+  expect(
+    screen.getByRole<HTMLButtonElement>("button", { name: "Next cycle" })
+      .disabled,
+  ).toBe(true);
+  expect(
+    screen.getByLabelText<HTMLSelectElement>(/playback rate/i).disabled,
+  ).toBe(true);
+
+  await userEvent.click(pause);
+  expect(props.onPause).toHaveBeenCalledOnce();
+});
+
 test("scrub input coalesces to one seek per animation frame", () => {
   const callbacks: FrameRequestCallback[] = [];
   vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {

@@ -89,7 +89,8 @@ export function Timeline(props: TimelineProps) {
         <PlaybackControls
           status={props.status}
           rate={props.rate}
-          disabled={disabled || props.seekPending}
+          disabled={disabled}
+          busy={props.seekPending}
           onPlay={props.onPlay}
           onPause={props.onPause}
           onStep={props.onStep}

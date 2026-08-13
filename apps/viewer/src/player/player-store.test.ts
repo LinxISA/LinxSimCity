@@ -39,6 +39,8 @@ class FakeWorker implements TraceWorkerApi {
   closed = false;
   failLoad = false;
   supersedeRequest: number | undefined;
+  blockNextSeek = false;
+  finishBlockedSeek: (() => void) | undefined;
 
   async load(): Promise<LoadedTraceInfo> {
     if (this.failLoad) throw new Error("broken trace");
@@ -48,6 +50,12 @@ class FakeWorker implements TraceWorkerApi {
   async seek(cycle: number, requestId: number) {
     if (requestId === this.supersedeRequest) {
       throw new SeekSupersededError(requestId, requestId + 1);
+    }
+    if (this.blockNextSeek) {
+      this.blockNextSeek = false;
+      return new Promise<SerializedViewerSnapshot>((resolve) => {
+        this.finishBlockedSeek = () => resolve(snapshot(cycle));
+      });
     }
     return snapshot(cycle);
   }
@@ -102,6 +110,29 @@ test("superseded seeks do not move the visible cycle", async () => {
   worker.supersedeRequest = store.getState().nextRequestId;
   await store.getState().seek(8);
   expect(store.getState()).toMatchObject({ cycle: 0, status: "ready" });
+});
+
+test("an in-flight playback seek cannot resume after pause", async () => {
+  const worker = new FakeWorker();
+  const store = createPlayerStore(() => worker);
+  await store.getState().loadTrace(source);
+  store.getState().play();
+  worker.blockNextSeek = true;
+
+  const pendingStep = store.getState().step(1);
+  expect(store.getState()).toMatchObject({
+    status: "playing",
+    seekPending: true,
+  });
+  store.getState().pause();
+  worker.finishBlockedSeek?.();
+  await pendingStep;
+
+  expect(store.getState()).toMatchObject({
+    cycle: 1,
+    status: "ready",
+    seekPending: false,
+  });
 });
 
 test("load errors are retained and unload closes the worker", async () => {
