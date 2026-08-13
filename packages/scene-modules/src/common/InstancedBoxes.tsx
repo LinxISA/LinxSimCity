@@ -5,6 +5,7 @@ import { Color, InstancedMesh, Matrix4, Quaternion, Vector3 } from "three";
 
 import { colorForState, stateMap } from "./colors.js";
 import type { BoxInstance } from "./box-instance.js";
+import { shadowsForInstances } from "./instance-rendering.js";
 
 export type { BoxInstance } from "./box-instance.js";
 
@@ -97,6 +98,7 @@ export function InstancedBoxes({
     const entityId = instances[event.instanceId]?.id;
     if (entityId) onSelect?.(entityId);
   };
+  const shadows = shadowsForInstances(instances.length);
 
   return (
     <instancedMesh
@@ -104,8 +106,8 @@ export function InstancedBoxes({
       args={[undefined, undefined, instances.length]}
       userData={{ instanceEntityIds: instances.map(({ id }) => id) }}
       onClick={select}
-      castShadow
-      receiveShadow
+      castShadow={shadows}
+      receiveShadow={shadows}
     >
       <boxGeometry args={[1, 1, 1]} />
       <meshStandardMaterial
