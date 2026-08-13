@@ -1,6 +1,6 @@
 # LinxSimCity Instruction-Level Trace City Design
 
-**Status:** Approved design, pending written-spec review  
+**Status:** Approved
 **Date:** 2026-08-13  
 **Repositories:** `LinxISA/LinxSimCity`, `LinxISA/SuperScalarModel`
 
@@ -99,8 +99,15 @@ IDs must be emitted by the model. They must not be synthesized from cycle order 
   "layout": {
     "schema": "linx-city-v1",
     "units": "scene-unit",
-    "up_axis": "y",
-    "forward_axis": "-z"
+    "upAxis": "y",
+    "forwardAxis": "-z",
+    "districts": [
+      {
+        "id": "scalar",
+        "position": [-62, 1, 0],
+        "size": [12, 4, 8]
+      }
+    ]
   }
 }
 ```
@@ -121,7 +128,7 @@ Every visible entity may carry:
     "rotation": [0, 0, 0],
     "row": 2,
     "column": 5,
-    "lod_group": "scalar-prf"
+    "lodGroup": "scalar-prf"
   }
 }
 ```
@@ -136,10 +143,10 @@ Ports have stable positions and direction metadata. A pipe references its source
 {
   "id": "pipe.scalar.int0",
   "kind": "pipe",
-  "from": "pe0.issue.port1",
-  "to": "pe0.int0.input",
   "route": {
     "style": "orthogonal",
+    "fromPortId": "pe0.issue.port1",
+    "toPortId": "pe0.int0.input",
     "points": [[-63, 1, -4], [-60, 1, -4], [-60, 1, 1]]
   }
 }
@@ -389,4 +396,3 @@ The published page must:
 7. Implement full-screen input and borderless commit HUD.
 8. Generate, validate, and publish the detailed FA trace.
 9. Run independent code review, memory-bounded full gates, and public browser acceptance.
-
