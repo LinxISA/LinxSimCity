@@ -3,7 +3,7 @@ import { useId, useState, type ChangeEvent, type DragEvent } from "react";
 import type { PlayerStatus } from "../player/types.js";
 
 interface TraceDropzoneProps {
-  readonly onLoad: (file: File) => Promise<void> | void;
+  readonly onLoad: (file: File) => Promise<unknown> | void;
   readonly status: PlayerStatus;
 }
 

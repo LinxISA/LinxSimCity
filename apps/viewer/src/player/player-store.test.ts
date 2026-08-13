@@ -75,10 +75,18 @@ class FakeWorker implements TraceWorkerApi {
 
 const source: WorkerTraceSource = { kind: "node-directory", path: "/fixture" };
 
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((fulfill) => {
+    resolve = fulfill;
+  });
+  return { promise, resolve };
+}
+
 test("load, seek, playback, mode, and selection transitions are bounded", async () => {
   const worker = new FakeWorker();
   const store = createPlayerStore(() => worker);
-  await store.getState().loadTrace(source);
+  expect(await store.getState().loadTrace(source)).toBe(true);
   expect(store.getState()).toMatchObject({ status: "ready", cycle: 0 });
 
   store.getState().setRate(4);
@@ -139,12 +147,56 @@ test("load errors are retained and unload closes the worker", async () => {
   const worker = new FakeWorker();
   worker.failLoad = true;
   const store = createPlayerStore(() => worker);
-  await store.getState().loadTrace(source);
+  expect(await store.getState().loadTrace(source)).toBe(false);
   expect(store.getState()).toMatchObject({ status: "error" });
   expect(store.getState().diagnostic?.message).toMatch(/broken trace/);
   await store.getState().unload();
   expect(worker.closed).toBe(true);
   expect(store.getState().status).toBe("empty");
+});
+
+test("the newest trace load owns the visible snapshot", async () => {
+  const defaultInfo = {
+    ...info,
+    manifest: { ...info.manifest, firstCycle: 49, lastCycle: 100 },
+  };
+  const localInfo = {
+    ...info,
+    manifest: { ...info.manifest, firstCycle: 200, lastCycle: 300 },
+  };
+  const defaultResult = deferred<LoadedTraceInfo>();
+  const localResult = deferred<LoadedTraceInfo>();
+  const scheduledLoads = [defaultResult.promise, localResult.promise];
+
+  class ScheduledWorker extends FakeWorker {
+    override load(): Promise<LoadedTraceInfo> {
+      const result = scheduledLoads.shift();
+      if (!result) throw new Error("unexpected trace load");
+      return result;
+    }
+  }
+
+  const firstWorker = new ScheduledWorker();
+  const secondWorker = new ScheduledWorker();
+  const workers = [firstWorker, secondWorker];
+  const store = createPlayerStore(() => {
+    const worker = workers.shift();
+    if (!worker) throw new Error("unexpected worker creation");
+    return worker;
+  });
+
+  const defaultLoad = store.getState().loadTrace(source);
+  const localLoad = store
+    .getState()
+    .loadTrace({ kind: "node-directory", path: "/local" });
+
+  localResult.resolve(localInfo);
+  expect(await localLoad).toBe(true);
+  defaultResult.resolve(defaultInfo);
+  expect(await defaultLoad).toBe(false);
+
+  expect(store.getState()).toMatchObject({ status: "ready", cycle: 200 });
+  expect(firstWorker.closed).toBe(true);
 });
 
 test.each([0.25, 0.5, 1, 2, 4] as const)(

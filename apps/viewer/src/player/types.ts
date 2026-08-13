@@ -22,7 +22,7 @@ export interface PlayerState {
   readonly diagnostic?: WorkerDiagnostic | undefined;
   readonly seekPending: boolean;
   readonly nextRequestId: number;
-  loadTrace(source: WorkerTraceSource): Promise<void>;
+  loadTrace(source: WorkerTraceSource): Promise<boolean>;
   seek(cycle: number): Promise<void>;
   play(): void;
   pause(): void;

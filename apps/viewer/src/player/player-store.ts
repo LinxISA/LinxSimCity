@@ -27,12 +27,17 @@ export function createPlayerStore(
   createWorker: TraceWorkerFactory = () => TraceWorkerClient.spawn(),
 ): PlayerStore {
   let worker: ReturnType<TraceWorkerFactory> | undefined;
+  let loadGeneration = 0;
   const getWorker = () => (worker ??= createWorker());
 
   return createStore<PlayerState>()((set, get) => ({
     ...initialValues,
 
     async loadTrace(source) {
+      const generation = ++loadGeneration;
+      const previousWorker = worker;
+      const nextWorker = createWorker();
+      worker = nextWorker;
       set({
         status: "loading",
         diagnostic: undefined,
@@ -40,13 +45,22 @@ export function createPlayerStore(
         seekPending: true,
       });
       try {
-        const info = await getWorker().load(source);
+        if (previousWorker && previousWorker !== nextWorker) {
+          await previousWorker.close();
+        }
+        const info = await nextWorker.load(source);
+        if (generation !== loadGeneration || worker !== nextWorker) {
+          return false;
+        }
         const requestId = get().nextRequestId;
         set({ info, nextRequestId: requestId + 1 });
-        const snapshot = await getWorker().seek(
+        const snapshot = await nextWorker.seek(
           info.manifest.firstCycle,
           requestId,
         );
+        if (generation !== loadGeneration || worker !== nextWorker) {
+          return false;
+        }
         set({
           info,
           snapshot,
@@ -54,12 +68,17 @@ export function createPlayerStore(
           status: "ready",
           seekPending: false,
         });
+        return true;
       } catch (error) {
+        if (generation !== loadGeneration || worker !== nextWorker) {
+          return false;
+        }
         set({
           status: "error",
           seekPending: false,
           diagnostic: normalizeWorkerError(error),
         });
+        return false;
       }
     },
 
@@ -122,8 +141,11 @@ export function createPlayerStore(
     },
 
     async unload() {
-      await worker?.close();
+      const generation = ++loadGeneration;
+      const currentWorker = worker;
       worker = undefined;
+      await currentWorker?.close();
+      if (generation !== loadGeneration) return;
       set({
         ...initialValues,
         info: undefined,
