@@ -53,11 +53,13 @@ The generator always enables the `pipeline` profile, uses the four-PE configurat
 
 ## Open in the WebGL viewer
 
+The verified FA-250 archive is bundled as the default public demo at <https://linxisa.github.io/LinxSimCity/>. The hosted Viewer loads it at cycle 49 and begins playback at 1× without requiring a file picker. The 250-block boundary remains explicit: this is a truthful bounded model trace, not a full-program FlashAttention claim.
+
 ```sh
 npm run dev --workspace @linxsimcity/viewer
 ```
 
-Open the printed local URL and drop either `.linxtrace` file onto the loader. The city is intentionally rectangular:
+Open the printed local URL to run the bundled FA trace, or choose **Open local trace** to load either generated archive. The city is intentionally rectangular:
 
 - The left district is a scalar CPU with IFU, rename, issue/execute pipes, caches, and a ring-shaped ROB.
 - The center Tile Register is flattened into individually addressable 128-byte cells, so each model read or write can highlight the exact cell.

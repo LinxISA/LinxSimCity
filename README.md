@@ -4,6 +4,10 @@ LinxSimCity is a WebGL trace visualizer for Linx processor and matrix-compute mo
 
 ![LinxSimCity running the official SuperNPUBench matmul trace](docs/assets/showcase/linxsimcity-matmul-cycle-1880.jpg)
 
+## Live demo
+
+Open **[LinxSimCity on GitHub Pages](https://linxisa.github.io/LinxSimCity/)**. The Viewer loads the verified 250-block SuperNPUBench FlashAttention trace and starts at cycle 49 at 1×. Use **Open local trace** to replace it with another `.linxtrace` bundle.
+
 ## Current foundation
 
 - Trace schema `1.0.0` with strict event ordering and stable topology IDs
@@ -33,7 +37,7 @@ node tools/linxtrace/dist/main.js pack \
 npm run dev --workspace @linxsimcity/viewer
 ```
 
-Open the local viewer URL and drop the generated `.linxtrace` file onto the loader. Trace parsing, validation, indexing, checkpoint seek, and reduction run off the rendering thread.
+Open the local viewer URL to play the bundled FA-250 trace, or use **Open local trace** to select the generated `.linxtrace` file. Trace parsing, validation, indexing, checkpoint seek, and reduction run off the rendering thread.
 
 ## Official workload showcase
 
