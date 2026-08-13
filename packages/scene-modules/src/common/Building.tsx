@@ -1,13 +1,15 @@
 import { Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
+import type { ColorRepresentation } from "three";
 
 interface BuildingProps {
   readonly id?: string | undefined;
   readonly label?: string | undefined;
   readonly position: readonly [number, number, number];
   readonly size: readonly [number, number, number];
-  readonly color: string;
-  readonly emissive?: string | undefined;
+  readonly color: ColorRepresentation;
+  readonly emissive?: ColorRepresentation | undefined;
+  readonly emissiveIntensity?: number | undefined;
   readonly labelScale?: number;
   readonly onSelect?: ((entityId: string) => void) | undefined;
 }
@@ -19,6 +21,7 @@ export function Building({
   size,
   color,
   emissive = color,
+  emissiveIntensity = 0.1,
   labelScale = 0.72,
   onSelect,
 }: BuildingProps) {
@@ -38,7 +41,7 @@ export function Building({
         <meshStandardMaterial
           color={color}
           emissive={emissive}
-          emissiveIntensity={0.1}
+          emissiveIntensity={emissiveIntensity}
           metalness={0.5}
           roughness={0.42}
         />

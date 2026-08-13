@@ -64,6 +64,26 @@ Open the printed local URL and drop either `.linxtrace` file onto the loader. Th
 - Four long CUBE PE strips align with one quarter of the Tile Register each. A flows horizontally from four BG banks; B broadcasts vertically from StgBufB, which is the Shared Tile Register below the matrix.
 - Crossbar and dataflow links are orthogonal 3D pipes rather than curved wires.
 
+## Reference captures
+
+The following captures come from the validated archives above, rendered by the production Viewer build.
+
+### Complete city · matmul cycle 1880
+
+![Rectangular LinxSimCity with scalar, vector, CELL, CUBE, StgBufB, and TLSU districts](assets/showcase/linxsimcity-matmul-cycle-1880.jpg)
+
+### CUBE pipeline · matmul cycle 365
+
+At this cycle, the official trace contains simultaneous `cube.stage` and `cube.complete` events. The close-up shows four long PE strips, individually addressable MAC cells, horizontal A pipes, vertical B broadcast pipes, CubeRdBuf, and WQ_CUBE.
+
+![Four-PE CUBE close-up with active MAC cells and orthogonal A/B pipes](assets/showcase/linxsimcity-matmul-cube-cycle-365.jpg)
+
+### Vector pipeline · FA cycle 2148
+
+The FA trace drives PE0 ALU and PE1 FMLA stages at this cycle. The Vector camera preset exposes the corresponding trace-driven cyan highlights next to the scalar CPU and flattened CELL banks.
+
+![FA vector pipeline with ALU and FMLA stages highlighted](assets/showcase/linxsimcity-fa-vector-cycle-2148.jpg)
+
 ## FlashAttention boundary
 
 The FA archive is a truthful bounded trace, not a claimed full-program result. Beyond the selected boundary, the current SuperScalarModel can publish a newer local BIFU fragment before the tail of an older fragment on another thread. That can close a `TSTORE` block before its canonical `B.IOT`/`B.IOR` metadata arrives. LinxSimCity records the 250-block limit in provenance so this incomplete model suffix is never presented as a valid complete workload.

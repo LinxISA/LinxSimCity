@@ -16,9 +16,10 @@ const EMPTY_TOPOLOGY: TopologyDescriptor = {
   entities: [],
 };
 
-const focusOptions: readonly { id: CameraFocus; label: string }[] = [
+export const focusOptions: readonly { id: CameraFocus; label: string }[] = [
   { id: "city", label: "Core" },
   { id: "scalar", label: "Scalar" },
+  { id: "vector", label: "Vector" },
   { id: "cell", label: "CELL" },
   { id: "cube", label: "CUBE" },
   { id: "tlsu", label: "TLSU" },

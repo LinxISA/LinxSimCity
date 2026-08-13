@@ -35,7 +35,11 @@ export function City({ snapshot, selectedEntityId, onSelect }: CityProps) {
         selectedEntityId={selectedEntityId}
         onSelect={onSelect}
       />
-      <VectorDistrict snapshot={snapshot} onSelect={onSelect} />
+      <VectorDistrict
+        snapshot={snapshot}
+        selectedEntityId={selectedEntityId}
+        onSelect={onSelect}
+      />
       <CellDistrict
         snapshot={snapshot}
         selectedEntityId={selectedEntityId}

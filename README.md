@@ -2,6 +2,8 @@
 
 LinxSimCity is a WebGL trace visualizer for Linx processor and matrix-compute models. It provides a versioned trace contract, a dependency-light C++ writer, validation/packing tools, and an interactive 3D browser viewer.
 
+![LinxSimCity running the official SuperNPUBench matmul trace](docs/assets/showcase/linxsimcity-matmul-cycle-1880.jpg)
+
 ## Current foundation
 
 - Trace schema `1.0.0` with strict event ordering and stable topology IDs
