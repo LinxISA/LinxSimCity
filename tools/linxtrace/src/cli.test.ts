@@ -148,11 +148,64 @@ describe("linxtrace CLI", () => {
 
     const result = runCli("validate", bundle, "--json");
 
-    expect(result.status).toBe(0);
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
     expect(JSON.parse(result.stdout)).toMatchObject({
       valid: true,
       errors: [],
       stats: { cycles: 2, events: 2, chunks: 1 },
+    });
+  });
+
+  test("validate accepts physical topology geometry", async () => {
+    const bundle = join(testRoot, "physical.trace-dir");
+    await writeBundle(bundle);
+    const manifest = await readJson(join(bundle, "manifest.json"));
+    manifest.schemaVersion = "1.1.0";
+    await writeJson(join(bundle, "manifest.json"), manifest);
+    const index = await readJson(join(bundle, "index.json"));
+    index.schemaVersion = "1.1.0";
+    await writeJson(join(bundle, "index.json"), index);
+    await writeJson(join(bundle, "topology.json"), {
+      schemaVersion: "1.1.0",
+      layout: {
+        schema: "linx-city-v1",
+        units: "scene-unit",
+        upAxis: "y",
+        forwardAxis: "-z",
+        districts: [{ id: "core", position: [0, 0, 0], size: [20, 4, 12] }],
+      },
+      entities: [
+        {
+          id: "pe0.fetch",
+          kind: "module",
+          label: "Fetch",
+          instance: {},
+          ports: [
+            {
+              id: "pe0.fetch.out",
+              direction: "out",
+              widthBytes: 16,
+              position: [2, 0.5, 0],
+            },
+          ],
+          placement: {
+            district: "core",
+            thread: 0,
+            position: [0, 0.5, 0],
+            size: [4, 1, 3],
+            rotation: [0, 0, 0],
+            lodGroup: "scalar-detail",
+          },
+        },
+      ],
+    });
+
+    const result = runCli("validate", bundle, "--json");
+
+    expect(result.status, `${result.stdout}\n${result.stderr}`).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      valid: true,
+      errors: [],
     });
   });
 

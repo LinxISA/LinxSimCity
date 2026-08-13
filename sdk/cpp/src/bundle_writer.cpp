@@ -22,8 +22,6 @@
 namespace linxsimcity::trace {
 namespace {
 
-constexpr const char *kSchemaVersion = "1.0.0";
-
 struct ChunkIndexEntry {
   std::string path;
   std::uint64_t firstCycle;
@@ -393,7 +391,7 @@ public:
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
     writer.Key("schemaVersion");
-    writer.String(kSchemaVersion);
+    writer.String(topology.schemaVersion.c_str());
     writer.Key("modelVersion");
     writer.String("unknown");
     writer.Key("profile");
@@ -428,7 +426,7 @@ public:
     rapidjson::Writer<rapidjson::StringBuffer> writer(buffer);
     writer.StartObject();
     writer.Key("schemaVersion");
-    writer.String(kSchemaVersion);
+    writer.String(topology.schemaVersion.c_str());
     writer.Key("chunks");
     writer.StartArray();
     for (const auto &chunk : chunks) {

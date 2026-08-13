@@ -42,8 +42,25 @@ export interface ValidationOptions {
   limits?: ResourceLimitOverrides;
 }
 
+const TopologyVector3Schema = z.tuple([z.number(), z.number(), z.number()]);
+
 const TopologySchema = z.strictObject({
   schemaVersion: z.string().min(1),
+  layout: z
+    .strictObject({
+      schema: z.literal("linx-city-v1"),
+      units: z.literal("scene-unit"),
+      upAxis: z.literal("y"),
+      forwardAxis: z.literal("-z"),
+      districts: z.array(
+        z.strictObject({
+          id: z.string().min(1),
+          position: TopologyVector3Schema,
+          size: TopologyVector3Schema,
+        }),
+      ),
+    })
+    .optional(),
   entities: z.array(
     z.strictObject({
       id: z.string().min(1),
@@ -69,15 +86,29 @@ const TopologySchema = z.strictObject({
             id: z.string().min(1),
             direction: z.enum(["in", "out", "inout"]),
             widthBytes: z.number().optional(),
+            position: TopologyVector3Schema.optional(),
           }),
         )
         .optional(),
       placement: z
         .strictObject({
           district: z.string().min(1),
+          thread: z.number().optional(),
+          position: TopologyVector3Schema.optional(),
+          size: TopologyVector3Schema.optional(),
+          rotation: TopologyVector3Schema.optional(),
           order: z.number().optional(),
           row: z.number().optional(),
           column: z.number().optional(),
+          lodGroup: z.string().min(1).optional(),
+        })
+        .optional(),
+      route: z
+        .strictObject({
+          style: z.literal("orthogonal"),
+          fromPortId: z.string().min(1),
+          toPortId: z.string().min(1),
+          points: z.array(TopologyVector3Schema).min(2),
         })
         .optional(),
       attributes: z

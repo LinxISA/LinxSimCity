@@ -193,6 +193,8 @@ void TestPhysicalTopologyAndCapabilitiesSerializeExactly() {
           "route points missing");
 
   const auto manifest = ParseJson(ReadFile(output / "manifest.json"));
+  Require(manifest["schemaVersion"] == topologyJson["schemaVersion"],
+          "manifest and physical topology schema versions differ");
   Require(manifest["capabilities"].Size() == 2,
           "manifest capabilities missing");
   Require(manifest["capabilities"][1] == "physical-layout-v1",

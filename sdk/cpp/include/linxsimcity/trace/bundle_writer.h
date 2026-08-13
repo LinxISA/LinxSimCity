@@ -7,6 +7,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace linxsimcity::trace {
@@ -17,6 +18,16 @@ public:
 };
 
 struct WriterOptions {
+  WriterOptions() = default;
+  explicit WriterOptions(std::filesystem::path output,
+                         std::string traceProfile = "pipeline",
+                         std::uint64_t chunkSpan = 4096,
+                         std::uint64_t checkpointSpan = 4096,
+                         std::vector<std::string> traceCapabilities = {})
+      : outputDirectory(std::move(output)), profile(std::move(traceProfile)),
+        chunkCycleSpan(chunkSpan), checkpointCycleSpan(checkpointSpan),
+        capabilities(std::move(traceCapabilities)) {}
+
   std::filesystem::path outputDirectory;
   std::string profile{"pipeline"};
   std::uint64_t chunkCycleSpan{4096};
