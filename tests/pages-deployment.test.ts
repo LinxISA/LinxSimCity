@@ -1,5 +1,6 @@
 import {
   copyFileSync,
+  readFileSync,
   mkdirSync,
   mkdtempSync,
   rmSync,
@@ -54,4 +55,16 @@ test("accepts the base-prefixed Viewer with the verified FA archive", () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("the Pages workflow verifies the production artifact before upload", () => {
+  const workflow = readFileSync(
+    join(repositoryRoot, ".github/workflows/pages.yml"),
+    "utf8",
+  );
+  const verify = workflow.indexOf("- run: npm run pages:verify");
+  const upload = workflow.indexOf("- uses: actions/upload-pages-artifact@v4");
+
+  expect(verify).toBeGreaterThan(-1);
+  expect(upload).toBeGreaterThan(verify);
 });

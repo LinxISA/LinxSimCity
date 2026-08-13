@@ -2,7 +2,7 @@ import {
   normalizeWorkerError,
   type WorkerDiagnostic,
 } from "@linxsimcity/trace-runtime";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { usePlayerStore } from "../player/player-store.js";
 import {
@@ -32,6 +32,13 @@ export function useTraceLoader() {
       }
     },
   });
+
+  useEffect(
+    () => () => {
+      controller.current?.cancel();
+    },
+    [],
+  );
 
   const startDefaultTrace = useCallback(() => controller.current!.start(), []);
   const loadFile = useCallback(

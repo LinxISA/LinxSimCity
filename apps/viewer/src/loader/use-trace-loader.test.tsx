@@ -84,6 +84,33 @@ test("selecting a local file cancels a pending default trace", async () => {
   expect(storeState.play).not.toHaveBeenCalled();
 });
 
+test("unmounting cancels a pending default trace before a remount loads local data", async () => {
+  const pendingResponse = deferred<Response>();
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => pendingResponse.promise),
+  );
+  const first = renderHook(() => useTraceLoader());
+
+  let staleDefaultLoad!: Promise<boolean>;
+  act(() => {
+    staleDefaultLoad = first.result.current.startDefaultTrace();
+  });
+  first.unmount();
+
+  const second = renderHook(() => useTraceLoader());
+  const localFile = new File(["local"], "local.linxtrace");
+  await act(async () => {
+    expect(await second.result.current.loadFile(localFile)).toBe(true);
+  });
+  pendingResponse.resolve(okResponse());
+  expect(await staleDefaultLoad).toBe(false);
+
+  expect(storeState.loadTrace).toHaveBeenCalledTimes(1);
+  expect(storeState.loadTrace).toHaveBeenCalledWith(localFile);
+  expect(storeState.play).not.toHaveBeenCalled();
+});
+
 test("a default fetch error is visible and retry reloads the demo", async () => {
   let attempt = 0;
   vi.stubGlobal(
