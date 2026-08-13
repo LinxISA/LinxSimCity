@@ -32,6 +32,15 @@ function snapshot(cycle: number): SerializedViewerSnapshot {
     activeEvents: [],
     changedEntityIds: [],
     profileAvailability: { overview: true, pipeline: true, forensic: false },
+    causal: {
+      instructions: [],
+      requests: [],
+      robs: [],
+      prfs: [],
+      caches: [],
+      cells: [],
+      activeRoutes: [],
+    },
   };
 }
 
@@ -92,10 +101,16 @@ test("load, seek, playback, mode, and selection transitions are bounded", async 
   store.getState().setRate(4);
   store.getState().setMode("expert");
   store.getState().selectEntity("core.scalar.rob.slot0");
+  store.getState().selectPe(2);
+  store.getState().setFollowCommit(false);
+  store.getState().pinInstruction(77);
   expect(store.getState()).toMatchObject({
     rate: 4,
     mode: "expert",
     selectedEntityId: "core.scalar.rob.slot0",
+    selectedPe: 2,
+    followCommit: false,
+    pinnedInstructionId: 77,
   });
 
   await store.getState().step(-1);
@@ -118,6 +133,51 @@ test("superseded seeks do not move the visible cycle", async () => {
   worker.supersedeRequest = store.getState().nextRequestId;
   await store.getState().seek(8);
   expect(store.getState()).toMatchObject({ cycle: 0, status: "ready" });
+});
+
+test("derives the live and bounded recent commit trace after every seek", async () => {
+  class CommitWorker extends FakeWorker {
+    override async seek(cycle: number) {
+      const value = snapshot(cycle);
+      return {
+        ...value,
+        causal: {
+          ...value.causal,
+          instructions: Array.from(
+            { length: 10 },
+            (_, index) =>
+              [
+                index,
+                {
+                  id: index,
+                  threadId: (index % 4) as 0 | 1 | 2 | 3,
+                  pc: 0x1000 + index * 4,
+                  disassemblyId: `fa-${index}`,
+                  robSlot: index,
+                  stage: "retire",
+                  sourceRegisters: [index],
+                  destinationRegisters: [index + 1],
+                  requestIds: [],
+                  routeIds: [`pe${index % 4}.scalar.pipe.alu`],
+                  completed: true,
+                  retired: true,
+                  squashed: false,
+                  lastCycle: index,
+                  terminalCycle: index,
+                },
+              ] as const,
+          ),
+        },
+      } satisfies SerializedViewerSnapshot;
+    }
+  }
+  const store = createPlayerStore(() => new CommitWorker());
+  await store.getState().loadTrace(source);
+  expect(store.getState().liveCommit?.id).toBe(9);
+  expect(store.getState().recentCommits).toHaveLength(8);
+  expect(store.getState().recentCommits.map(({ id }) => id)).toEqual([
+    9, 8, 7, 6, 5, 4, 3, 2,
+  ]);
 });
 
 test("an in-flight playback seek cannot resume after pause", async () => {

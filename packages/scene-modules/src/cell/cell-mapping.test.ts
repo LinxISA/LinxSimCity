@@ -6,6 +6,7 @@ import {
   cellInstanceId,
   cellMapping,
   selectedBankGroup,
+  topologyCellInstanceId,
 } from "./cell-mapping.js";
 
 test("CELL mapping covers four PEs, eight thin banks, and 256 128B rows", () => {
@@ -23,4 +24,5 @@ test("CELL mapping covers four PEs, eight thin banks, and 256 128B rows", () => 
   expect(cellByteRange(23)).toEqual({ firstByte: 2_944, lastByte: 3_071 });
   expect(selectedBankGroup(0)).toEqual([0, 1, 2, 3]);
   expect(selectedBankGroup(1)).toEqual([4, 5, 6, 7]);
+  expect(topologyCellInstanceId(3, 7, 2_559, 2_560)).toBe(81_919);
 });

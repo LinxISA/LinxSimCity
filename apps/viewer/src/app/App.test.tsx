@@ -23,6 +23,11 @@ const playerState = vi.hoisted(() => ({
   rate: 1 as const,
   mode: "demo" as const,
   seekPending: false,
+  selectedPe: 0 as const,
+  followCommit: true,
+  pinnedInstructionId: undefined as number | undefined,
+  liveCommit: undefined,
+  recentCommits: [],
   selectedEntityId: undefined,
   unload: vi.fn(async () => {}),
   seek: vi.fn(async () => {}),
@@ -31,6 +36,9 @@ const playerState = vi.hoisted(() => ({
   step: vi.fn(async () => {}),
   setRate: vi.fn(),
   setMode: vi.fn(),
+  selectPe: vi.fn(),
+  setFollowCommit: vi.fn(),
+  pinInstruction: vi.fn(),
 }));
 
 vi.mock("../loader/use-trace-loader.js", () => ({
@@ -45,7 +53,7 @@ vi.mock("../player/playback-clock.js", () => ({
   startPlaybackClock: () => () => {},
 }));
 vi.mock("../scene/SceneViewport.js", () => ({
-  SceneViewport: () => <div aria-label="3D scene" />,
+  SceneViewport: () => <div className="scene-viewport" aria-label="3D scene" />,
 }));
 vi.mock("../timeline/Timeline.js", () => ({
   Timeline: () => <div aria-label="Trace navigation" />,
@@ -66,9 +74,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 test("mounting the app starts the bundled demo", () => {
-  render(<App />);
+  const { container } = render(<App />);
   expect(loaderState.startDefaultTrace).toHaveBeenCalledTimes(1);
   expect(screen.getByTestId("trace-dropzone")).toBeTruthy();
+  expect(container.querySelector(".app-shell > .scene-viewport")).toBeTruthy();
+  expect(container.querySelector(".topbar")).toBeNull();
+  expect(container.querySelector(".inspector-shell")).toBeNull();
 });
 
 test("a loaded snapshot keeps the compact local picker visible", () => {

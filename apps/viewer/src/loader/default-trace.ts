@@ -1,4 +1,6 @@
-export const DEFAULT_TRACE_FILENAME = "supernpubench-fa-250-blocks.linxtrace";
+import type { WorkerTraceSource } from "@linxsimcity/trace-runtime";
+
+export const DEFAULT_TRACE_DIRECTORY = "supernpubench-fa-250-blocks";
 
 export interface DefaultTraceController {
   start(): Promise<boolean>;
@@ -8,8 +10,8 @@ export interface DefaultTraceController {
 
 interface DefaultTraceControllerOptions {
   readonly baseUrl: string;
-  readonly fetchTrace?: typeof fetch;
-  readonly loadTrace: (file: File) => Promise<boolean>;
+  readonly pageUrl?: string | undefined;
+  readonly loadTrace: (source: WorkerTraceSource) => Promise<boolean>;
   readonly play: () => void;
   readonly onFailure: (error?: unknown) => void;
 }
@@ -17,12 +19,19 @@ interface DefaultTraceControllerOptions {
 export function resolveDefaultTraceUrl(baseUrl: string): string {
   const root = baseUrl.length === 0 ? "/" : baseUrl;
   const normalized = root.endsWith("/") ? root : `${root}/`;
-  return `${normalized}traces/${DEFAULT_TRACE_FILENAME}`;
+  return `${normalized}traces/${DEFAULT_TRACE_DIRECTORY}/`;
+}
+
+function absoluteBundleUrl(baseUrl: string, pageUrl?: string): string {
+  const fallback = "http://localhost/";
+  const candidate = pageUrl ?? globalThis.location?.href ?? fallback;
+  const documentUrl = /^https?:/.test(candidate) ? candidate : fallback;
+  return new URL(resolveDefaultTraceUrl(baseUrl), documentUrl).href;
 }
 
 export function createDefaultTraceController({
   baseUrl,
-  fetchTrace = fetch,
+  pageUrl,
   loadTrace,
   play,
   onFailure,
@@ -32,27 +41,17 @@ export function createDefaultTraceController({
 
   const run = async (attemptGeneration: number): Promise<boolean> => {
     try {
-      const response = await fetchTrace(resolveDefaultTraceUrl(baseUrl));
-      if (attemptGeneration !== generation) return false;
-      if (!response.ok) {
-        throw new Error(
-          `Default trace request failed with HTTP ${response.status}`,
-        );
-      }
-
-      const blob = await response.blob();
-      if (attemptGeneration !== generation) return false;
-      const loaded = await loadTrace(
-        new File([blob], DEFAULT_TRACE_FILENAME, {
-          type: response.headers.get("content-type") ?? "application/zip",
-        }),
-      );
+      const loaded = await loadTrace({
+        kind: "http-directory",
+        baseUrl: absoluteBundleUrl(baseUrl, pageUrl),
+      });
       if (attemptGeneration !== generation) return false;
       if (!loaded) {
-        onFailure();
+        onFailure(
+          new Error("Default trace worker could not load the logical bundle"),
+        );
         return false;
       }
-
       play();
       return true;
     } catch (error) {

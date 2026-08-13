@@ -4,13 +4,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import { Color, InstancedMesh, Matrix4, Quaternion, Vector3 } from "three";
 
 import { colorForState, stateMap } from "./colors.js";
+import type { BoxInstance } from "./box-instance.js";
 
-export interface BoxInstance {
-  readonly id: string;
-  readonly position: readonly [number, number, number];
-  readonly scale: readonly [number, number, number];
-  readonly rotationY?: number;
-}
+export type { BoxInstance } from "./box-instance.js";
 
 interface InstancedBoxesProps {
   readonly instances: readonly BoxInstance[];

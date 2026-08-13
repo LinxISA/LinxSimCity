@@ -54,7 +54,6 @@ describe("trace event schema", () => {
         options,
       ),
     ).toThrow();
-
   });
 
   test("keeps legacy payloads loose without a detailed capability", () => {

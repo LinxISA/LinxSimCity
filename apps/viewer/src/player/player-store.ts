@@ -19,9 +19,24 @@ const initialValues = {
   cycle: 0,
   rate: 1 as const,
   mode: "demo" as const,
+  selectedPe: 0 as const,
+  followCommit: true,
+  recentCommits: [],
   seekPending: false,
   nextRequestId: 0,
 };
+
+function commitState(
+  snapshot: import("@linxsimcity/trace-runtime").SerializedViewerSnapshot,
+) {
+  const retired = snapshot.causal.instructions
+    .map(([, instruction]) => instruction)
+    .filter((instruction) => instruction.retired && !instruction.squashed)
+    .sort(
+      (left, right) => right.lastCycle - left.lastCycle || right.id - left.id,
+    );
+  return { liveCommit: retired[0], recentCommits: retired.slice(0, 8) };
+}
 
 export function createPlayerStore(
   createWorker: TraceWorkerFactory = () => TraceWorkerClient.spawn(),
@@ -64,6 +79,7 @@ export function createPlayerStore(
         set({
           info,
           snapshot,
+          ...commitState(snapshot),
           cycle: snapshot.cycle,
           status: "ready",
           seekPending: false,
@@ -97,6 +113,7 @@ export function createPlayerStore(
         const status = get().status === "playing" ? "playing" : "ready";
         set({
           snapshot,
+          ...commitState(snapshot),
           cycle: snapshot.cycle,
           seekPending: false,
           status,
@@ -137,7 +154,25 @@ export function createPlayerStore(
     },
 
     selectEntity(entityId) {
-      set({ selectedEntityId: entityId });
+      const peMatch = entityId
+        ? /(?:^|\.)pe([0-3])(?:\.|$)/.exec(entityId)
+        : undefined;
+      set({
+        selectedEntityId: entityId,
+        ...(peMatch ? { selectedPe: Number(peMatch[1]) as 0 | 1 | 2 | 3 } : {}),
+      });
+    },
+
+    selectPe(selectedPe) {
+      set({ selectedPe });
+    },
+
+    setFollowCommit(followCommit) {
+      set({ followCommit });
+    },
+
+    pinInstruction(pinnedInstructionId) {
+      set({ pinnedInstructionId });
     },
 
     async unload() {
@@ -151,6 +186,8 @@ export function createPlayerStore(
         info: undefined,
         snapshot: undefined,
         selectedEntityId: undefined,
+        pinnedInstructionId: undefined,
+        liveCommit: undefined,
         diagnostic: undefined,
       });
     },

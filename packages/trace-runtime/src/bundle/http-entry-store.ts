@@ -52,7 +52,7 @@ export class HttpEntryStore implements EntryStore {
 
   private constructor(source: HttpDirectorySource) {
     this.baseUrl = normalizeBaseUrl(source.baseUrl);
-    this.fetchEntry = source.fetch ?? fetch;
+    this.fetchEntry = source.fetch ?? globalThis.fetch.bind(globalThis);
   }
 
   static open(source: HttpDirectorySource): HttpEntryStore {

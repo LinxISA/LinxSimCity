@@ -1,16 +1,39 @@
-import { StraightPipe } from "../common/StraightPipe.js";
+import type { SerializedViewerSnapshot } from "@linxsimcity/trace-runtime";
+import type { TopologyDescriptor } from "@linxsimcity/topology";
+import { useMemo } from "react";
 
-export function ExecutionPipes() {
-  const xs = [-69.7, -67.2, -64.7, -62.2];
+import { RoutePipe } from "../topology/RoutePipe.js";
+import { stateMap } from "../common/colors.js";
+
+export function ExecutionPipes({
+  topology,
+  selectedPe,
+  snapshot,
+}: {
+  readonly topology: TopologyDescriptor;
+  readonly selectedPe: number;
+  readonly snapshot?: SerializedViewerSnapshot | undefined;
+}) {
+  const pipes = useMemo(
+    () =>
+      topology.entities.filter(
+        (entity) =>
+          entity.kind === "pipe" &&
+          entity.id.startsWith(`pe${selectedPe}.scalar.pipe.`),
+      ),
+    [selectedPe, topology],
+  );
+  const states = stateMap(snapshot);
   return (
     <group>
-      {xs.map((x, index) => (
-        <StraightPipe
-          key={x}
-          from={[x, 1.35, 3.4]}
-          to={[x, 1.35, 10.2]}
-          color={["#b96cff", "#8b7cff", "#55b8ff", "#ffb14e"][index]!}
-          radius={0.09}
+      {pipes.map((pipe) => (
+        <RoutePipe
+          key={pipe.id}
+          entity={pipe}
+          color={
+            states.get(pipe.id)?.status === "active" ? "#ffffff" : "#a979ff"
+          }
+          radius={0.16}
         />
       ))}
     </group>

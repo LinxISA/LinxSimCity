@@ -10,7 +10,7 @@ export interface ResourceLimits {
 }
 
 export const DEFAULT_RESOURCE_LIMITS: Readonly<ResourceLimits> = {
-  metadataEntryBytes: 16 * 1024 * 1024,
+  metadataEntryBytes: 32 * 1024 * 1024,
   totalMetadataBytes: 64 * 1024 * 1024,
   totalCompressedBytes: 4 * 1024 * 1024 * 1024,
   totalUncompressedBytes: 16 * 1024 * 1024 * 1024,

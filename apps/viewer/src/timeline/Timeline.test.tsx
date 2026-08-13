@@ -29,19 +29,13 @@ function renderTimeline(
   return props;
 }
 
-test("keyboard controls play, pause, and single-step", () => {
+test("does not register competing global keyboard controls", () => {
   const props = renderTimeline();
   fireEvent.keyDown(window, { code: "Space" });
   fireEvent.keyDown(window, { code: "ArrowLeft" });
   fireEvent.keyDown(window, { code: "ArrowRight" });
-  expect(props.onPlay).toHaveBeenCalledOnce();
-  expect(props.onStep).toHaveBeenNthCalledWith(1, -1);
-  expect(props.onStep).toHaveBeenNthCalledWith(2, 1);
-
-  cleanup();
-  const playing = renderTimeline({ status: "playing" });
-  fireEvent.keyDown(window, { code: "Space" });
-  expect(playing.onPause).toHaveBeenCalledOnce();
+  expect(props.onPlay).not.toHaveBeenCalled();
+  expect(props.onStep).not.toHaveBeenCalled();
 });
 
 test("cycle input clamps and playback rate is selectable", async () => {

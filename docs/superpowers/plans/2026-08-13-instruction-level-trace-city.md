@@ -16,7 +16,7 @@
 - Run memory-heavy gates sequentially with one worker or bounded parallelism; never run full model and full TypeScript suites concurrently.
 - The Viewer never infers ROB slots, physical registers, cache ways, CELL rows, issue ports, or routes when detailed trace fields are required.
 - Four PE-threads share one I-Cache topology and one D-Cache topology; every access retains `thread_id`.
-- Tile Register geometry is exactly `4 PE × 8 banks × 256 rows × 128 bytes = 8192 CELL`.
+- Tile Register geometry follows the active four-PE model configuration: `4 PE × 8 banks × 2560 rows × 128 bytes = 81,920 CELL`.
 - Physical city placement and pipe routes live in `topology.json`; all pipe route segments are orthogonal.
 - Instruction body color is stable by thread; hit/miss/stall/flush/read/write are overlay effects.
 - Existing `.linxtrace` ZIP archives and legacy topologies remain loadable through explicit fallback behavior.
@@ -44,7 +44,7 @@ packages/trace-runtime/src/
 packages/scene-modules/src/
   topology/                topology placement/route adapters
   scalar/                  selected-PE ROB/PRF/IQ/pipes/shared caches
-  cell/                    exact 8192 CELL and arbitration visualization
+  cell/                    exact 81,920 CELL and arbitration visualization
   tlsu/                    detailed TLSU stages and queues
   flow/                    continuous route-driven tokens
 apps/viewer/src/
@@ -435,7 +435,7 @@ git push origin feat/implementation
 
 **Interfaces:**
 - Consumes Task 1 topology JSON contract.
-- Produces exactly 8192 CELL entities, one shared I-Cache, one shared D-Cache, four PE-local ROB/PRF/IQ sets, physical placements, stable port IDs, and orthogonal routes.
+- Produces exactly 81,920 CELL entities, one shared I-Cache, one shared D-Cache, four PE-local ROB/PRF/IQ sets, physical placements, stable port IDs, and orthogonal routes.
 
 - [x] **Step 1: Write failing topology-count and route tests**
 
@@ -723,7 +723,7 @@ git push origin feat/linxsimcity-trace
 
 **Interfaces:**
 - Consumes Task 1 physical topology and Task 2 causal snapshot.
-- Produces a topology-driven city, selected-PE scalar detail, shared cache beams, exact 8192 CELL instances, detailed TLSU stages, and continuous route-based tokens.
+- Produces a topology-driven city, selected-PE scalar detail, shared cache beams, exact 81,920 CELL instances, detailed TLSU stages, and continuous route-based tokens.
 
 - [ ] **Step 1: Write failing placement and route tests**
 
@@ -731,7 +731,7 @@ Assert entity transforms exactly match topology placement, route segments create
 
 - [ ] **Step 2: Write failing physical-count and selection tests**
 
-Assert `CELL_INSTANCE_COUNT===8192`, each `pe.bank.row` ID maps bijectively, selected PE changes visible ROB/PRF/IQ detail, and shared caches remain visible.
+Assert the topology supplies exactly 81,920 CELL placements, each `pe.bank.row` ID maps bijectively, selected PE changes visible ROB/PRF/IQ detail, and shared caches remain visible.
 
 - [ ] **Step 3: Write failing causal route/color tests**
 
@@ -741,7 +741,7 @@ Assert an instruction token keeps one thread color across all stages; miss/stall
 
 Run: `npx vitest run packages/scene-modules/src`
 
-Expected: FAIL on missing topology placement, PRF cells, 8192 CELL mapping, selected PE, and causal routes.
+Expected: FAIL on missing topology placement, PRF cells, 81,920 CELL mapping, selected PE, and causal routes.
 
 - [ ] **Step 5: Implement topology transform and route primitives**
 
@@ -907,7 +907,7 @@ Create `{ kind: "http-directory", baseUrl: new URL("traces/fa-detail/", BASE_URL
 
 - [ ] **Step 7: Verify production Pages output**
 
-Extend `verify-pages-build.mjs` to validate manifest/topology/index, every indexed chunk/checkpoint path and hash, `8192` CELL entities, required capabilities, and `/LinxSimCity/` asset paths.
+Extend `verify-pages-build.mjs` to validate manifest/topology/index, every indexed chunk/checkpoint path and hash, `81,920` CELL entities, required capabilities, and `/LinxSimCity/` asset paths.
 
 - [ ] **Step 8: Run focused publishing gates**
 

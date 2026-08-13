@@ -24,6 +24,8 @@ test("worker loads, seeks, and queries a trace", async () => {
   const snapshot = await trace.seek(44, 1);
   expect(snapshot.cycle).toBe(44);
   expect(snapshot.entities[0]?.[0]).toBeDefined();
+  expect(snapshot.entities.length).toBeLessThan(info.topology.entities.length);
+  expect(() => structuredClone(snapshot)).not.toThrow();
   expect(await trace.eventsAt(44)).toHaveLength(1);
   expect((await trace.entityHistory("pe0.bg.bank0.row0", 0, 255)).length).toBe(
     21,

@@ -56,12 +56,13 @@ export function useTraceLoader() {
     [loadTrace],
   );
   const retryLoad = useCallback(async () => {
+    const shouldRetry = defaultFailure || diagnostic !== undefined;
     await unload();
-    if (!defaultFailure) return;
+    if (!shouldRetry) return;
     setDefaultFailure(false);
     setDefaultDiagnostic(undefined);
     await controller.current!.retry();
-  }, [defaultFailure, unload]);
+  }, [defaultFailure, diagnostic, unload]);
 
   return {
     loadFile,

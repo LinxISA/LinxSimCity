@@ -8,6 +8,7 @@ import { afterEach, expect, test } from "vitest";
 
 import { rebuildIndex } from "./index-command.js";
 import { ResourceLimitError } from "./io.js";
+import { DEFAULT_RESOURCE_LIMITS } from "./limits.js";
 import { validateBundle } from "./validate.js";
 
 interface TestBundle {
@@ -29,6 +30,15 @@ afterEach(async () => {
     testDirectories
       .splice(0)
       .map((directory) => rm(directory, { recursive: true, force: true })),
+  );
+});
+
+test("default metadata budget accommodates fully placed physical topologies", () => {
+  expect(DEFAULT_RESOURCE_LIMITS.metadataEntryBytes).toBeGreaterThanOrEqual(
+    32 * 1024 * 1024,
+  );
+  expect(DEFAULT_RESOURCE_LIMITS.totalMetadataBytes).toBeGreaterThan(
+    DEFAULT_RESOURCE_LIMITS.metadataEntryBytes,
   );
 });
 

@@ -50,3 +50,19 @@ export function cellMapping(pe: number, bank: number, row: number) {
     entityId: cellEntityId(pe, bank, row),
   } as const;
 }
+
+export function topologyCellInstanceId(
+  pe: number,
+  bank: number,
+  row: number,
+  rowsPerBank: number,
+): number {
+  if (!Number.isSafeInteger(rowsPerBank) || rowsPerBank <= 0) {
+    throw new RangeError("rowsPerBank must be a positive safe integer");
+  }
+  return (
+    bounded("pe", pe, PE_COUNT) * BANKS_PER_PE * rowsPerBank +
+    bounded("bank", bank, BANKS_PER_PE) * rowsPerBank +
+    bounded("row", row, rowsPerBank)
+  );
+}

@@ -2,10 +2,11 @@ import { cp, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
+import { gunzipSync } from "node:zlib";
 
-import { afterAll, beforeAll, expect, test } from "vitest";
+import { afterAll, beforeAll, expect, test, vi } from "vitest";
 
-import { TraceBundleReader } from "./open-bundle.js";
+import { MAX_METADATA_BYTES, TraceBundleReader } from "./open-bundle.js";
 import type { HttpDirectorySource } from "./types.js";
 
 const root = resolve(import.meta.dirname, "../../../..");
@@ -73,6 +74,10 @@ test("directory and ZIP readers return equal logical data", async () => {
   );
   await directoryReader.close();
   await zipReader.close();
+});
+
+test("runtime accepts the generated physical topology metadata size", () => {
+  expect(MAX_METADATA_BYTES).toBeGreaterThanOrEqual(32 * 1024 * 1024);
 });
 
 test("reader rejects traversal entries before opening data", async () => {
@@ -143,6 +148,56 @@ test("HTTP directory opens metadata without fetching strings or trace data", asy
   expect(calls.at(-1)?.url).toBe(
     "https://example.test/traces/fa-detail/chunks/000000.jsonl.gz",
   );
+  await reader.close();
+});
+
+test("HTTP directory binds the WorkerGlobalScope fetch receiver", async () => {
+  const calls: Array<{ url: string; signal: AbortSignal | null }> = [];
+  const fetchTrace = fixtureFetch(calls);
+  const receiver = globalThis;
+  vi.stubGlobal(
+    "fetch",
+    function (this: unknown, ...args: Parameters<typeof fetch>) {
+      if (this !== receiver) throw new TypeError("Illegal invocation");
+      return fetchTrace(...args);
+    },
+  );
+
+  try {
+    const reader = await TraceBundleReader.open({
+      kind: "http-directory",
+      baseUrl: "https://example.test/traces/fa-detail",
+    });
+    expect(await reader.readManifest()).toBeDefined();
+    expect(calls).toHaveLength(3);
+    await reader.close();
+  } finally {
+    vi.unstubAllGlobals();
+  }
+});
+
+test("HTTP directory accepts trace data transparently decompressed by the server", async () => {
+  const fetchTrace: typeof fetch = async (input) => {
+    const url = new URL(String(input));
+    const prefix = "/traces/fa-detail/";
+    const path = url.pathname.slice(prefix.length);
+    try {
+      const bytes = await readFile(join(fixture, path));
+      const body = path.endsWith(".gz") ? gunzipSync(bytes) : bytes;
+      return new Response(new Uint8Array(body), { status: 200 });
+    } catch {
+      return new Response("missing", { status: 404 });
+    }
+  };
+  const reader = await TraceBundleReader.open(httpSource(fetchTrace));
+  const index = await reader.readIndex();
+
+  await expect(reader.readChunk(index.chunks[0]!)).resolves.toHaveLength(
+    index.chunks[0]!.eventCount,
+  );
+  await expect(
+    reader.readCheckpoint(index.chunks[0]!.checkpointPath),
+  ).resolves.toBeDefined();
   await reader.close();
 });
 

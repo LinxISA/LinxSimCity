@@ -16,9 +16,12 @@ import type {
 function serialize(snapshot: ViewerSnapshot): SerializedViewerSnapshot {
   return {
     cycle: snapshot.cycle,
-    entities: [...snapshot.entities.entries()].sort(([left], [right]) =>
-      left.localeCompare(right),
-    ),
+    entities: [...snapshot.entities.entries()]
+      .filter(
+        ([, entity]) =>
+          entity.status !== "idle" || entity.steadyStatus !== "idle",
+      )
+      .sort(([left], [right]) => left.localeCompare(right)),
     activeEvents: snapshot.activeEvents,
     changedEntityIds: [...snapshot.changedEntityIds],
     profileAvailability: snapshot.profileAvailability,

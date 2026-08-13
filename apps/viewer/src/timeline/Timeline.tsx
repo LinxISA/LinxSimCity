@@ -26,31 +26,6 @@ export function Timeline(props: TimelineProps) {
 
   useEffect(() => setScrubCycle(props.cycle), [props.cycle]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target;
-      if (
-        target instanceof Element &&
-        target.matches("input, select, textarea, [contenteditable=true]")
-      ) {
-        return;
-      }
-      if (event.code === "Space") {
-        event.preventDefault();
-        if (props.status === "playing") props.onPause();
-        else props.onPlay();
-      } else if (event.code === "ArrowLeft") {
-        event.preventDefault();
-        props.onStep(-1);
-      } else if (event.code === "ArrowRight") {
-        event.preventDefault();
-        props.onStep(1);
-      }
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [props]);
-
   useEffect(
     () => () => {
       if (frame.current !== undefined) cancelAnimationFrame(frame.current);

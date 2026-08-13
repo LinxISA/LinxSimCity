@@ -1,5 +1,5 @@
 import {
-  copyFileSync,
+  cpSync,
   readFileSync,
   mkdirSync,
   mkdtempSync,
@@ -14,9 +14,9 @@ import { expect, test } from "vitest";
 import { verifyPagesBuild } from "../scripts/verify-pages-build.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
-const sourceTrace = join(
+const sourceTraceDirectory = join(
   repositoryRoot,
-  "apps/viewer/public/traces/supernpubench-fa-250-blocks.linxtrace",
+  "apps/viewer/public/traces/supernpubench-fa-250-blocks",
 );
 
 function createPagesFixture(indexHtml: string): string {
@@ -24,9 +24,10 @@ function createPagesFixture(indexHtml: string): string {
   const dist = join(root, "apps/viewer/dist");
   mkdirSync(join(dist, "traces"), { recursive: true });
   writeFileSync(join(dist, "index.html"), indexHtml);
-  copyFileSync(
-    sourceTrace,
-    join(dist, "traces/supernpubench-fa-250-blocks.linxtrace"),
+  cpSync(
+    sourceTraceDirectory,
+    join(dist, "traces/supernpubench-fa-250-blocks"),
+    { recursive: true },
   );
   return root;
 }
@@ -42,15 +43,19 @@ test("rejects a Pages artifact whose assets escape the repository base", () => {
   }
 });
 
-test("accepts the base-prefixed Viewer with the verified FA archive", () => {
+test("accepts the base-prefixed Viewer with the verified FA logical bundle", () => {
   const root = createPagesFixture(
     '<script type="module" src="/LinxSimCity/assets/index.js"></script>',
   );
   try {
     expect(verifyPagesBuild(root)).toEqual({
       assetBase: "/LinxSimCity/assets/",
-      traceSha256:
-        "2d2001de4b1b00e3dade9a8d4e77f5f9915f235798fbbd8b5db1074e65572fa0",
+      eventCount: 199_585,
+      traceDirectory: "/LinxSimCity/traces/supernpubench-fa-250-blocks/",
+      manifestSha256:
+        "428e03ac8d8a6f5ad88e1f003c26ea16deca3dd069b1b220b43110ddab135bd1",
+      topologySha256:
+        "18b15289f730edb56f56a20633668f3b9048e40470b26a14adae6182cc08d32c",
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -1,4 +1,5 @@
 import type {
+  InstructionTraceState,
   LoadedTraceInfo,
   SerializedViewerSnapshot,
   TraceWorkerApi,
@@ -19,6 +20,11 @@ export interface PlayerState {
   readonly rate: PlaybackRate;
   readonly mode: ViewerMode;
   readonly selectedEntityId?: string | undefined;
+  readonly selectedPe: 0 | 1 | 2 | 3;
+  readonly followCommit: boolean;
+  readonly pinnedInstructionId?: number | undefined;
+  readonly liveCommit?: InstructionTraceState | undefined;
+  readonly recentCommits: readonly InstructionTraceState[];
   readonly diagnostic?: WorkerDiagnostic | undefined;
   readonly seekPending: boolean;
   readonly nextRequestId: number;
@@ -30,6 +36,9 @@ export interface PlayerState {
   setRate(rate: PlaybackRate): void;
   setMode(mode: ViewerMode): void;
   selectEntity(entityId?: string): void;
+  selectPe(pe: 0 | 1 | 2 | 3): void;
+  setFollowCommit(enabled: boolean): void;
+  pinInstruction(instructionId?: number): void;
   unload(): Promise<void>;
 }
 

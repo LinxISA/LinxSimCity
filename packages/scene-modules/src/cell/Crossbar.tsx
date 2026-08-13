@@ -1,53 +1,31 @@
-import { resolveLayout } from "@linxsimcity/scene-core";
+import type { SerializedViewerSnapshot } from "@linxsimcity/trace-runtime";
+import type { TopologyDescriptor } from "@linxsimcity/topology";
 import { useMemo } from "react";
 
-import { Building } from "../common/Building.js";
-import { StraightPipe } from "../common/StraightPipe.js";
+import { InstancedBoxes } from "../common/InstancedBoxes.js";
+import { entityToBox } from "../topology/placement.js";
 
 interface CrossbarProps {
+  readonly topology: TopologyDescriptor;
+  readonly snapshot?: SerializedViewerSnapshot | undefined;
   readonly onSelect?: ((entityId: string) => void) | undefined;
 }
 
-export function Crossbar({ onSelect }: CrossbarProps) {
-  const layout = useMemo(
-    () => resolveLayout({ schemaVersion: "1.0.0", entities: [] }),
-    [],
+export function Crossbar({ topology, snapshot, onSelect }: CrossbarProps) {
+  const lanes = useMemo(
+    () =>
+      topology.entities
+        .filter((entity) => entity.kind === "xbar-lane" && entity.placement)
+        .map(entityToBox),
+    [topology],
   );
   return (
-    <group>
-      {layout.peRows.map((row) => (
-        <group key={row.pe}>
-          <Building
-            id={`pe${row.pe}.xbar`}
-            label="8→4 XBAR"
-            position={[-14.45, 0.65, row.cell.z + row.cell.depth / 2]}
-            size={[0.75, 1.15, row.cell.depth - 0.8]}
-            color="#075477"
-            emissive="#23bbf0"
-            onSelect={onSelect}
-          />
-          {Array.from({ length: 4 }, (_, lane) => {
-            const z = row.cell.z + 2 + lane * 2.45;
-            return (
-              <group key={lane}>
-                <Building
-                  id={`pe${row.pe}.xbar.lane${lane}`}
-                  position={[-14.2, 1.13, z]}
-                  size={[0.5, 0.42, 0.42]}
-                  color="#1c9dcc"
-                  onSelect={onSelect}
-                />
-                <StraightPipe
-                  from={[-36.5, 1.08, z]}
-                  to={[-13.8, 1.08, z]}
-                  color="#29c8ff"
-                  radius={0.075}
-                />
-              </group>
-            );
-          })}
-        </group>
-      ))}
-    </group>
+    <InstancedBoxes
+      instances={lanes}
+      snapshot={snapshot}
+      baseColor={0x1c9dcc}
+      emissive={0x23bbf0}
+      onSelect={onSelect}
+    />
   );
 }

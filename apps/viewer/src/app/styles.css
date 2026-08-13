@@ -705,3 +705,270 @@ code {
     min-height: 180px;
   }
 }
+
+/* Full-screen city shell: controls float over the WebGL scene without panels. */
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.app-shell {
+  position: relative;
+  display: block;
+  width: 100vw;
+  height: 100vh;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.scene-viewport {
+  position: absolute;
+  inset: 0;
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #030811;
+}
+
+.scene-viewport canvas {
+  width: 100vw !important;
+  height: 100vh !important;
+  min-height: 0;
+}
+
+.status-overlay,
+.pe-selector,
+.commit-hud,
+.control-hint,
+.timeline-shell {
+  position: absolute;
+  z-index: 5;
+  font-family: "SFMono-Regular", Consolas, monospace;
+}
+
+.status-overlay {
+  top: 14px;
+  left: 16px;
+  color: #91abc0;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  text-shadow: 0 1px 5px #000;
+}
+
+.status-ready,
+.status-playing {
+  color: #75f0c2;
+}
+
+.status-error {
+  color: #ff7892;
+}
+
+.pe-selector {
+  top: 12px;
+  left: 50%;
+  display: flex;
+  gap: 4px;
+  transform: translateX(-50%);
+}
+
+.pe-selector button,
+.camera-toolbar button {
+  border: 0;
+  color: #6f8499;
+  background: transparent;
+  cursor: pointer;
+  text-shadow: 0 1px 4px #000;
+}
+
+.pe-selector button {
+  padding: 5px 8px;
+  font:
+    700 10px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+}
+
+.pe-selector button.is-active {
+  color: #e9fbff;
+  box-shadow: inset 0 -2px #42d8ff;
+}
+
+.camera-toolbar {
+  top: 39px;
+  right: auto;
+  left: 50%;
+  padding: 0;
+  transform: translateX(-50%);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.camera-toolbar button.is-active {
+  color: #dff8ff;
+  background: transparent;
+  box-shadow: inset 0 -1px #2dbde9;
+}
+
+.scene-stats {
+  right: auto;
+  bottom: 83px;
+  left: 16px;
+  justify-content: flex-start;
+  max-width: calc(100% - 360px);
+}
+
+.scene-stats span {
+  padding: 0 8px 0 0;
+  border: 0;
+  border-radius: 0;
+  color: #607f95;
+  background: transparent;
+  text-shadow: 0 1px 5px #000;
+}
+
+.commit-hud {
+  top: 14px;
+  right: 18px;
+  width: min(320px, 30vw);
+  max-height: calc(100vh - 112px);
+  overflow: auto;
+  color: #a8bfd3;
+  font-size: 10px;
+  line-height: 1.45;
+  scrollbar-width: thin;
+  text-shadow: 0 1px 5px #000;
+}
+
+.instruction-trace {
+  margin: 0 0 14px;
+  padding: 0 0 0 9px;
+  border-left: 2px solid var(--thread-color, #48d8ff);
+}
+
+.instruction-trace strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--thread-color, #a6eaff);
+  letter-spacing: 0.14em;
+}
+
+.trace-path {
+  margin-top: 4px;
+  color: #6f90a8;
+  overflow-wrap: anywhere;
+}
+
+.commit-hud ol {
+  display: grid;
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.commit-hud li {
+  padding-left: 9px;
+  color: var(--thread-color, #7895aa);
+  border-left: 1px solid currentColor;
+}
+
+[data-thread="0"] {
+  --thread-color: #42d8ff;
+}
+
+[data-thread="1"] {
+  --thread-color: #ffd34f;
+}
+
+[data-thread="2"] {
+  --thread-color: #f062ff;
+}
+
+[data-thread="3"] {
+  --thread-color: #54ee8b;
+}
+
+.control-hint {
+  right: 18px;
+  bottom: 82px;
+  color: #546d81;
+  font-size: 9px;
+  letter-spacing: 0.03em;
+  pointer-events: none;
+  text-shadow: 0 1px 4px #000;
+}
+
+.timeline-shell {
+  right: 16px;
+  bottom: 10px;
+  left: 16px;
+  padding: 8px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.playback-controls button,
+.rate-control select,
+.cycle-input input {
+  border: 0;
+  background: rgb(2 9 17 / 58%);
+  backdrop-filter: blur(5px);
+}
+
+.playback-controls .play-button {
+  border: 0;
+  background: rgb(13 82 110 / 72%);
+}
+
+.trace-loader {
+  z-index: 7;
+}
+
+.trace-loader-compact {
+  top: 38px;
+  left: 16px;
+}
+
+.trace-compact-button,
+.trace-dropzone,
+.diagnostics-panel {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.trace-compact-button {
+  padding: 5px 0;
+  color: #75b9d6;
+  background: transparent;
+  backdrop-filter: none;
+}
+
+.trace-dropzone {
+  background: linear-gradient(90deg, rgb(3 11 21 / 86%), transparent);
+}
+
+.diagnostics-panel {
+  background: rgb(22 6 14 / 86%);
+}
+
+@media (max-width: 760px) {
+  .commit-hud {
+    width: 42vw;
+  }
+
+  .control-hint,
+  .scene-stats {
+    display: none;
+  }
+}

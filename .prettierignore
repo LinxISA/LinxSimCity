@@ -1,3 +1,4 @@
 .superpowers/
 docs/superpowers/
 fixtures/**/*.trace-dir/
+apps/viewer/public/traces/supernpubench-fa-250-blocks/

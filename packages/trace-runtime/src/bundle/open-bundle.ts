@@ -28,7 +28,7 @@ import {
   type TraceBundleSource,
 } from "./types.js";
 
-const MAX_METADATA_BYTES = 16 * 1024 * 1024;
+export const MAX_METADATA_BYTES = 32 * 1024 * 1024;
 const MAX_DECOMPRESSED_BYTES = 256 * 1024 * 1024;
 const textDecoder = new TextDecoder("utf-8", { fatal: true });
 
@@ -60,7 +60,8 @@ function parseJson(text: string, path: string): unknown {
 
 function decompress(bytes: Uint8Array, path: string): Uint8Array {
   try {
-    const result = gunzipSync(bytes);
+    const result =
+      bytes[0] === 0x1f && bytes[1] === 0x8b ? gunzipSync(bytes) : bytes;
     if (result.byteLength > MAX_DECOMPRESSED_BYTES) {
       throw new TraceBundleError(
         "resource_limit",
