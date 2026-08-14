@@ -1,6 +1,6 @@
 # LinxSimCity Gem5-Style Instruction Effects Design
 
-**Status:** Approved direction; pending specification review
+**Status:** Approved
 
 **Date:** 2026-08-14
 
