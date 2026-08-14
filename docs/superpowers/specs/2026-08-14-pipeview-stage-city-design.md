@@ -163,7 +163,7 @@ Existing events are mapped only when their payload already carries a real `stage
 2. Macro district placement remains recognizable and follows the confirmed order.
 3. Every listed Scalar, Vector, CUBE, ACCCVT, TLSU, and Tile Bridge stage has one visible building.
 4. Every consecutive stage transition has a topology pipe.
-5. CUBE A pipes are horizontal and B broadcast pipes are vertical.
+5. CUBE has sixteen horizontal A pipes (`4 PE x 4 bank lanes`) and four vertical B broadcast pipes.
 6. Shared Tile Register is labeled exactly `Shared Tile Register`, contains 2048 selectable 128B cells, and is aligned beneath CUBE.
 7. Stage buildings display four PE bays and use the existing thread color palette.
 8. The bundled topology passes deterministic collision and orthogonal-route validation.

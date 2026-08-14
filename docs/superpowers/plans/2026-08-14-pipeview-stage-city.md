@@ -140,13 +140,13 @@ Give every stage module four PE bays through `attributes.peBays = 4`. Add one in
 
 - [ ] **Step 4: Add CUBE, branch, and Shared Tile Register topology**
 
-Make `cube.Calc` a container-sized stage building with the existing four PE matrix rows nested inside it. Add four horizontal A routes and four vertical B broadcast routes. Create `shared_tile_register` plus 2048 `cell` children arranged as 64 SsbID groups times 32 128-byte cells, preserving `stgbufb` in `attributes.compatibilityAlias`.
+Make `cube.Calc` a container-sized stage building with the existing four PE matrix rows nested inside it. Add sixteen horizontal A routes (four bank lanes for each of four PE rows) and four vertical B broadcast routes. Create `shared_tile_register` plus 2048 `cell` children arranged as 64 SsbID groups times 32 128-byte cells, preserving `stgbufb` in `attributes.compatibilityAlias`.
 
 Relocate existing BG/CELL and CUBE MAC placements into their new districts using normalized coordinates. Do not change event entity IDs.
 
 - [ ] **Step 5: Validate the enriched topology and commit**
 
-In the test, call both `validateTopology(enriched)` and `findLayoutCollisions(enriched)`. Assert zero errors/collisions, Core aspect ratio `1.875`, 2048 Shared Tile Register cells, four A routes, four B routes, and one module for every stage inventory entry.
+In the test, call both `validateTopology(enriched)` and `findLayoutCollisions(enriched)`. Assert zero errors/collisions, Core aspect ratio `1.875`, 2048 Shared Tile Register cells, sixteen A routes, four B routes, and one module for every stage inventory entry.
 
 Run:
 
@@ -365,7 +365,7 @@ Verify in the browser:
 - Scalar, Vector, BG/CELL, CUBE, TLSU, and Shared Tile Register plots do not overlap;
 - stage buildings remain within their parent plots;
 - CUBE PE rows align with BG/CELL rows;
-- A pipes are horizontal and B pipes are vertical;
+- all sixteen A pipes are horizontal and all four B pipes are vertical;
 - Shared Tile Register is directly beneath CUBE and labeled correctly;
 - pan, orbit, zoom, arrow keys, and PE selection still work;
 - no WebGL errors or runaway memory growth occur during default playback.
