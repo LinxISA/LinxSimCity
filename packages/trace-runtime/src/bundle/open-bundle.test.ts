@@ -89,9 +89,13 @@ test("reader rejects traversal entries before opening data", async () => {
   ).rejects.toThrow(/trace bundle|required/i);
 });
 
-function fixtureFetch(
-  calls: Array<{ url: string; signal: AbortSignal | null }>,
-): typeof fetch {
+interface FetchCall {
+  url: string;
+  signal: AbortSignal | null;
+  cache: RequestCache | undefined;
+}
+
+function fixtureFetch(calls: FetchCall[]): typeof fetch {
   return async (input, init) => {
     const url = new URL(
       typeof input === "string"
@@ -100,7 +104,11 @@ function fixtureFetch(
           ? input.href
           : input.url,
     );
-    calls.push({ url: url.href, signal: init?.signal ?? null });
+    calls.push({
+      url: url.href,
+      signal: init?.signal ?? null,
+      cache: init?.cache,
+    });
     const prefix = "/traces/fa-detail/";
     if (!url.pathname.startsWith(prefix)) {
       return new Response("outside logical bundle", { status: 404 });
@@ -131,7 +139,7 @@ function httpSource(fetchTrace: typeof fetch): HttpDirectorySource {
 }
 
 test("HTTP directory opens metadata without fetching strings or trace data", async () => {
-  const calls: Array<{ url: string; signal: AbortSignal | null }> = [];
+  const calls: FetchCall[] = [];
   const reader = await TraceBundleReader.open(httpSource(fixtureFetch(calls)));
 
   expect(calls.map(({ url }) => url).sort()).toEqual([
@@ -140,6 +148,7 @@ test("HTTP directory opens metadata without fetching strings or trace data", asy
     "https://example.test/traces/fa-detail/topology.json",
   ]);
   expect(calls.every(({ signal }) => signal instanceof AbortSignal)).toBe(true);
+  expect(calls.every(({ cache }) => cache === "no-cache")).toBe(true);
   await reader.readManifest();
   expect(calls).toHaveLength(3);
 
@@ -152,7 +161,7 @@ test("HTTP directory opens metadata without fetching strings or trace data", asy
 });
 
 test("HTTP directory binds the WorkerGlobalScope fetch receiver", async () => {
-  const calls: Array<{ url: string; signal: AbortSignal | null }> = [];
+  const calls: FetchCall[] = [];
   const fetchTrace = fixtureFetch(calls);
   const receiver = globalThis;
   vi.stubGlobal(

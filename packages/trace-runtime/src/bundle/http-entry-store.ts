@@ -82,6 +82,7 @@ export class HttpEntryStore implements EntryStore {
     this.activeRequests.add(controller);
     try {
       const response = await this.fetchEntry(url.href, {
+        cache: "no-cache",
         redirect: "error",
         signal: controller.signal,
       });
