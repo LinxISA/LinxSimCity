@@ -174,7 +174,12 @@ export function findLayoutCollisions(
     }),
   );
   for (const pipe of topology.entities) {
-    if (pipe.kind !== "pipe" || !pipe.route) continue;
+    if (
+      pipe.kind !== "pipe" ||
+      !pipe.route ||
+      pipe.attributes?.collisionRole === "hidden"
+    )
+      continue;
     const endpointIds = new Set([
       entityByPort.get(pipe.route.fromPortId),
       entityByPort.get(pipe.route.toPortId),

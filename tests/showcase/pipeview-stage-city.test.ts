@@ -1,3 +1,9 @@
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { spawnSync } from "node:child_process";
+
 import { describe, expect, test } from "vitest";
 
 import {
@@ -215,5 +221,53 @@ describe("PipeView stage city topology", () => {
     const before = JSON.stringify(source);
     enrichPipeviewStageCity(source);
     expect(JSON.stringify(source)).toBe(before);
+  });
+
+  test("atomically enriches a trace directory and refuses accidental replay", () => {
+    const root = mkdtempSync(join(tmpdir(), "linxsimcity-stage-city-"));
+    writeFileSync(
+      join(root, "topology.json"),
+      `${JSON.stringify(minimalTopology())}\n`,
+    );
+    writeFileSync(
+      join(root, "manifest.json"),
+      `${JSON.stringify({
+        schemaVersion: "1.1.0",
+        modelVersion: "test",
+        profile: "pipeline",
+        firstCycle: 10,
+        lastCycle: 20,
+        eventCount: 3,
+        chunkCount: 1,
+        chunkCycleSpan: 4096,
+        checkpointCycleSpan: 4096,
+        capabilities: ["physical-layout-v1"],
+      })}\n`,
+    );
+    const script = fileURLToPath(
+      new URL("../../scripts/enrich-pipeview-stage-city.mjs", import.meta.url),
+    );
+    const first = spawnSync(process.execPath, [script, "--trace-dir", root], {
+      encoding: "utf8",
+    });
+    expect(first.status, first.stderr).toBe(0);
+    const manifest = JSON.parse(
+      readFileSync(join(root, "manifest.json"), "utf8"),
+    ) as { eventCount: number; capabilities: string[] };
+    expect(manifest).toMatchObject({ eventCount: 3 });
+    expect(manifest.capabilities).toEqual([
+      "physical-layout-v1",
+      "pipeview-stage-city-v1",
+    ]);
+    expect(readdirSync(root).sort()).toEqual([
+      "manifest.json",
+      "topology.json",
+    ]);
+
+    const second = spawnSync(process.execPath, [script, "--trace-dir", root], {
+      encoding: "utf8",
+    });
+    expect(second.status).toBe(1);
+    expect(second.stderr).toContain("already declares pipeview-stage-city-v1");
   });
 });

@@ -194,7 +194,7 @@ node scripts/enrich-pipeview-stage-city.mjs \
   --trace-dir apps/viewer/public/traces/supernpubench-fa-250-blocks
 ```
 
-Format the generated JSON with the script's stable two-space serializer. Do not load chunk event files.
+Write the generated topology with the script's stable compact serializer so the 80K+ CELL topology does not grow several-fold in memory or transfer size. Do not load chunk event files.
 
 - [ ] **Step 4: Repack the downloadable archive**
 

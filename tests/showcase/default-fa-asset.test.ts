@@ -3,6 +3,12 @@ import { createInterface } from "node:readline";
 import { createGunzip } from "node:zlib";
 import { expect, test } from "vitest";
 
+import {
+  findLayoutCollisions,
+  validateTopology,
+  type TopologyDescriptor,
+} from "../../packages/topology/src/index.js";
+
 const defaultTrace = new URL(
   "../../apps/viewer/public/traces/supernpubench-fa-250-blocks/",
   import.meta.url,
@@ -49,21 +55,30 @@ test("the hosted FA logical bundle exposes physical instruction observability", 
     "shared-cache-v1",
     "cell-128b-v1",
     "tlsu-detail-v1",
+    "pipeview-stage-city-v1",
   ]);
 
   const topology = JSON.parse(
     readFileSync(new URL("topology.json", defaultTrace), "utf8"),
-  ) as { entities: Array<{ kind: string }> };
+  ) as TopologyDescriptor;
   const entityCounts = new Map<string, number>();
   for (const { kind } of topology.entities) {
     entityCounts.set(kind, (entityCounts.get(kind) ?? 0) + 1);
   }
-  expect(topology.entities).toHaveLength(86_138);
-  expect(entityCounts.get("cell")).toBe(81_920);
+  expect(topology.entities).toHaveLength(88_312);
+  expect(entityCounts.get("cell")).toBe(83_968);
   expect(entityCounts.get("cache-line")).toBe(2_048);
   expect(entityCounts.get("rob-slot")).toBe(512);
   expect(entityCounts.get("register")).toBe(1_024);
-  expect(entityCounts.get("pipe")).toBe(56);
+  expect(entityCounts.get("pipe")).toBe(143);
+  expect(
+    topology.entities.filter(
+      ({ parentId, kind }) =>
+        parentId === "shared_tile_register" && kind === "cell",
+    ),
+  ).toHaveLength(2_048);
+  expect(validateTopology(topology).errors).toEqual([]);
+  expect(findLayoutCollisions(topology)).toEqual([]);
 
   const index = JSON.parse(
     readFileSync(new URL("index.json", defaultTrace), "utf8"),

@@ -280,6 +280,19 @@ function remapExistingTopology(topology) {
           );
         }
       }
+      if (result.kind === "module") {
+        result.attributes = {
+          ...result.attributes,
+          collisionRole: "container",
+          visualRole: result.id === "core" ? "core-floor" : "legacy-hardware",
+        };
+      } else if (result.kind === "pipe") {
+        result.attributes = {
+          ...result.attributes,
+          collisionRole: "hidden",
+          visualRole: "legacy-pipe",
+        };
+      }
       if (sourceDistrict && targetDistrict && result.ports) {
         result.ports = result.ports.map((port) => ({
           ...port,
@@ -498,6 +511,7 @@ function operandEntities() {
     },
     attributes: {
       compatibilityAlias: "stgbufb",
+      collisionRole: "container",
       cell_bytes: 128,
       total_bytes: 262144,
     },
