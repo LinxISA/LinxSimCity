@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck -- Small Node CLI; pure enrichment logic is typed by its .d.mts contract.
 
 import { readFileSync, renameSync, writeFileSync } from "node:fs";
@@ -41,13 +42,18 @@ export function main(argv) {
     ? manifest.capabilities
     : [];
   if (capabilities.includes(CAPABILITY) && !values.force) {
-    throw new Error(`trace already declares ${CAPABILITY}; pass --force to rebuild`);
+    throw new Error(
+      `trace already declares ${CAPABILITY}; pass --force to rebuild`,
+    );
   }
 
   const enriched = enrichPipeviewStageCity(topology);
   const nextManifest = {
     ...manifest,
-    capabilities: [...capabilities.filter((value) => value !== CAPABILITY), CAPABILITY],
+    capabilities: [
+      ...capabilities.filter((value) => value !== CAPABILITY),
+      CAPABILITY,
+    ],
   };
   writeJsonAtomic(topologyPath, enriched);
   writeJsonAtomic(manifestPath, nextManifest);

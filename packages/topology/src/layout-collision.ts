@@ -7,9 +7,7 @@ import type {
 } from "./types.js";
 
 export type LayoutCollisionKind =
-  | "district-overlap"
-  | "entity-overlap"
-  | "pipe-building-crossing";
+  "district-overlap" | "entity-overlap" | "pipe-building-crossing";
 
 export interface LayoutCollision {
   readonly kind: LayoutCollisionKind;
@@ -131,8 +129,9 @@ export function findLayoutCollisions(
   const districts =
     topology.layout?.districts
       .filter((district) => district.id !== "core")
-      .map((district) => bounds(district.id, district.position, district.size)) ??
-    [];
+      .map((district) =>
+        bounds(district.id, district.position, district.size),
+      ) ?? [];
   for (const [first, second] of overlappingPairs(districts)) {
     collisions.push({
       kind: "district-overlap",

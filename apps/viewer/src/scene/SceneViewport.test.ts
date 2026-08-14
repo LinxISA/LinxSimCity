@@ -20,6 +20,12 @@ test("scene statistics come from the physical trace topology", () => {
       entities: [
         { id: "pe0.bg.bank0.row0", kind: "cell", label: "CELL 0" },
         { id: "pe0.bg.bank0.row1", kind: "cell", label: "CELL 1" },
+        {
+          id: "shared_tile_register.ssb0.cell0",
+          kind: "cell",
+          parentId: "shared_tile_register",
+          label: "Shared CELL 0",
+        },
         { id: "cube.pe0.mac.m0.n0", kind: "cube-mac", label: "MAC" },
         {
           id: "stgbufb.subspace0",
@@ -28,5 +34,5 @@ test("scene statistics come from the physical trace topology", () => {
         },
       ],
     }),
-  ).toEqual({ cells: 2, macs: 1, ssbIds: 1 });
+  ).toEqual({ cells: 3, macs: 1, sharedTileCells: 1, ssbIds: 1 });
 });

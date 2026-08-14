@@ -5,3 +5,5 @@ export * from "./flow/orthogonal-route.js";
 export * from "./flow/instruction-motion.js";
 export * from "./flow/instruction-layer.js";
 export * from "./scalar/scalar-layout.js";
+export * from "./stages/stage-entities.js";
+export * from "./topology/district.js";

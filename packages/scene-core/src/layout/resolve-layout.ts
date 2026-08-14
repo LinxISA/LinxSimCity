@@ -20,7 +20,7 @@ const DISTRICT_STYLE: Readonly<
   vector: { label: "VECTOR", color: "#f2c14e" },
   cell: { label: "CELL · BG", color: "#34c9f0" },
   cube: { label: "CUBE · GMMA", color: "#ff7138" },
-  stgbufb: { label: "StgBufB · Shared Tile", color: "#d94fff" },
+  stgbufb: { label: "Shared Tile Register", color: "#d94fff" },
   tlsu: { label: "TLSU · MEMORY", color: "#87c84a" },
 };
 

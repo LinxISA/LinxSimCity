@@ -6,6 +6,7 @@ import { Building } from "../common/Building.js";
 import { DistrictFrame } from "../common/DistrictFrame.js";
 import { InstancedBoxes } from "../common/InstancedBoxes.js";
 import { entityToBox } from "../topology/placement.js";
+import { districtRect, hasPipeviewStageCity } from "../topology/district.js";
 import { CacheCells } from "./CacheCells.js";
 import { ExecutionPipes } from "./ExecutionPipes.js";
 import { PrfCells } from "./PrfCells.js";
@@ -27,6 +28,11 @@ export function ScalarCpu({
   onSelect,
 }: ScalarCpuProps) {
   const scalarParent = `pe${selectedPe}.scalar`;
+  const stageCity = hasPipeviewStageCity(topology);
+  const district = districtRect(topology, "scalar") ?? {
+    center: [-88, 0, -4] as const,
+    size: [40, 8, 84] as const,
+  };
   const modules = useMemo(
     () =>
       topology.entities.filter(
@@ -62,24 +68,24 @@ export function ScalarCpu({
     <group>
       <DistrictFrame
         label={`SCALAR O3 · PE${selectedPe}`}
-        x={-108}
-        z={-46}
-        width={40}
-        depth={84}
+        center={district.center}
+        size={district.size}
         color="#a979ff"
       />
-      {modules.map((entity) => (
-        <Building
-          key={entity.id}
-          id={entity.id}
-          label={entity.label.toUpperCase()}
-          position={entity.placement!.position!}
-          size={entity.placement!.size!}
-          color="#4a2b79"
-          emissive="#8454ce"
-          onSelect={onSelect}
-        />
-      ))}
+      {stageCity
+        ? null
+        : modules.map((entity) => (
+            <Building
+              key={entity.id}
+              id={entity.id}
+              label={entity.label.toUpperCase()}
+              position={entity.placement!.position!}
+              size={entity.placement!.size!}
+              color="#4a2b79"
+              emissive="#8454ce"
+              onSelect={onSelect}
+            />
+          ))}
       <RobRing
         topology={topology}
         selectedPe={selectedPe}
@@ -102,11 +108,13 @@ export function ScalarCpu({
         emissive={0x8c5bdb}
         onSelect={onSelect}
       />
-      <ExecutionPipes
-        topology={topology}
-        selectedPe={selectedPe}
-        snapshot={snapshot}
-      />
+      {stageCity ? null : (
+        <ExecutionPipes
+          topology={topology}
+          selectedPe={selectedPe}
+          snapshot={snapshot}
+        />
+      )}
 
       {sharedCacheModules.map((entity) => (
         <Building

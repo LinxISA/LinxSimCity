@@ -24,9 +24,7 @@ function minimalTopology(): TopologyDescriptor {
       units: "scene-unit",
       upAxis: "y",
       forwardAxis: "-z",
-      districts: [
-        { id: "core", position: [0, 0, 0], size: [220, 10, 120] },
-      ],
+      districts: [{ id: "core", position: [0, 0, 0], size: [220, 10, 120] }],
     },
     entities: [
       {
@@ -161,7 +159,8 @@ describe("PipeView stage city topology", () => {
     const enriched = enrichPipeviewStageCity(minimalTopology());
     const core = enriched.layout?.districts.find(({ id }) => id === "core");
     expect(core).toBeDefined();
-    if (!core) throw new Error("enriched topology is missing the core district");
+    if (!core)
+      throw new Error("enriched topology is missing the core district");
     expect(core.size[0] / core.size[2]).toBe(1.875);
 
     const stages = enriched.entities.filter(
@@ -203,14 +202,10 @@ describe("PipeView stage city topology", () => {
     });
 
     expect(
-      enriched.entities.filter(
-        ({ attributes }) => attributes?.operand === "A",
-      ),
+      enriched.entities.filter(({ attributes }) => attributes?.operand === "A"),
     ).toHaveLength(16);
     expect(
-      enriched.entities.filter(
-        ({ attributes }) => attributes?.operand === "B",
-      ),
+      enriched.entities.filter(({ attributes }) => attributes?.operand === "B"),
     ).toHaveLength(4);
     expect(validateTopology(enriched).errors).toEqual([]);
     expect(findLayoutCollisions(enriched)).toEqual([]);
@@ -221,6 +216,61 @@ describe("PipeView stage city topology", () => {
     const before = JSON.stringify(source);
     enrichPipeviewStageCity(source);
     expect(JSON.stringify(source)).toBe(before);
+  });
+
+  test("places CUBE MAC cells above the Calc stage roof", () => {
+    const source = minimalTopology();
+    source.layout!.districts.push({
+      id: "cube",
+      position: [48, 0, -8],
+      size: [82, 8, 88],
+    });
+    source.entities.push(
+      {
+        id: "pe0",
+        kind: "module",
+        parentId: "core",
+        label: "PE0",
+        instance: {},
+      },
+      {
+        id: "pe0.cube",
+        kind: "module",
+        parentId: "pe0",
+        label: "CUBE PE0",
+        instance: {},
+        placement: {
+          district: "cube",
+          position: [48, 0, -37],
+          size: [78, 2, 16],
+        },
+      },
+      {
+        id: "pe0.cube.mac.m0.n0",
+        kind: "cube-mac",
+        parentId: "pe0.cube",
+        label: "MAC",
+        instance: { index: 0 },
+        placement: {
+          district: "cube",
+          position: [11, 0.65, -42],
+          size: [4, 0.7, 2],
+        },
+      },
+    );
+    const enriched = enrichPipeviewStageCity(source);
+    const calc = enriched.entities.find(
+      ({ attributes }) =>
+        attributes?.stageDomain === "cube" && attributes.stageId === "Calc",
+    );
+    const mac = enriched.entities.find(({ id }) => id === "pe0.cube.mac.m0.n0");
+    expect(mac?.placement?.position?.[1]).toBeGreaterThan(
+      calc!.placement!.position![1] + calc!.placement!.size![1] / 2,
+    );
+    const rebuilt = enrichPipeviewStageCity(enriched);
+    expect(
+      rebuilt.entities.find(({ id }) => id === "pe0.cube.mac.m0.n0")?.placement,
+    ).toEqual(mac?.placement);
   });
 
   test("atomically enriches a trace directory and refuses accidental replay", () => {

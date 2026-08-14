@@ -6,9 +6,9 @@ import { fileURLToPath, pathToFileURL, URL } from "node:url";
 
 const EXPECTED_ASSET_BASE = "/LinxSimCity/assets/";
 const EXPECTED_MANIFEST_SHA256 =
-  "428e03ac8d8a6f5ad88e1f003c26ea16deca3dd069b1b220b43110ddab135bd1";
+  "f84ae484d8004a86156da6ee8f7697a917f1a15fc7876ac15eb4435f78ab3dbe";
 const EXPECTED_TOPOLOGY_SHA256 =
-  "18b15289f730edb56f56a20633668f3b9048e40470b26a14adae6182cc08d32c";
+  "71eaab6780714ef47bee5262af493bafa7325b068545517b48cfa20b658a5636";
 const TRACE_DIRECTORY = "supernpubench-fa-250-blocks";
 
 /** @param {Uint8Array} bytes */

@@ -6,7 +6,9 @@ import { CubeDistrict } from "./cube/CubeDistrict.js";
 import { DataTokenLayer } from "./flow/DataTokenLayer.js";
 import { InstructionTokenLayer } from "./flow/InstructionTokenLayer.js";
 import { ScalarCpu } from "./scalar/ScalarCpu.js";
+import { StageCity } from "./stages/StageCity.js";
 import { TlsuDistrict } from "./tlsu/TlsuDistrict.js";
+import { hasPipeviewStageCity } from "./topology/district.js";
 import { RoutePipe } from "./topology/RoutePipe.js";
 import { VectorDistrict } from "./vector/VectorDistrict.js";
 
@@ -30,6 +32,7 @@ export function City({
   const coreDistrict = topology.layout?.districts.find(
     (district) => district.id === "core",
   );
+  const stageCity = hasPipeviewStageCity(topology);
   const floorWidth = coreDistrict?.size[0] ?? 128;
   const floorDepth = coreDistrict?.size[2] ?? 73;
   const floorX = coreDistrict?.position[0] ?? -9.5;
@@ -37,7 +40,9 @@ export function City({
   const dataPipes = topology.entities.filter(
     (entity) =>
       entity.kind === "pipe" &&
-      !entity.id.includes(".scalar.pipe.") &&
+      entity.attributes?.visualRole !== "pipeview-pipe" &&
+      entity.attributes?.visualRole !== "legacy-pipe" &&
+      (!entity.id.includes(".scalar.pipe.") || stageCity) &&
       entity.route,
   );
   return (
@@ -62,6 +67,7 @@ export function City({
         onSelect={onSelect}
       />
       <VectorDistrict
+        topology={topology}
         snapshot={snapshot}
         selectedEntityId={selectedEntityId}
         onSelect={onSelect}
@@ -73,6 +79,7 @@ export function City({
         onSelect={onSelect}
       />
       <CubeDistrict
+        topology={topology}
         snapshot={snapshot}
         selectedEntityId={selectedEntityId}
         onSelect={onSelect}
@@ -82,6 +89,14 @@ export function City({
         snapshot={snapshot}
         onSelect={onSelect}
       />
+      {stageCity ? (
+        <StageCity
+          topology={topology}
+          events={snapshot?.activeEvents ?? []}
+          selectedEntityId={selectedEntityId}
+          onSelect={onSelect}
+        />
+      ) : null}
       {dataPipes.map((pipe) => (
         <RoutePipe
           key={pipe.id}

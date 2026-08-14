@@ -5,6 +5,7 @@ import { Building } from "../common/Building.js";
 import { DistrictFrame } from "../common/DistrictFrame.js";
 import { StraightPipe } from "../common/StraightPipe.js";
 import { RoutePipe } from "../topology/RoutePipe.js";
+import { districtRect, hasPipeviewStageCity } from "../topology/district.js";
 
 interface TlsuDistrictProps {
   readonly topology: TopologyDescriptor;
@@ -23,6 +24,11 @@ const legacyModules = [
 ] as const;
 
 export function TlsuDistrict({ topology, onSelect }: TlsuDistrictProps) {
+  const stageCity = hasPipeviewStageCity(topology);
+  const district = districtRect(topology, "tlsu") ?? {
+    center: [-5, 0, 52] as const,
+    size: [198, 6, 14] as const,
+  };
   const physicalModules = topology.entities.filter(
     (entity) =>
       entity.kind === "module" &&
@@ -36,58 +42,60 @@ export function TlsuDistrict({ topology, onSelect }: TlsuDistrictProps) {
     <group>
       <DistrictFrame
         label="TLSU · AGU / LDQ / STQ / BPQ / MTE / RESPONSE"
-        x={-104}
-        z={45}
-        width={198}
-        depth={14}
+        center={district.center}
+        size={district.size}
         color="#89d04f"
       />
-      {physicalModules.length > 0
-        ? physicalModules.map((module) => (
-            <Building
-              key={module.id}
-              id={module.id}
-              label={module.label}
-              position={module.placement!.position!}
-              size={module.placement!.size!}
-              color="#285019"
-              emissive="#67a83c"
-              onSelect={onSelect}
-            />
-          ))
-        : legacyModules.map((module, index) => (
-            <Building
-              key={module.id}
-              id={module.id}
-              label={module.label}
-              position={[module.x, 1.1 + index * 0.04, 52]}
-              size={[module.width, 2, 9.2]}
-              color="#285019"
-              emissive="#67a83c"
-              onSelect={onSelect}
-            />
-          ))}
-      {physicalPipes.length > 0
-        ? physicalPipes.map((pipe) => (
-            <RoutePipe
-              key={pipe.id}
-              entity={pipe}
-              color="#91df52"
-              radius={0.14}
-            />
-          ))
-        : legacyModules.slice(0, -1).map((module, index) => {
-            const next = legacyModules[index + 1]!;
-            return (
-              <StraightPipe
+      {stageCity
+        ? null
+        : physicalModules.length > 0
+          ? physicalModules.map((module) => (
+              <Building
                 key={module.id}
-                from={[module.x + module.width / 2, 1.4, 52]}
-                to={[next.x - next.width / 2, 1.4, 52]}
+                id={module.id}
+                label={module.label}
+                position={module.placement!.position!}
+                size={module.placement!.size!}
+                color="#285019"
+                emissive="#67a83c"
+                onSelect={onSelect}
+              />
+            ))
+          : legacyModules.map((module, index) => (
+              <Building
+                key={module.id}
+                id={module.id}
+                label={module.label}
+                position={[module.x, 1.1 + index * 0.04, 52]}
+                size={[module.width, 2, 9.2]}
+                color="#285019"
+                emissive="#67a83c"
+                onSelect={onSelect}
+              />
+            ))}
+      {stageCity
+        ? null
+        : physicalPipes.length > 0
+          ? physicalPipes.map((pipe) => (
+              <RoutePipe
+                key={pipe.id}
+                entity={pipe}
                 color="#91df52"
                 radius={0.14}
               />
-            );
-          })}
+            ))
+          : legacyModules.slice(0, -1).map((module, index) => {
+              const next = legacyModules[index + 1]!;
+              return (
+                <StraightPipe
+                  key={module.id}
+                  from={[module.x + module.width / 2, 1.4, 52]}
+                  to={[next.x - next.width / 2, 1.4, 52]}
+                  color="#91df52"
+                  radius={0.14}
+                />
+              );
+            })}
     </group>
   );
 }

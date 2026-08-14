@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck -- Runtime Node ESM implementation is typed by the adjacent .d.mts contract.
 
 const CORE_DISTRICT = {
@@ -133,7 +134,7 @@ export const PIPEVIEW_STAGE_DOMAINS = Object.freeze({
 const STAGE_LAYOUTS = Object.freeze({
   scalar: {
     district: "scalar",
-    rect: { x: -93.5, z: -12, width: 41, depth: 88 },
+    rect: { x: -93.5, z: -25, width: 41, depth: 62 },
     columns: 4,
   },
   vector: {
@@ -173,7 +174,7 @@ function stageKey(value) {
 }
 
 function clone(value) {
-  return structuredClone(value);
+  return globalThis.structuredClone(value);
 }
 
 function districtBounds(district) {
@@ -231,9 +232,28 @@ function targetDistrictFor(id) {
   return PIPEVIEW_DISTRICTS[id];
 }
 
-function remapExistingTopology(topology) {
+function contentTargetFor(entity, districtId) {
+  if (districtId === "scalar") {
+    return { id: "scalar", position: [-93.5, 0, 21], size: [43, 8, 24] };
+  }
+  if (
+    districtId === "cube" &&
+    (entity.id.includes(".cube") || entity.kind === "cube-mac")
+  ) {
+    return {
+      id: "cube",
+      position: [61.375, 0, -0.33333333333333215],
+      size: [20.25, 8, 20.666666666666668],
+    };
+  }
+  return targetDistrictFor(districtId);
+}
+
+function remapExistingTopology(topology, alreadyEnriched) {
   const sourceDistricts = topology.layout?.districts ?? [];
-  const sourceById = new Map(sourceDistricts.map((district) => [district.id, district]));
+  const sourceById = new Map(
+    sourceDistricts.map((district) => [district.id, district]),
+  );
   const entities = topology.entities
     .filter(
       ({ id, attributes }) =>
@@ -249,12 +269,19 @@ function remapExistingTopology(topology) {
     )
     .map((entity) => {
       const result = clone(entity);
+      if (alreadyEnriched) {
+        if (result.kind === "cube-mac" && result.placement) {
+          if (result.placement.position) result.placement.position[1] = 2.52;
+          if (result.placement.size) result.placement.size[1] = 0.34;
+        }
+        return result;
+      }
       const sourceDistrictId = result.placement?.district;
       const sourceDistrict = sourceDistrictId
         ? sourceById.get(sourceDistrictId)
         : undefined;
       const targetDistrict = sourceDistrictId
-        ? targetDistrictFor(sourceDistrictId)
+        ? contentTargetFor(result, sourceDistrictId)
         : undefined;
       if (result.id === "core" && result.placement) {
         result.placement.position = clone(CORE_DISTRICT.position);
@@ -280,6 +307,10 @@ function remapExistingTopology(topology) {
           );
         }
       }
+      if (result.kind === "cube-mac" && result.placement) {
+        if (result.placement.position) result.placement.position[1] = 2.52;
+        if (result.placement.size) result.placement.size[1] = 0.34;
+      }
       if (result.kind === "module") {
         result.attributes = {
           ...result.attributes,
@@ -297,7 +328,13 @@ function remapExistingTopology(topology) {
         result.ports = result.ports.map((port) => ({
           ...port,
           ...(port.position
-            ? { position: mapPoint(port.position, sourceDistrict, targetDistrict) }
+            ? {
+                position: mapPoint(
+                  port.position,
+                  sourceDistrict,
+                  targetDistrict,
+                ),
+              }
             : {}),
         }));
       }
@@ -356,7 +393,7 @@ function edgeToward(from, to) {
   const dz = to.position[2] - from.position[2];
   if (Math.abs(dx) >= Math.abs(dz)) {
     return [
-      from.position[0] + Math.sign(dx || 1) * from.size[0] / 2,
+      from.position[0] + (Math.sign(dx || 1) * from.size[0]) / 2,
       1.45,
       from.position[2],
     ];
@@ -364,7 +401,7 @@ function edgeToward(from, to) {
   return [
     from.position[0],
     1.45,
-    from.position[2] + Math.sign(dz || 1) * from.size[2] / 2,
+    from.position[2] + (Math.sign(dz || 1) * from.size[2]) / 2,
   ];
 }
 
@@ -379,11 +416,19 @@ function stageDomainEntities(domain, stages, layout) {
   const modules = placements.map((placement, index) => {
     const previous = placements[index - 1] ?? {
       ...placement,
-      position: [placement.position[0] - 1, placement.position[1], placement.position[2]],
+      position: [
+        placement.position[0] - 1,
+        placement.position[1],
+        placement.position[2],
+      ],
     };
     const next = placements[index + 1] ?? {
       ...placement,
-      position: [placement.position[0] + 1, placement.position[1], placement.position[2]],
+      position: [
+        placement.position[0] + 1,
+        placement.position[1],
+        placement.position[2],
+      ],
     };
     const id = `${rootId}.stage.${stageKey(placement.stage)}`;
     return {
@@ -529,8 +574,16 @@ function operandEntities() {
       const targetPosition = [28, 1.6, peZ + laneOffset];
       const sourceId = `pipeview.cell.a.pe${pe}.lane${lane}`;
       const targetId = `pipeview.cube.a.pe${pe}.lane${lane}`;
-      cellRoot.ports.push({ id: sourceId, direction: "out", position: sourcePosition });
-      cubeRoot.ports.push({ id: targetId, direction: "in", position: targetPosition });
+      cellRoot.ports.push({
+        id: sourceId,
+        direction: "out",
+        position: sourcePosition,
+      });
+      cubeRoot.ports.push({
+        id: targetId,
+        direction: "in",
+        position: targetPosition,
+      });
       entities.push({
         id: `core.pipe.a.pe${pe}.lane${lane}`,
         kind: "pipe",
@@ -553,8 +606,18 @@ function operandEntities() {
     const targetPosition = [x, 1.6, 34];
     const sourceId = `shared_tile_register.b.pe${pe}`;
     const targetId = `pipeview.cube.b.pe${pe}`;
-    shared.ports.push({ id: sourceId, direction: "out", widthBytes: 128, position: sourcePosition });
-    cubeRoot.ports.push({ id: targetId, direction: "in", widthBytes: 128, position: targetPosition });
+    shared.ports.push({
+      id: sourceId,
+      direction: "out",
+      widthBytes: 128,
+      position: sourcePosition,
+    });
+    cubeRoot.ports.push({
+      id: targetId,
+      direction: "in",
+      widthBytes: 128,
+      position: targetPosition,
+    });
     entities.push({
       id: `core.pipe.b.pe${pe}`,
       kind: "pipe",
@@ -605,7 +668,10 @@ function operandEntities() {
 
 export function enrichPipeviewStageCity(topology) {
   const source = clone(topology);
-  const entities = remapExistingTopology(source);
+  const alreadyEnriched = source.entities.some(
+    ({ attributes }) => attributes?.visualRole === "pipeview-stage",
+  );
+  const entities = remapExistingTopology(source, alreadyEnriched);
   for (const [domain, stages] of Object.entries(PIPEVIEW_STAGE_DOMAINS)) {
     entities.push(
       ...stageDomainEntities(domain, stages, STAGE_LAYOUTS[domain]),

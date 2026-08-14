@@ -1,17 +1,21 @@
 import { resolveLayout } from "@linxsimcity/scene-core";
 import type { SerializedViewerSnapshot } from "@linxsimcity/trace-runtime";
+import type { TopologyDescriptor } from "@linxsimcity/topology";
 import { useMemo } from "react";
 
 import { InstancedBoxes, type BoxInstance } from "../common/InstancedBoxes.js";
+import { entityToBox } from "../topology/placement.js";
 import { cubeEntityId } from "./cube-mapping.js";
 
 interface CubeMacCellsProps {
+  readonly topology: TopologyDescriptor;
   readonly snapshot?: SerializedViewerSnapshot | undefined;
   readonly selectedEntityId?: string | undefined;
   readonly onSelect?: ((entityId: string) => void) | undefined;
 }
 
 export function CubeMacCells({
+  topology,
   snapshot,
   selectedEntityId,
   onSelect,
@@ -20,7 +24,15 @@ export function CubeMacCells({
     () => resolveLayout({ schemaVersion: "1.0.0", entities: [] }),
     [],
   );
+  const physicalMacs = useMemo(
+    () =>
+      topology.entities.filter(
+        (entity) => entity.kind === "cube-mac" && entity.placement,
+      ),
+    [topology],
+  );
   const instances = useMemo<readonly BoxInstance[]>(() => {
+    if (physicalMacs.length > 0) return physicalMacs.map(entityToBox);
     const boxes: BoxInstance[] = [];
     const matrixX = -2.6;
     const matrixWidth = 47.5;
@@ -43,7 +55,7 @@ export function CubeMacCells({
       }
     }
     return boxes;
-  }, [layout]);
+  }, [layout, physicalMacs]);
   return (
     <InstancedBoxes
       instances={instances}

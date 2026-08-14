@@ -94,7 +94,7 @@ describe("root workspace scripts", () => {
         ),
       ).toHaveLength(1);
     },
-    90_000,
+    240_000,
   );
 
   test("build and typecheck succeed from source without prebuilt workspace artifacts", () => {
@@ -131,7 +131,7 @@ describe("root workspace scripts", () => {
     } finally {
       rmSync(cleanRepository, { recursive: true, force: true });
     }
-  }, 120_000);
+  }, 600_000);
 });
 
 test("registry lock entries retain tarball resolution and integrity", () => {

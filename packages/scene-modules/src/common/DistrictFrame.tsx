@@ -2,24 +2,22 @@ import { Html } from "@react-three/drei";
 
 interface DistrictFrameProps {
   readonly label: string;
-  readonly x: number;
-  readonly z: number;
-  readonly width: number;
-  readonly depth: number;
+  readonly center: readonly [number, number, number];
+  readonly size: readonly [number, number, number];
   readonly color: string;
 }
 
 export function DistrictFrame({
   label,
-  x,
-  z,
-  width,
-  depth,
+  center,
+  size,
   color,
 }: DistrictFrameProps) {
+  const [x, , z] = center;
+  const [width, , depth] = size;
   return (
     <group>
-      <mesh position={[x + width / 2, 0.04, z + depth / 2]} receiveShadow>
+      <mesh position={[x, 0.04, z]} receiveShadow>
         <boxGeometry args={[width, 0.08, depth]} />
         <meshStandardMaterial
           color="#07121f"
@@ -30,7 +28,7 @@ export function DistrictFrame({
         />
       </mesh>
       <Html
-        position={[x + 0.6, 0.14, z + 0.5]}
+        position={[x - width / 2 + 0.6, 0.14, z - depth / 2 + 0.5]}
         distanceFactor={38}
         style={{ pointerEvents: "none" }}
       >

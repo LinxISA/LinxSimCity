@@ -34,15 +34,21 @@ export const focusOptions: readonly { id: CameraFocus; label: string }[] = [
 export function topologyStats(topology: TopologyDescriptor): {
   readonly cells: number;
   readonly macs: number;
+  readonly sharedTileCells: number;
   readonly ssbIds: number;
 } {
   return topology.entities.reduce(
     (stats, entity) => ({
       cells: stats.cells + Number(entity.kind === "cell"),
       macs: stats.macs + Number(entity.kind === "cube-mac"),
+      sharedTileCells:
+        stats.sharedTileCells +
+        Number(
+          entity.kind === "cell" && entity.parentId === "shared_tile_register",
+        ),
       ssbIds: stats.ssbIds + Number(entity.kind === "stgbufb-subspace"),
     }),
-    { cells: 0, macs: 0, ssbIds: 0 },
+    { cells: 0, macs: 0, sharedTileCells: 0, ssbIds: 0 },
   );
 }
 
@@ -96,7 +102,11 @@ export function SceneViewport({ snapshot, topology }: SceneViewportProps) {
       <div className="scene-stats" aria-live="polite">
         <span>{stats.cells.toLocaleString()} × 128B CELL</span>
         <span>{stats.macs.toLocaleString()} MAC</span>
-        <span>{stats.ssbIds.toLocaleString()} SsbID</span>
+        <span>
+          {stats.sharedTileCells > 0
+            ? `${stats.sharedTileCells.toLocaleString()} Shared Tile CELL`
+            : `${stats.ssbIds.toLocaleString()} SsbID`}
+        </span>
         <span>{snapshot ? `CYCLE ${snapshot.cycle}` : "TOPOLOGY PREVIEW"}</span>
       </div>
       <SceneCanvas focus={focus} onBlankClick={() => selectEntity(undefined)}>

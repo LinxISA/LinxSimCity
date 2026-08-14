@@ -57,7 +57,11 @@ export function CellBanks({
   onSelect,
 }: CellBanksProps) {
   const physicalCells = useMemo(
-    () => topology.entities.filter((entity) => entity.kind === "cell"),
+    () =>
+      topology.entities.filter(
+        (entity) =>
+          entity.kind === "cell" && entity.placement?.district === "cell",
+      ),
     [topology],
   );
   const instances = useMemo<readonly BoxInstance[]>(
