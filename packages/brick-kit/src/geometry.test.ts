@@ -8,7 +8,6 @@ import {
   orthogonalRoute,
   portWorldPosition,
   QUEUE_ROUTE_DECK_Y,
-  QUEUE_VISUAL_ELEVATION,
   rotateAnchor,
 } from "./geometry.js";
 
@@ -62,7 +61,7 @@ test("port positions follow a rotated brick", () => {
     },
   };
   portWorldPosition(instance, definition, "out").forEach((value, index) =>
-    expect(value).toBeCloseTo([10, QUEUE_VISUAL_ELEVATION + 1.1, 2.5][index]!),
+    expect(value).toBeCloseTo([10, 1.1, 2.5][index]!),
   );
 });
 

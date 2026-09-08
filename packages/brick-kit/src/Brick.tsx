@@ -17,7 +17,7 @@ import {
   matrixEntryLayout,
 } from "./entry-layout.js";
 import type { BrickActivity, EntryVisual } from "./entry-layout.js";
-import { districtColor, QUEUE_VISUAL_ELEVATION } from "./geometry.js";
+import { districtColor } from "./geometry.js";
 
 const KIND_COLORS: Record<BrickKind, string> = {
   queue: "#3ad6c6",
@@ -425,189 +425,6 @@ function HierarchyDistrict({
   );
 }
 
-function QueuePipe({
-  instance,
-  definition,
-  activity,
-  selected,
-  onSelect,
-}: BrickProps) {
-  const base = positionToTuple(instance.transform.position);
-  const radius = definition.size.z * 0.28;
-  const logicalCount = logicalEntryCount(instance, definition);
-  const entries = linearEntryLayout(
-    logicalCount,
-    definition.size,
-    definition.visual.maxVisibleEntries ?? 12,
-  );
-  const rotation = [0, instance.transform.yawRadians, 0] as const;
-  const pick = (event: ThreeEvent<MouseEvent>) => {
-    event.stopPropagation();
-    onSelect(instance.id);
-  };
-  return (
-    <group
-      position={[base[0], base[1] + QUEUE_VISUAL_ELEVATION, base[2]]}
-      rotation={rotation}
-      onClick={pick}
-    >
-      {[-0.36, 0.36].map((offset) => (
-        <group key={offset} position={[offset * definition.size.x, 0, 0]}>
-          <mesh position={[0, -QUEUE_VISUAL_ELEVATION / 2, 0]}>
-            <cylinderGeometry args={[0.1, 0.15, QUEUE_VISUAL_ELEVATION, 12]} />
-            <meshStandardMaterial
-              color="#22343e"
-              metalness={0.8}
-              roughness={0.34}
-            />
-          </mesh>
-          <RoundedBox
-            position={[0, -QUEUE_VISUAL_ELEVATION + 0.08, 0]}
-            args={[0.62, 0.16, 0.62]}
-            radius={0.08}
-            smoothness={2}
-          >
-            <meshStandardMaterial
-              color="#18262f"
-              metalness={0.78}
-              roughness={0.4}
-            />
-          </RoundedBox>
-        </group>
-      ))}
-      <mesh
-        position={[0, definition.size.y / 2, 0]}
-        rotation={[0, 0, Math.PI / 2]}
-        castShadow
-      >
-        <cylinderGeometry
-          args={[radius, radius, definition.size.x, 32, 1, true]}
-        />
-        <meshPhysicalMaterial
-          color="#247f78"
-          emissive="#0b3f3c"
-          emissiveIntensity={0.25}
-          metalness={0.54}
-          roughness={0.18}
-          transmission={0.28}
-          thickness={0.42}
-          clearcoat={0.85}
-          clearcoatRoughness={0.14}
-          transparent
-          opacity={0.56}
-          side={DoubleSide}
-          depthWrite={false}
-        />
-      </mesh>
-      {entries.map((entry) => {
-        const occupied = entryIsOccupied(
-          entry.logicalIndex,
-          logicalCount,
-          activity,
-        );
-        return (
-          <RoundedBox
-            key={entry.logicalIndex}
-            position={[entry.position[0], definition.size.y / 2, 0]}
-            args={[
-              Math.max(0.12, entry.scale[0] * 0.72),
-              radius * 0.52,
-              radius * 0.76,
-            ]}
-            radius={0.09}
-            smoothness={3}
-          >
-            <meshPhysicalMaterial
-              color={occupied ? "#a3ffec" : "#222b2f"}
-              emissive={occupied ? "#25e9bf" : "#020404"}
-              emissiveIntensity={occupied ? 1.35 : 0.025}
-              metalness={occupied ? 0.32 : 0.72}
-              roughness={occupied ? 0.16 : 0.5}
-              clearcoat={0.82}
-            />
-          </RoundedBox>
-        );
-      })}
-      {[-0.32, -0.1, 0.12, 0.34].map((offset) => (
-        <mesh
-          key={offset}
-          position={[offset * definition.size.x, definition.size.y / 2, 0]}
-          rotation={[0, Math.PI / 2, 0]}
-        >
-          <torusGeometry args={[radius * 1.03, 0.055, 8, 24]} />
-          <meshStandardMaterial
-            color="#62bfb3"
-            emissive="#1a6e66"
-            emissiveIntensity={0.34}
-            metalness={0.78}
-            roughness={0.2}
-          />
-        </mesh>
-      ))}
-      {[-0.18, 0.18].map((offset) => (
-        <mesh
-          key={offset}
-          position={[
-            offset * definition.size.x,
-            definition.size.y / 2 + radius * 0.72,
-            0,
-          ]}
-          rotation={[0, 0, -Math.PI / 2]}
-        >
-          <coneGeometry args={[radius * 0.22, radius * 0.48, 12]} />
-          <meshStandardMaterial
-            color="#d8fff7"
-            emissive="#5be7d3"
-            emissiveIntensity={0.85}
-          />
-        </mesh>
-      ))}
-      {definition.ports.map((port) => (
-        <mesh
-          key={port.id}
-          position={[
-            port.anchor[0],
-            definition.size.y / 2 + port.anchor[1],
-            port.anchor[2],
-          ]}
-          rotation={[0, Math.PI / 2, 0]}
-        >
-          <torusGeometry args={[radius * 1.18, 0.11, 10, 24]} />
-          <meshStandardMaterial
-            color={port.direction === "input" ? "#69dcff" : "#ffcf68"}
-            emissive={port.direction === "input" ? "#176b8a" : "#845d12"}
-            emissiveIntensity={0.78}
-          />
-        </mesh>
-      ))}
-      {selected ? (
-        <mesh
-          position={[0, definition.size.y / 2, 0]}
-          rotation={[0, 0, Math.PI / 2]}
-        >
-          <cylinderGeometry
-            args={[radius * 1.32, radius * 1.32, definition.size.x + 0.28, 16]}
-          />
-          <meshBasicMaterial
-            color="#d7f7ff"
-            wireframe
-            transparent
-            opacity={0.72}
-          />
-        </mesh>
-      ) : null}
-      {selected || logicalCount >= 16 ? (
-        <Html position={[0, definition.size.y + 0.4, 0]} center>
-          <span className="queue-label">
-            {instance.label ?? instance.id} · {activity.occupiedEntries}/
-            {logicalCount}
-          </span>
-        </Html>
-      ) : null}
-    </group>
-  );
-}
-
 export function Brick({
   instance,
   definition,
@@ -626,17 +443,7 @@ export function Brick({
       />
     );
   }
-  if (definition.kind === "queue") {
-    return (
-      <QueuePipe
-        instance={instance}
-        definition={definition}
-        activity={activity}
-        selected={selected}
-        onSelect={onSelect}
-      />
-    );
-  }
+  if (definition.kind === "queue") return null;
   const position = positionToTuple(instance.transform.position);
   const color = KIND_COLORS[definition.kind];
   const storageProfile = [

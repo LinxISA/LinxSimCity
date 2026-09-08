@@ -29,6 +29,12 @@ function topology(): ArchitectureTopology {
     revision: "test-revision",
     nodes: [
       {
+        id: "source.1",
+        definitionId: "ac.source",
+        parameters: {},
+        area: unknownArea,
+      },
+      {
         id: "queue.1",
         definitionId: "core.queue",
         parameters: { capacity: 16 },
@@ -48,6 +54,11 @@ function topology(): ArchitectureTopology {
       },
     ],
     edges: [
+      {
+        id: "edge.source-queue",
+        from: { nodeId: "source.1", portId: "out" },
+        to: { nodeId: "queue.1", portId: "in" },
+      },
       {
         id: "edge.queue-vector",
         from: { nodeId: "queue.1", portId: "out" },
@@ -77,8 +88,9 @@ describe("topology-driven world generation", () => {
   test("performs a stable topological sort before assigning X positions", () => {
     const source = topology();
     const sorted = stableTopologicalSort(source, CORE_CATALOG);
-    expect(sorted.orderedNodeIds).toEqual(["queue.1", "sram.1", "vector.1"]);
-    expect(sorted.rankByNodeId.get("queue.1")).toBe(0);
+    expect(sorted.orderedNodeIds).toEqual(["source.1", "sram.1", "vector.1"]);
+    expect(sorted.rankByNodeId.has("queue.1")).toBe(false);
+    expect(sorted.rankByNodeId.get("source.1")).toBe(0);
     expect(sorted.rankByNodeId.get("sram.1")).toBe(0);
     expect(sorted.rankByNodeId.get("vector.1")).toBe(1);
     expect(sorted.cyclicNodeIds).toEqual([]);
@@ -106,8 +118,12 @@ describe("topology-driven world generation", () => {
       );
     }
     const queue = world.instances.find((item) => item.id === "queue.1")!;
+    const sourceInstance = world.instances.find(
+      (item) => item.id === "source.1",
+    )!;
     const vector = world.instances.find((item) => item.id === "vector.1")!;
     const queuePosition = positionToTuple(queue.transform.position);
+    const sourcePosition = positionToTuple(sourceInstance.transform.position);
     const vectorPosition = positionToTuple(vector.transform.position);
     const deltaX = vectorPosition[0] - queuePosition[0];
     const deltaZ = vectorPosition[2] - queuePosition[2];
@@ -117,6 +133,18 @@ describe("topology-driven world generation", () => {
         Math.sin(queue.transform.yawRadians) * deltaZ) /
       magnitude;
     expect(alignment).toBeGreaterThan(0.99);
+    expect(
+      Math.abs(queuePosition[0] - (sourcePosition[0] + vectorPosition[0]) / 2),
+    ).toBeLessThanOrEqual(1);
+    const sourceSize = CORE_CATALOG.definitions.find(
+      (definition) => definition.id === sourceInstance.definitionId,
+    )!.size;
+    const vectorSize = CORE_CATALOG.definitions.find(
+      (definition) => definition.id === vector.definitionId,
+    )!.size;
+    expect(vectorPosition[0] - sourcePosition[0]).toBeGreaterThanOrEqual(
+      sourceSize.x / 2 + vectorSize.x / 2 + 9,
+    );
   });
 
   test("barycenter ordering removes a simple two-edge crossing", () => {
@@ -163,10 +191,16 @@ describe("topology-driven world generation", () => {
     const world = generateWorldFromTopology(source, CORE_CATALOG);
     expect(world.instances.map((item) => item.id).sort()).toEqual([
       "queue.1",
+      "source.1",
       "sram.1",
       "vector.1",
     ]);
     expect(world.links).toEqual([
+      {
+        id: "edge.source-queue",
+        from: { instanceId: "source.1", portId: "out" },
+        to: { instanceId: "queue.1", portId: "in" },
+      },
       {
         id: "edge.queue-vector",
         from: { instanceId: "queue.1", portId: "out" },
@@ -176,6 +210,15 @@ describe("topology-driven world generation", () => {
         id: "edge.sram-vector",
         from: { instanceId: "sram.1", portId: "tile-out" },
         to: { instanceId: "vector.1", portId: "tile" },
+      },
+    ]);
+    expect(world.queueCorridors).toEqual([
+      {
+        id: "queue.1",
+        queueInstanceId: "queue.1",
+        from: { instanceId: "source.1", portId: "out" },
+        to: { instanceId: "vector.1", portId: "issue" },
+        topologyEdgeIds: ["edge.source-queue", "edge.queue-vector"],
       },
     ]);
     expect(world.topologyFingerprint).toBe(topologyFingerprint(source));
@@ -223,7 +266,7 @@ describe("topology-driven world generation", () => {
     expect(child.hierarchyDepth).toBe(1);
     expect(root.visualSize?.x).toBeGreaterThan(10);
     expect(topologyHierarchy(hierarchical).map((item) => item.depth)).toEqual([
-      0, 1, 1, 1,
+      0, 1, 1, 1, 1,
     ]);
   });
 

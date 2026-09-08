@@ -86,6 +86,14 @@ export interface WorldLink {
   readonly to: WorldLinkEndpoint;
 }
 
+export interface WorldQueueCorridor {
+  readonly id: string;
+  readonly queueInstanceId: string;
+  readonly from: WorldLinkEndpoint;
+  readonly to: WorldLinkEndpoint;
+  readonly topologyEdgeIds: readonly [string, string];
+}
+
 export interface GeneratedWorld {
   readonly schema: "linxsimcity.generated-world";
   readonly schemaVersion: "1";
@@ -95,6 +103,7 @@ export interface GeneratedWorld {
   readonly name: string;
   readonly instances: readonly BrickInstance[];
   readonly links: readonly WorldLink[];
+  readonly queueCorridors: readonly WorldQueueCorridor[];
 }
 
 export interface TopologyDiagnostic {

@@ -112,6 +112,7 @@
 - [ ] 完成首批 Queue、Table、SRAM、计算块、端口/连接，并逐步补齐约 10–15 种形态；支持参数变化、内部展开和统一材质。
 - [x] 层次区域使用由 topology ID 稳定派生的克制配色；SimQueue 使用带方向标记的透明管道，并由 producer/consumer 几何方向决定连续旋转，端口与边锚点共享同一变换。
 - [x] 将 SimQueue 与 topology edge 统一为高架 3D 管廊，使用体积管线、支柱和方向箭头替换灰色细线；Queue entry 按容量有界采样，有数据发光、空 entry 为深灰。
+- [x] 布局图中折叠 Queue 节点，以 Queue 的 producer→consumer 关系对真实模块重新拓扑排序；rank/lane 间距按放大后的模块包围盒计算。场景不再绘制独立 Queue 积木，Queue ID 绑定到横平竖直的管道及其数据流光点。
 - [x] 组件定义通过 `visual.profile` 声明视觉语义：一维 Table 使用线性槽位，多维 Table 使用矩阵/分层阵列，Reorder Window 使用带 head/tail 标记的 circular buffer；渲染器不依赖显示名猜测类型。
 - [x] 存储类积木使用开放式低基座，统一圆角金属/陶瓷外壳与状态材质；拓扑列表选中后相机聚焦到对应 3D 实例。
 - [ ] 实现基础 instancing、LOD、拾取映射和静态资源释放；禁止由显示名推导硬件身份。

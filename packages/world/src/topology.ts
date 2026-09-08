@@ -276,6 +276,54 @@ export interface TopologicalSortResult {
   readonly rankCount: number;
 }
 
+interface ModuleFlowEdge {
+  readonly fromNodeId: string;
+  readonly toNodeId: string;
+  readonly queueNodeId?: string;
+}
+
+function moduleFlowEdges(
+  topology: ArchitectureTopology,
+  definitionById: ReadonlyMap<string, BrickDefinition>,
+): readonly ModuleFlowEdge[] {
+  const nodeById = new Map(topology.nodes.map((node) => [node.id, node]));
+  const kindOf = (nodeId: string) => {
+    const node = nodeById.get(nodeId);
+    return node ? definitionById.get(node.definitionId)?.kind : undefined;
+  };
+  const result: ModuleFlowEdge[] = [];
+  for (const edge of topology.edges) {
+    if (
+      kindOf(edge.from.nodeId) !== "queue" &&
+      kindOf(edge.to.nodeId) !== "queue"
+    ) {
+      result.push({ fromNodeId: edge.from.nodeId, toNodeId: edge.to.nodeId });
+    }
+  }
+  for (const queue of topology.nodes.filter(
+    (node) => definitionById.get(node.definitionId)?.kind === "queue",
+  )) {
+    const incoming = topology.edges.filter(
+      (edge) =>
+        edge.to.nodeId === queue.id && kindOf(edge.from.nodeId) !== "queue",
+    );
+    const outgoing = topology.edges.filter(
+      (edge) =>
+        edge.from.nodeId === queue.id && kindOf(edge.to.nodeId) !== "queue",
+    );
+    for (const producer of incoming) {
+      for (const consumer of outgoing) {
+        result.push({
+          fromNodeId: producer.from.nodeId,
+          toNodeId: consumer.to.nodeId,
+          queueNodeId: queue.id,
+        });
+      }
+    }
+  }
+  return result;
+}
+
 export function stableTopologicalSort(
   topology: ArchitectureTopology,
   catalog: ComponentCatalog,
@@ -284,24 +332,27 @@ export function stableTopologicalSort(
     catalog.definitions.map((definition) => [definition.id, definition]),
   );
   const graphNodes = topology.nodes.filter(
-    (node) => definitionById.get(node.definitionId)?.kind !== "container",
+    (node) =>
+      !["container", "queue"].includes(
+        definitionById.get(node.definitionId)?.kind ?? "container",
+      ),
   );
   const graphNodeIds = new Set(graphNodes.map((node) => node.id));
   const indegree = new Map(graphNodes.map((node) => [node.id, 0]));
   const outgoing = new Map<string, string[]>();
-  for (const edge of topology.edges) {
+  for (const edge of moduleFlowEdges(topology, definitionById)) {
     if (
-      !graphNodeIds.has(edge.from.nodeId) ||
-      !graphNodeIds.has(edge.to.nodeId)
+      !graphNodeIds.has(edge.fromNodeId) ||
+      !graphNodeIds.has(edge.toNodeId)
     ) {
       continue;
     }
-    const targets = outgoing.get(edge.from.nodeId) ?? [];
-    if (!targets.includes(edge.to.nodeId)) {
-      targets.push(edge.to.nodeId);
+    const targets = outgoing.get(edge.fromNodeId) ?? [];
+    if (!targets.includes(edge.toNodeId)) {
+      targets.push(edge.toNodeId);
       targets.sort();
-      outgoing.set(edge.from.nodeId, targets);
-      indegree.set(edge.to.nodeId, (indegree.get(edge.to.nodeId) ?? 0) + 1);
+      outgoing.set(edge.fromNodeId, targets);
+      indegree.set(edge.toNodeId, (indegree.get(edge.toNodeId) ?? 0) + 1);
     }
   }
   const ready = graphNodes
@@ -383,9 +434,8 @@ interface Bounds2 {
   readonly maxZ: number;
 }
 
-const RANK_GAP = 7;
-const NODE_GAP = 3.5;
-const LANE_GAP = 8;
+const RANK_GAP = 9;
+const NODE_GAP = 4;
 const CONTAINER_PADDING = 4;
 
 function hierarchyDepthByNode(
@@ -439,6 +489,10 @@ export function generateWorldFromTopology(
   const hierarchyDepths = hierarchyDepthByNode(topology);
   const sort = stableTopologicalSort(topology, catalog);
   const graphNodes = sort.orderedNodeIds.map((id) => nodeById.get(id)!);
+  const queueNodes = topology.nodes
+    .filter((node) => definitionById.get(node.definitionId)?.kind === "queue")
+    .sort((left, right) => left.id.localeCompare(right.id));
+  const flowEdges = moduleFlowEdges(topology, definitionById);
   const laneByNode = new Map(
     graphNodes.map((node) => [node.id, laneForNode(node, nodeById)]),
   );
@@ -454,13 +508,13 @@ export function generateWorldFromTopology(
   const laneIndex = new Map(laneIds.map((id, index) => [id, index]));
   const incoming = new Map<string, string[]>();
   const outgoing = new Map<string, string[]>();
-  for (const edge of topology.edges) {
-    const predecessors = incoming.get(edge.to.nodeId) ?? [];
-    predecessors.push(edge.from.nodeId);
-    incoming.set(edge.to.nodeId, predecessors);
-    const successors = outgoing.get(edge.from.nodeId) ?? [];
-    successors.push(edge.to.nodeId);
-    outgoing.set(edge.from.nodeId, successors);
+  for (const edge of flowEdges) {
+    const predecessors = incoming.get(edge.toNodeId) ?? [];
+    predecessors.push(edge.fromNodeId);
+    incoming.set(edge.toNodeId, predecessors);
+    const successors = outgoing.get(edge.fromNodeId) ?? [];
+    successors.push(edge.toNodeId);
+    outgoing.set(edge.fromNodeId, successors);
   }
   const nodesByRank = new Map<number, string[]>();
   for (const node of graphNodes) {
@@ -488,10 +542,6 @@ export function generateWorldFromTopology(
     const nodes = nodesByRank.get(rank);
     if (!nodes) return;
     nodes.sort((left, right) => {
-      const laneDifference =
-        (laneIndex.get(laneByNode.get(left)!) ?? 0) -
-        (laneIndex.get(laneByNode.get(right)!) ?? 0);
-      if (laneDifference !== 0) return laneDifference;
       const leftCenter = barycenter(left, neighbors, order);
       const rightCenter = barycenter(right, neighbors, order);
       if (leftCenter !== undefined && rightCenter !== undefined) {
@@ -530,54 +580,21 @@ export function generateWorldFromTopology(
     cursorX += width + RANK_GAP;
   }
 
-  const laneHeights = new Map<string, number>();
-  for (const laneId of laneIds) {
-    let maximum = 0;
-    for (let rank = 0; rank < sort.rankCount; rank += 1) {
-      const nodes = (nodesByRank.get(rank) ?? []).filter(
-        (id) => laneByNode.get(id) === laneId,
-      );
-      const depth = nodes.reduce(
-        (sum, id, index) =>
-          sum +
-          definitionById.get(nodeById.get(id)!.definitionId)!.size.z +
-          (index > 0 ? NODE_GAP : 0),
-        0,
-      );
-      maximum = Math.max(maximum, depth);
-    }
-    laneHeights.set(laneId, Math.max(maximum + 2 * CONTAINER_PADDING, 10));
-  }
-  const totalLaneDepth =
-    laneIds.reduce((sum, id) => sum + laneHeights.get(id)!, 0) +
-    LANE_GAP * Math.max(0, laneIds.length - 1);
-  const laneZ = new Map<string, number>();
-  let cursorZ = -totalLaneDepth / 2;
-  for (const laneId of laneIds) {
-    const height = laneHeights.get(laneId)!;
-    laneZ.set(laneId, cursorZ + height / 2);
-    cursorZ += height + LANE_GAP;
-  }
-
   const positions = new Map<string, Point2>();
   for (let rank = 0; rank < sort.rankCount; rank += 1) {
-    for (const laneId of laneIds) {
-      const nodes = (nodesByRank.get(rank) ?? []).filter(
-        (id) => laneByNode.get(id) === laneId,
-      );
-      const totalDepth = nodes.reduce(
-        (sum, id, index) =>
-          sum +
-          definitionById.get(nodeById.get(id)!.definitionId)!.size.z +
-          (index > 0 ? NODE_GAP : 0),
-        0,
-      );
-      let z = laneZ.get(laneId)! - totalDepth / 2;
-      for (const id of nodes) {
-        const size = definitionById.get(nodeById.get(id)!.definitionId)!.size;
-        positions.set(id, { x: rankX[rank]!, z: z + size.z / 2 });
-        z += size.z + NODE_GAP;
-      }
+    const nodes = nodesByRank.get(rank) ?? [];
+    const totalDepth = nodes.reduce(
+      (sum, id, index) =>
+        sum +
+        definitionById.get(nodeById.get(id)!.definitionId)!.size.z +
+        (index > 0 ? NODE_GAP : 0),
+      0,
+    );
+    let z = -totalDepth / 2;
+    for (const id of nodes) {
+      const size = definitionById.get(nodeById.get(id)!.definitionId)!.size;
+      positions.set(id, { x: rankX[rank]!, z: z + size.z / 2 });
+      z += size.z + NODE_GAP;
     }
   }
 
@@ -591,12 +608,35 @@ export function generateWorldFromTopology(
       z: values.reduce((sum, point) => sum + point.z, 0) / values.length,
     };
   };
+  const queueEndpoints = (nodeId: string) => {
+    const producerIds = topology.edges
+      .filter((edge) => edge.to.nodeId === nodeId)
+      .map((edge) => edge.from.nodeId);
+    const consumerIds = topology.edges
+      .filter((edge) => edge.from.nodeId === nodeId)
+      .map((edge) => edge.to.nodeId);
+    return {
+      producerIds,
+      consumerIds,
+      producer: averagePosition(producerIds),
+      consumer: averagePosition(consumerIds),
+    };
+  };
+  const queuePosition = (nodeId: string): Point2 => {
+    const endpoints = queueEndpoints(nodeId);
+    if (endpoints.producer && endpoints.consumer) {
+      return {
+        x: (endpoints.producer.x + endpoints.consumer.x) / 2,
+        z: (endpoints.producer.z + endpoints.consumer.z) / 2,
+      };
+    }
+    return endpoints.producer ?? endpoints.consumer ?? { x: 0, z: 0 };
+  };
   const queueYawRadians = (nodeId: string): number => {
-    const current = positions.get(nodeId)!;
-    const producer = averagePosition(incoming.get(nodeId) ?? []);
-    const consumer = averagePosition(outgoing.get(nodeId) ?? []);
-    const start = producer ?? current;
-    const end = consumer ?? current;
+    const endpoints = queueEndpoints(nodeId);
+    const current = queuePosition(nodeId);
+    const start = endpoints.producer ?? current;
+    const end = endpoints.consumer ?? current;
     const deltaX = end.x - start.x;
     const deltaZ = end.z - start.z;
     if (deltaX === 0 && deltaZ === 0) return 0;
@@ -634,7 +674,7 @@ export function generateWorldFromTopology(
     const childBounds = (children.get(node.id) ?? [])
       .map((child) => boundsByNode.get(child.id))
       .filter((bounds): bounds is Bounds2 => bounds !== undefined);
-    const fallbackLane = laneZ.get(node.id) ?? 0;
+    const fallbackLane = (laneIndex.get(node.id) ?? 0) * 12;
     const bounds =
       childBounds.length > 0
         ? {
@@ -737,6 +777,67 @@ export function generateWorldFromTopology(
       laneId: laneByNode.get(node.id)!,
     });
   }
+  for (const node of queueNodes) {
+    const definition = definitionById.get(node.definitionId)!;
+    const position = queuePosition(node.id);
+    const endpoints = queueEndpoints(node.id);
+    const producerRanks = endpoints.producerIds
+      .map((id) => sort.rankByNodeId.get(id))
+      .filter((rank): rank is number => rank !== undefined);
+    const depth = hierarchyDepths.get(node.id) ?? 0;
+    instances.push({
+      id: node.id,
+      definitionId: node.definitionId,
+      ...(node.label ? { label: node.label } : {}),
+      transform: {
+        position: worldPosition(
+          Math.round(position.x),
+          depth,
+          Math.round(position.z),
+        ),
+        yawRadians: queueYawRadians(node.id),
+      },
+      parameters: {
+        ...defaultParameters(definition),
+        ...node.parameters,
+      },
+      hierarchyDepth: depth,
+      topologyRank:
+        producerRanks.length > 0 ? Math.max(...producerRanks) + 0.5 : 0,
+      topologyOrder: graphNodes.length + queueNodes.indexOf(node),
+      laneId: laneForNode(node, nodeById),
+    });
+  }
+  const kindOfNode = (nodeId: string) =>
+    definitionById.get(nodeById.get(nodeId)!.definitionId)!.kind;
+  const queueCorridors = queueNodes.flatMap((queue) => {
+    const incomingEdges = topology.edges.filter(
+      (edge) =>
+        edge.to.nodeId === queue.id && kindOfNode(edge.from.nodeId) !== "queue",
+    );
+    const outgoingEdges = topology.edges.filter(
+      (edge) =>
+        edge.from.nodeId === queue.id && kindOfNode(edge.to.nodeId) !== "queue",
+    );
+    return incomingEdges.flatMap((producer, producerIndex) =>
+      outgoingEdges.map((consumer, consumerIndex) => ({
+        id:
+          incomingEdges.length === 1 && outgoingEdges.length === 1
+            ? queue.id
+            : `${queue.id}.${producerIndex}.${consumerIndex}`,
+        queueInstanceId: queue.id,
+        from: {
+          instanceId: producer.from.nodeId,
+          portId: producer.from.portId,
+        },
+        to: {
+          instanceId: consumer.to.nodeId,
+          portId: consumer.to.portId,
+        },
+        topologyEdgeIds: [producer.id, consumer.id] as const,
+      })),
+    );
+  });
   return {
     schema: "linxsimcity.generated-world",
     schemaVersion: "1",
@@ -750,5 +851,6 @@ export function generateWorldFromTopology(
       from: { instanceId: edge.from.nodeId, portId: edge.from.portId },
       to: { instanceId: edge.to.nodeId, portId: edge.to.portId },
     })),
+    queueCorridors,
   };
 }

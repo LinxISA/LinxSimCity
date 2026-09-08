@@ -12,7 +12,6 @@ import {
   orthogonalRoute,
   portWorldPosition,
   QUEUE_ROUTE_DECK_Y,
-  QUEUE_VISUAL_ELEVATION,
 } from "./geometry.js";
 import { RouteTube } from "./RouteTube.js";
 
@@ -65,9 +64,9 @@ function portlessVisualCenter(
   const [x, y, z] = positionToTuple(instance.transform.position);
   return [
     x,
-    y +
-      (definition.kind === "queue" ? QUEUE_VISUAL_ELEVATION : 0) +
-      definition.size.y / 2,
+    definition.kind === "queue"
+      ? QUEUE_ROUTE_DECK_Y + 1.25
+      : y + definition.size.y / 2,
     z,
   ];
 }
@@ -89,42 +88,69 @@ function SceneContent(props: SceneContentProps) {
       ),
     [props.definitions, props.world.instances],
   );
-  const routes = useMemo(
-    () =>
-      props.world.links.flatMap((link, linkIndex) => {
-        const fromInstance = instances.get(link.from.instanceId);
-        const toInstance = instances.get(link.to.instanceId);
-        if (!fromInstance || !toInstance) return [];
+  const routes = useMemo(() => {
+    const queueRoutes = props.world.queueCorridors.flatMap(
+      (corridor, corridorIndex) => {
+        const fromInstance = instances.get(corridor.from.instanceId);
+        const toInstance = instances.get(corridor.to.instanceId);
+        const queueInstance = instances.get(corridor.queueInstanceId);
+        if (!fromInstance || !toInstance || !queueInstance) return [];
         const fromDefinition = props.definitions.get(fromInstance.definitionId);
         const toDefinition = props.definitions.get(toInstance.definitionId);
-        if (!fromDefinition || !toDefinition) return [];
-        const queueInstanceId =
-          fromDefinition.kind === "queue"
-            ? fromInstance.id
-            : toDefinition.kind === "queue"
-              ? toInstance.id
-              : undefined;
-        const start = portWorldPosition(
-          fromInstance,
-          fromDefinition,
-          link.from.portId,
+        const queueDefinition = props.definitions.get(
+          queueInstance.definitionId,
         );
-        const end = portWorldPosition(toInstance, toDefinition, link.to.portId);
+        if (!fromDefinition || !toDefinition || !queueDefinition) return [];
+        const queueActivity = activity.get(corridor.queueInstanceId);
+        const capacity = queueInstance.parameters.capacity ?? 1;
         return [
           {
-            id: link.id,
-            queueInstanceId,
+            id: corridor.id,
+            queueInstanceId: corridor.queueInstanceId,
+            activity: queueActivity,
+            label: `${queueInstance.label ?? queueInstance.id} · ${queueActivity?.occupiedEntries ?? 0}/${capacity}`,
             points: orthogonalRoute(
-              start,
-              end,
-              linkIndex,
-              queueInstanceId ? QUEUE_ROUTE_DECK_Y : 0,
+              portWorldPosition(
+                fromInstance,
+                fromDefinition,
+                corridor.from.portId,
+              ),
+              portWorldPosition(toInstance, toDefinition, corridor.to.portId),
+              corridorIndex,
+              QUEUE_ROUTE_DECK_Y,
             ),
           },
         ];
-      }),
-    [instances, props.definitions, props.world.links],
-  );
+      },
+    );
+    const directRoutes = props.world.links.flatMap((link, linkIndex) => {
+      const fromInstance = instances.get(link.from.instanceId);
+      const toInstance = instances.get(link.to.instanceId);
+      if (!fromInstance || !toInstance) return [];
+      const fromDefinition = props.definitions.get(fromInstance.definitionId);
+      const toDefinition = props.definitions.get(toInstance.definitionId);
+      if (!fromDefinition || !toDefinition) return [];
+      if (fromDefinition.kind === "queue" || toDefinition.kind === "queue") {
+        return [];
+      }
+      const start = portWorldPosition(
+        fromInstance,
+        fromDefinition,
+        link.from.portId,
+      );
+      const end = portWorldPosition(toInstance, toDefinition, link.to.portId);
+      return [
+        {
+          id: link.id,
+          queueInstanceId: undefined,
+          activity: undefined,
+          label: undefined,
+          points: orthogonalRoute(start, end, linkIndex, 0),
+        },
+      ];
+    });
+    return [...queueRoutes, ...directRoutes];
+  }, [activity, instances, props.definitions, props.world]);
   return (
     <>
       <ambientLight intensity={0.55} />
@@ -166,6 +192,8 @@ function SceneContent(props: SceneContentProps) {
               points={route.points}
               queue={route.queueInstanceId !== undefined}
               selected={props.selectedInstanceId === route.queueInstanceId}
+              {...(route.activity ? { activity: route.activity } : {})}
+              {...(route.label ? { label: route.label } : {})}
               {...(route.queueInstanceId
                 ? { onSelect: () => props.onSelect(route.queueInstanceId!) }
                 : {})}
@@ -174,7 +202,13 @@ function SceneContent(props: SceneContentProps) {
           {props.world.instances.map((instance) => {
             const definition = props.definitions.get(instance.definitionId);
             const instanceActivity = activity.get(instance.id);
-            if (!definition || !instanceActivity) return null;
+            if (
+              !definition ||
+              !instanceActivity ||
+              definition.kind === "queue"
+            ) {
+              return null;
+            }
             return (
               <Brick
                 key={instance.id}

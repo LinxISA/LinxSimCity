@@ -34,25 +34,40 @@ const definition = (
   ports: readonly BrickPortDefinition[],
   parameters: BrickDefinition["parameters"],
   visual?: BrickVisualDefinition,
-): BrickDefinition => ({
-  id,
-  label,
-  kind,
-  description,
-  size,
-  ports,
-  parameters,
-  visual: visual ?? {
-    profile:
-      kind === "container"
-        ? "district"
-        : kind === "io"
-          ? "interface"
-          : kind === "crossbar" || kind === "arbiter"
-            ? "switch"
-            : "compute",
-  },
-});
+): BrickDefinition => {
+  const scaleXZ = kind === "queue" || kind === "container" ? 1 : 1.28;
+  const scaleY = kind === "queue" || kind === "container" ? 1 : 1.58;
+  return {
+    id,
+    label,
+    kind,
+    description,
+    size: {
+      x: size.x * scaleXZ,
+      y: size.y * scaleY,
+      z: size.z * scaleXZ,
+    },
+    ports: ports.map((item) => ({
+      ...item,
+      anchor: [
+        item.anchor[0] * scaleXZ,
+        item.anchor[1] * scaleY,
+        item.anchor[2] * scaleXZ,
+      ],
+    })),
+    parameters,
+    visual: visual ?? {
+      profile:
+        kind === "container"
+          ? "district"
+          : kind === "io"
+            ? "interface"
+            : kind === "crossbar" || kind === "arbiter"
+              ? "switch"
+              : "compute",
+    },
+  };
+};
 
 export const CORE_BRICKS: readonly BrickDefinition[] = [
   definition(

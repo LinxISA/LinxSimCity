@@ -331,7 +331,10 @@ export function App() {
                       <span>
                         <strong>{node.label ?? node.id}</strong>
                         <small>
-                          R{instance.topologyRank} · {instance.laneId}
+                          {definition?.kind === "queue"
+                            ? "PIPE"
+                            : `R${instance.topologyRank}`}{" "}
+                          · {instance.laneId}
                         </small>
                       </span>
                       <span className="edge-count">
@@ -382,7 +385,7 @@ export function App() {
                   <strong>{topology?.edges.length ?? 0}</strong>
                 </div>
                 <div>
-                  <span>拓扑层</span>
+                  <span>模块层</span>
                   <strong>
                     {orderedNodes.length > 0
                       ? Math.max(
@@ -445,14 +448,14 @@ export function App() {
           )}
           <div className="scene-mode">
             <span className="mode-light mode-topology" />
-            高架 SimQueue · 方向管廊 · 状态材质预览
+            Queue 折叠排序 · 尺寸感知布局 · SimQueue 管道
           </div>
           <div className="scene-state-legend" aria-label="Entry state legend">
             <span>
-              <i className="entry-swatch entry-occupied" /> 有数据
+              <i className="entry-swatch entry-occupied" /> 数据流动
             </span>
             <span>
-              <i className="entry-swatch entry-empty" /> 空 entry
+              <i className="entry-swatch entry-empty" /> 空闲管道
             </span>
             <small>PREVIEW · 非仿真状态</small>
           </div>
@@ -512,8 +515,7 @@ export function App() {
       <footer className="status-bar">
         <span>拖拽旋转 · 滚轮缩放 · 点击组件检查连接 · 点击空白取消选择</span>
         <span>
-          <i className="status-dot" /> 拓扑只读 · Entry 为视觉预览 · Trace
-          暂停接入
+          <i className="status-dot" /> 管道光点为数据流预览 · Trace 暂停接入
         </span>
       </footer>
     </main>

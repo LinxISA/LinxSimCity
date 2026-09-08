@@ -50,7 +50,7 @@ Selection is shared between the tree, 3D object, and inspector. The browser neve
 
 1. **Structure before spectacle.** Geometry must explain hardware type, hierarchy, and direction before lighting adds atmosphere.
 2. **State has one meaning.** Bright entries contain data; dark gray entries are empty. Unknown runtime state is labeled and must not be presented as measured activity.
-3. **Queues are transport.** SimQueue is an elevated, directional pipe corridor connecting modules, with entry chambers visible inside it.
+3. **Queues are transport.** SimQueue is the elevated, directional pipe corridor connecting modules. It is not rendered as a separate building.
 4. **Storage shows shape.** One-dimensional Tables use a strip, multi-dimensional Tables use a grid or layered array, and ROB uses a circular buffer.
 5. **Topology owns identity.** Labels, colors, layout, and preview activity never create or change hardware identity.
 6. **Detail follows distance.** District color and silhouettes remain readable from afar; entry state and ports become readable at close range.
@@ -61,13 +61,12 @@ The scene uses a near-black blue background and restrained cyan, teal, amber, vi
 
 Typography uses the system sans family for interface text and a monospaced face for IDs, revisions, counts, and mode labels. UI spacing follows a compact 4/8/12/16 px rhythm.
 
-Modules use dark machined bases, rounded metal or ceramic shells, recessed state surfaces, selective clearcoat, and low emissive intensity. Queue pipes use glass-metal shells, internal entry capsules, structural supports, and a luminous directional core. Connections are volumetric raised tubes with visible arrows. Motion is reserved for trace-backed transfers; topology preview stays still.
+Modules use dark machined bases, rounded metal or ceramic shells, recessed state surfaces, selective clearcoat, and low emissive intensity. Queue pipes use straight rectangular glass-metal sections, square junctions, vertical risers, and luminous data packets. Preview motion is always labeled; trace-backed motion must replace it explicitly rather than silently falling back.
 
 ## Components
 
 - **Hierarchy district:** translucent colored slab plus wire boundary and stable scope label.
-- **SimQueue:** elevated cylindrical chamber aligned with producer-to-consumer flow; capacity is sampled into bounded visible entry capsules. Occupied entries glow; empty entries remain gray.
-- **Queue corridor:** raised 3D tube from module port to Queue port with a directional arrow. It replaces the old generic semitransparent line treatment.
+- **SimQueue corridor:** one selectable raised pipe from the producer module to the consumer module. Its stable Queue ID owns the pipe, capacity/occupancy controls the data markers, and moving luminous packets show preview flow. The route uses straight axis-aligned sections and square junctions, without spline curves or a separate Queue building.
 - **Linear Table/Register File:** one row of bounded representative entries.
 - **Matrix Table:** rows and columns come from catalog-declared dimension parameters; large logical arrays use representative sampling.
 - **ROB:** circular entry ring with head/tail markers and amber occupied entries.
@@ -101,7 +100,7 @@ Use concise engineering language. Keep canonical identifiers and source names un
 
 The current path uses React, TypeScript, Vite, Three.js, React Three Fiber, and Drei on WebGL2. New rendering work stays in `packages/brick-kit`; derived placement stays in `packages/world`; topology and catalog data remain independent of scene coordinates.
 
-Visual state is passed separately from topology. Large capacities use bounded representative geometry and must retain the logical capacity in labels and inspection. Connections remain 1:1 with topology edges. Queue visual elevation changes rendered coordinates and port anchors together so links remain attached after rotation.
+Visual state is passed separately from topology. Large capacities use bounded representative geometry and must retain the logical capacity in labels and inspection. Queue nodes are collapsed into producer-to-consumer module edges for layout, while each rendered corridor retains the Queue ID and both source topology edge IDs. Module rank widths and lane depths use the scaled component bounding boxes. Queue routes use straight orthogonal segments above the tallest module class.
 
 Validation includes TypeScript, Vitest, ESLint, Prettier, production build, Pages verification, and browser screenshots at overview and close range. Rendering must dispose generated geometry through React Three Fiber lifecycle and avoid unbounded per-entry objects.
 
