@@ -8,6 +8,8 @@ import { Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { DoubleSide } from "three";
 
+import { districtColor } from "./geometry.js";
+
 const KIND_COLORS: Record<BrickKind, string> = {
   queue: "#3ad6c6",
   table: "#7aa8ff",
@@ -199,6 +201,7 @@ function HierarchyDistrict({
 }: BrickProps) {
   const position = positionToTuple(instance.transform.position);
   const size = instance.visualSize ?? definition.size;
+  const color = districtColor(instance.id, instance.hierarchyDepth);
   const pick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     onSelect(instance.id);
@@ -208,26 +211,154 @@ function HierarchyDistrict({
       <mesh position={[0, 0.12, 0]} receiveShadow>
         <boxGeometry args={[size.x, 0.24, size.z]} />
         <meshPhysicalMaterial
-          color="#294858"
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.08}
           metalness={0.58}
           roughness={0.48}
           transparent
-          opacity={selected ? 0.42 : 0.22}
+          opacity={
+            selected ? 0.46 : instance.hierarchyDepth === 0 ? 0.12 : 0.24
+          }
           depthWrite={false}
         />
       </mesh>
       <mesh position={[0, 0.26, 0]}>
         <boxGeometry args={[size.x, 0.48, size.z]} />
         <meshBasicMaterial
-          color={selected ? "#bdeaff" : "#4f8296"}
+          color={selected ? "#e3faff" : color}
           wireframe
           transparent
           opacity={selected ? 0.8 : 0.32}
         />
       </mesh>
       <Html position={[-size.x / 2 + 1.2, 0.62, -size.z / 2 + 0.8]}>
-        <span className="hierarchy-label">
+        <span
+          className="hierarchy-label"
+          style={{ borderColor: `${color}80`, color }}
+        >
           {instance.label ?? instance.id} · L{instance.hierarchyDepth}
+        </span>
+      </Html>
+    </group>
+  );
+}
+
+function QueuePipe({ instance, definition, selected, onSelect }: BrickProps) {
+  const position = positionToTuple(instance.transform.position);
+  const radius = definition.size.z * 0.28;
+  const rotation = [0, instance.transform.yawRadians, 0] as const;
+  const pick = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    onSelect(instance.id);
+  };
+  return (
+    <group
+      position={[position[0], position[1], position[2]]}
+      rotation={rotation}
+      onClick={pick}
+    >
+      <mesh
+        position={[0, definition.size.y / 2, 0]}
+        rotation={[0, 0, Math.PI / 2]}
+        castShadow
+      >
+        <cylinderGeometry
+          args={[radius, radius, definition.size.x, 24, 1, true]}
+        />
+        <meshPhysicalMaterial
+          color="#2ba998"
+          emissive="#0c4e49"
+          emissiveIntensity={0.3}
+          metalness={0.48}
+          roughness={0.22}
+          transmission={0.18}
+          transparent
+          opacity={0.66}
+          side={DoubleSide}
+        />
+      </mesh>
+      <mesh
+        position={[0, definition.size.y / 2, 0]}
+        rotation={[0, 0, Math.PI / 2]}
+      >
+        <cylinderGeometry
+          args={[radius * 0.42, radius * 0.42, definition.size.x * 0.92, 16]}
+        />
+        <meshStandardMaterial
+          color="#78f2df"
+          emissive="#23a895"
+          emissiveIntensity={0.5}
+          transparent
+          opacity={0.72}
+        />
+      </mesh>
+      {[-0.32, -0.1, 0.12, 0.34].map((offset) => (
+        <mesh
+          key={offset}
+          position={[offset * definition.size.x, definition.size.y / 2, 0]}
+          rotation={[0, Math.PI / 2, 0]}
+        >
+          <torusGeometry args={[radius * 1.03, 0.06, 8, 20]} />
+          <meshStandardMaterial
+            color="#a8fff1"
+            emissive="#48dcca"
+            emissiveIntensity={0.6}
+          />
+        </mesh>
+      ))}
+      {[-0.2, 0.15].map((offset) => (
+        <mesh
+          key={offset}
+          position={[offset * definition.size.x, definition.size.y / 2, 0]}
+          rotation={[0, 0, -Math.PI / 2]}
+        >
+          <coneGeometry args={[radius * 0.34, radius * 0.62, 12]} />
+          <meshStandardMaterial
+            color="#d5fff8"
+            emissive="#5be7d3"
+            emissiveIntensity={0.75}
+          />
+        </mesh>
+      ))}
+      {definition.ports.map((port) => (
+        <mesh
+          key={port.id}
+          position={[
+            port.anchor[0],
+            definition.size.y / 2 + port.anchor[1],
+            port.anchor[2],
+          ]}
+          rotation={[0, Math.PI / 2, 0]}
+        >
+          <torusGeometry args={[radius * 1.18, 0.11, 10, 24]} />
+          <meshStandardMaterial
+            color={port.direction === "input" ? "#69dcff" : "#ffcf68"}
+            emissive={port.direction === "input" ? "#176b8a" : "#845d12"}
+            emissiveIntensity={0.7}
+          />
+        </mesh>
+      ))}
+      {selected ? (
+        <mesh
+          position={[0, definition.size.y / 2, 0]}
+          rotation={[0, 0, Math.PI / 2]}
+        >
+          <cylinderGeometry
+            args={[radius * 1.32, radius * 1.32, definition.size.x + 0.28, 16]}
+          />
+          <meshBasicMaterial
+            color="#d7f7ff"
+            wireframe
+            transparent
+            opacity={0.72}
+          />
+        </mesh>
+      ) : null}
+      <Html position={[0, definition.size.y + 0.34, 0]} center>
+        <span className="queue-label">
+          {instance.label ?? instance.id} ·{" "}
+          {instance.parameters.capacity ?? "?"}
         </span>
       </Html>
     </group>
@@ -250,14 +381,20 @@ export function Brick({
       />
     );
   }
+  if (definition.kind === "queue") {
+    return (
+      <QueuePipe
+        instance={instance}
+        definition={definition}
+        selected={selected}
+        onSelect={onSelect}
+      />
+    );
+  }
   const position = positionToTuple(instance.transform.position);
   const color = KIND_COLORS[definition.kind];
   const emissive = selected ? "#bdeaff" : "#07141e";
-  const rotation = [
-    0,
-    instance.transform.yawQuarterTurns * (Math.PI / 2),
-    0,
-  ] as const;
+  const rotation = [0, instance.transform.yawRadians, 0] as const;
   const pick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     onSelect(instance.id);

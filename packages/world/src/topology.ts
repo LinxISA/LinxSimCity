@@ -581,6 +581,28 @@ export function generateWorldFromTopology(
     }
   }
 
+  const averagePosition = (ids: readonly string[]): Point2 | undefined => {
+    const values = ids
+      .map((id) => positions.get(id))
+      .filter((point): point is Point2 => point !== undefined);
+    if (values.length === 0) return undefined;
+    return {
+      x: values.reduce((sum, point) => sum + point.x, 0) / values.length,
+      z: values.reduce((sum, point) => sum + point.z, 0) / values.length,
+    };
+  };
+  const queueYawRadians = (nodeId: string): number => {
+    const current = positions.get(nodeId)!;
+    const producer = averagePosition(incoming.get(nodeId) ?? []);
+    const consumer = averagePosition(outgoing.get(nodeId) ?? []);
+    const start = producer ?? current;
+    const end = consumer ?? current;
+    const deltaX = end.x - start.x;
+    const deltaZ = end.z - start.z;
+    if (deltaX === 0 && deltaZ === 0) return 0;
+    return Math.atan2(-deltaZ, deltaX);
+  };
+
   const children = new Map<string | undefined, TopologyNode[]>();
   for (const node of topology.nodes) {
     const values = children.get(node.parentId) ?? [];
@@ -675,7 +697,7 @@ export function generateWorldFromTopology(
           depth,
           Math.round(position.z),
         ),
-        yawQuarterTurns: 0,
+        yawRadians: 0,
       },
       parameters: {
         ...defaultParameters(definition),
@@ -703,7 +725,7 @@ export function generateWorldFromTopology(
           depth,
           Math.round(position.z),
         ),
-        yawQuarterTurns: 0,
+        yawRadians: definition.kind === "queue" ? queueYawRadians(node.id) : 0,
       },
       parameters: {
         ...defaultParameters(definition),

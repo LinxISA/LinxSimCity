@@ -463,6 +463,19 @@ code {
   pointer-events: none;
 }
 
+.queue-label {
+  display: block;
+  padding: 3px 6px;
+  color: #9beadc;
+  background: rgb(4 18 20 / 76%);
+  font:
+    500 12px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
 .scene-loading,
 .scene-error {
   position: absolute;

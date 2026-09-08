@@ -60,10 +60,22 @@ renderer draws containers as labeled district plates and ordinary modules as
 buildings inside those plates. The topology inspector uses the same parent
 chain, so 3D districts and the selected-node path cannot disagree.
 
+Each district receives a stable color derived from its topology ID. The root
+uses a neutral graphite-blue; child scopes use a restrained categorical palette
+with translucent fills and matching labels. Color is presentation metadata and
+does not enter the topology fingerprint or imply area, latency, or ownership.
+
 The sorter never changes `parentId` to make an edge shorter. Cross-scope edges
 remain visible between district plates and use orthogonal X/Y/Z routes. Small
 per-edge routing heights keep coincident links distinguishable while preserving
 their exact endpoints.
+
+`SimQueue` is rendered as a transparent pipe rather than a building. Its local
+positive X axis is the transfer direction. The world generator calculates a
+continuous Y-axis angle from the average producer position to the average
+consumer position; one-sided boundary queues point toward or away from their
+known neighbor. Input/output rings and line anchors use the same rotation, so
+the pipe body, direction chevrons, and topology edges stay aligned.
 
 ## Physical area
 

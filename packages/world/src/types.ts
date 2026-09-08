@@ -15,7 +15,7 @@ export interface WorldPosition {
 
 export interface BrickTransform {
   readonly position: WorldPosition;
-  readonly yawQuarterTurns: 0 | 1 | 2 | 3;
+  readonly yawRadians: number;
 }
 
 export interface BrickInstance {

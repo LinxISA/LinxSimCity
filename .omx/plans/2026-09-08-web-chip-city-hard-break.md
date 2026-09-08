@@ -109,6 +109,7 @@
 
 - [ ] 重建 `packages/scene-core`；以 `packages/brick-kit` 替换旧分区专用 `packages/scene-modules` 主路径。
 - [ ] 完成首批 Queue、Table、SRAM、计算块、端口/连接，并逐步补齐约 10–15 种形态；支持参数变化、内部展开和统一材质。
+- [x] 层次区域使用由 topology ID 稳定派生的克制配色；SimQueue 使用带方向标记的透明管道，并由 producer/consumer 几何方向决定连续旋转，端口与边锚点共享同一变换。
 - [ ] 实现基础 instancing、LOD、拾取映射和静态资源释放；禁止由显示名推导硬件身份。
 - [ ] 建立积木展示场景与全景/近景/选中/阻塞的截图检查，核对几何、标识、端口和光照。
 

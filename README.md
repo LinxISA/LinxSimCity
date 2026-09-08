@@ -18,6 +18,7 @@ packages remain isolated only while the new trace path is implemented.
   barycenter crossing reduction, and orthogonal connection routing
 - Nested labeled districts generated from `parentId`, with hierarchy paths in
   the inspector
+- Stable scope colors and flow-aligned transparent SimQueue pipes
 - Mandatory physical-area records in square micrometres, including explicit
   unknown and aggregate evidence states
 - Read-only topology import, search, selection, connection navigation, and node

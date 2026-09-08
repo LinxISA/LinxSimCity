@@ -4,16 +4,44 @@ import type { BrickInstance } from "@linxsimcity/world";
 import { expect, test } from "vitest";
 
 import {
+  districtColor,
   orthogonalRoute,
   portWorldPosition,
   rotateAnchor,
 } from "./geometry.js";
 
-test("quarter-turn rotation keeps port anchors exact", () => {
-  expect(rotateAnchor([2, 0, 1], 0)).toEqual([2, 0, 1]);
-  expect(rotateAnchor([2, 0, 1], 1)).toEqual([1, 0, -2]);
-  expect(rotateAnchor([2, 0, 1], 2)).toEqual([-2, 0, -1]);
-  expect(rotateAnchor([2, 0, 1], 3)).toEqual([-1, 0, 2]);
+test("hierarchy district colors are stable and root remains neutral", () => {
+  expect(districtColor("scope.root", 0)).toBe("#456677");
+  expect(districtColor("scope.frontend", 1)).toBe(
+    districtColor("scope.frontend", 1),
+  );
+  const colors = new Set(
+    [
+      "frontend",
+      "dependency",
+      "dispatch",
+      "scalar",
+      "vector",
+      "cube",
+      "tma",
+      "retire",
+    ].map((scope) => districtColor(`scope.${scope}`, 1)),
+  );
+  expect(colors.size).toBeGreaterThanOrEqual(4);
+});
+
+test("continuous Y rotation keeps port anchors aligned", () => {
+  const cases = [
+    [0, [2, 0, 1]],
+    [Math.PI / 2, [1, 0, -2]],
+    [Math.PI, [-2, 0, -1]],
+    [(3 * Math.PI) / 2, [-1, 0, 2]],
+  ] as const;
+  for (const [angle, expected] of cases) {
+    rotateAnchor([2, 0, 1], angle).forEach((value, index) =>
+      expect(value).toBeCloseTo(expected[index]!),
+    );
+  }
 });
 
 test("port positions follow a rotated brick", () => {
@@ -28,12 +56,12 @@ test("port positions follow a rotated brick", () => {
     laneId: "root",
     transform: {
       position: worldPosition(10, 0, 5),
-      yawQuarterTurns: 1 as const,
+      yawRadians: Math.PI / 2,
     },
   };
-  expect(portWorldPosition(instance, definition, "out")).toEqual([
-    10, 1.1, 2.5,
-  ]);
+  portWorldPosition(instance, definition, "out").forEach((value, index) =>
+    expect(value).toBeCloseTo([10, 1.1, 2.5][index]!),
+  );
 });
 
 test("connection routing stays orthogonal in X, Y, and Z", () => {

@@ -105,6 +105,18 @@ describe("topology-driven world generation", () => {
         xById.get(edge.to.nodeId)!,
       );
     }
+    const queue = world.instances.find((item) => item.id === "queue.1")!;
+    const vector = world.instances.find((item) => item.id === "vector.1")!;
+    const queuePosition = positionToTuple(queue.transform.position);
+    const vectorPosition = positionToTuple(vector.transform.position);
+    const deltaX = vectorPosition[0] - queuePosition[0];
+    const deltaZ = vectorPosition[2] - queuePosition[2];
+    const magnitude = Math.hypot(deltaX, deltaZ);
+    const alignment =
+      (Math.cos(queue.transform.yawRadians) * deltaX -
+        Math.sin(queue.transform.yawRadians) * deltaZ) /
+      magnitude;
+    expect(alignment).toBeGreaterThan(0.99);
   });
 
   test("barycenter ordering removes a simple two-edge crossing", () => {

@@ -2,15 +2,38 @@ import type { BrickDefinition } from "@linxsimcity/component-catalog";
 import type { BrickInstance } from "@linxsimcity/world";
 import { positionToTuple } from "@linxsimcity/world";
 
+const DISTRICT_COLORS = [
+  "#48b8d0",
+  "#5fc49a",
+  "#7c8fe8",
+  "#b77bd8",
+  "#d89859",
+  "#cf6f78",
+  "#65a8e8",
+  "#9aa85e",
+] as const;
+
+export function districtColor(id: string, depth: number): string {
+  if (depth === 0) return "#456677";
+  let hash = 2166136261;
+  for (const character of id) {
+    hash ^= character.codePointAt(0) ?? 0;
+    hash = Math.imul(hash, 16777619);
+  }
+  return DISTRICT_COLORS[Math.abs(hash) % DISTRICT_COLORS.length]!;
+}
+
 export function rotateAnchor(
   anchor: readonly [number, number, number],
-  quarterTurns: number,
+  yawRadians: number,
 ): readonly [number, number, number] {
-  const turn = ((quarterTurns % 4) + 4) % 4;
-  if (turn === 1) return [anchor[2], anchor[1], -anchor[0]];
-  if (turn === 2) return [-anchor[0], anchor[1], -anchor[2]];
-  if (turn === 3) return [-anchor[2], anchor[1], anchor[0]];
-  return anchor;
+  const cosine = Math.cos(yawRadians);
+  const sine = Math.sin(yawRadians);
+  return [
+    anchor[0] * cosine + anchor[2] * sine,
+    anchor[1],
+    -anchor[0] * sine + anchor[2] * cosine,
+  ];
 }
 
 export function portWorldPosition(
@@ -21,7 +44,7 @@ export function portWorldPosition(
   const port = definition.ports.find((item) => item.id === portId);
   if (!port) throw new Error(`port ${definition.id}.${portId} does not exist`);
   const base = positionToTuple(instance.transform.position);
-  const anchor = rotateAnchor(port.anchor, instance.transform.yawQuarterTurns);
+  const anchor = rotateAnchor(port.anchor, instance.transform.yawRadians);
   return [
     base[0] + anchor[0],
     base[1] + definition.size.y / 2 + anchor[1],
