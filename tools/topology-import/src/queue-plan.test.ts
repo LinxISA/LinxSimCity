@@ -103,3 +103,30 @@ test("rejects unsupported QueueGraph block kinds", () => {
     ),
   ).toThrow(/unsupported QueueGraph block kind/);
 });
+
+test("assigns engine-specific visual definitions from canonical scopes", () => {
+  const enginePlan = {
+    ...plan,
+    scopes: ["/vector_engine"],
+    queues: plan.queues.map((queue, index) =>
+      index === 1 ? { ...queue, scope: "/vector_engine" } : queue,
+    ),
+    blocks: plan.blocks.map((block, index) =>
+      index === 1 ? { ...block, scope: "/vector_engine" } : block,
+    ),
+  };
+  const topology = convertAgenticQueuePlan(enginePlan, {
+    repository: "https://example.test/pycircuit",
+    revision: "0123456789012345678901234567890123456789",
+    worktreeDirty: false,
+    relevantInputsDirty: false,
+    planSha256: "a".repeat(64),
+    modelSha256: "b".repeat(64),
+  });
+  expect(topology.nodes).toContainEqual(
+    expect.objectContaining({
+      id: "block.b001.results",
+      definitionId: "ac.vector-engine",
+    }),
+  );
+});

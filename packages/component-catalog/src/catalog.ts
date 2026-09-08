@@ -36,7 +36,7 @@ const definition = (
   visual?: BrickVisualDefinition,
 ): BrickDefinition => {
   const scaleXZ = kind === "queue" || kind === "container" ? 1 : 1.28;
-  const scaleY = kind === "queue" || kind === "container" ? 1 : 1.58;
+  const scaleY = kind === "queue" || kind === "container" ? 1 : 8 / size.y;
   return {
     id,
     label,
@@ -44,7 +44,7 @@ const definition = (
     description,
     size: {
       x: size.x * scaleXZ,
-      y: size.y * scaleY,
+      y: kind === "queue" || kind === "container" ? size.y : 8,
       z: size.z * scaleXZ,
     },
     ports: ports.map((item) => ({
@@ -62,9 +62,11 @@ const definition = (
           ? "district"
           : kind === "io"
             ? "interface"
-            : kind === "crossbar" || kind === "arbiter"
-              ? "switch"
-              : "compute",
+            : kind === "tma"
+              ? "tma-memory"
+              : kind === "crossbar" || kind === "arbiter"
+                ? "switch"
+                : "compute",
     },
   };
 };
@@ -374,6 +376,120 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
         step: 1,
       },
     },
+  ),
+  definition(
+    "ac.vector-engine",
+    "Vector MAC Engine",
+    "vector",
+    "A topology-selected linear array of vector MAC lanes.",
+    { x: 7.6, y: 4.2, z: 4.8 },
+    [
+      port(
+        "in",
+        "Input queues",
+        "input",
+        "transaction",
+        [-3.8, 0, 0],
+        null,
+        "many",
+      ),
+      port(
+        "out",
+        "Output queues",
+        "output",
+        "transaction",
+        [3.8, 0, 0],
+        null,
+        "many",
+      ),
+    ],
+    {
+      latency: {
+        kind: "integer",
+        label: "Latency",
+        default: 1,
+        minimum: 1,
+        maximum: 4096,
+        step: 1,
+      },
+    },
+    { profile: "compute", maxVisibleEntries: 8 },
+  ),
+  definition(
+    "ac.cube-engine",
+    "Cube Systolic Array",
+    "cube",
+    "A topology-selected two-dimensional systolic MAC array.",
+    { x: 8.2, y: 5.2, z: 7.2 },
+    [
+      port(
+        "in",
+        "Input queues",
+        "input",
+        "transaction",
+        [-4.1, 0, 0],
+        null,
+        "many",
+      ),
+      port(
+        "out",
+        "Output queues",
+        "output",
+        "transaction",
+        [4.1, 0, 0],
+        null,
+        "many",
+      ),
+    ],
+    {
+      latency: {
+        kind: "integer",
+        label: "Latency",
+        default: 1,
+        minimum: 1,
+        maximum: 4096,
+        step: 1,
+      },
+    },
+    { profile: "compute", maxVisibleEntries: 16 },
+  ),
+  definition(
+    "ac.tma-engine",
+    "Tensor Memory Access",
+    "tma",
+    "A topology-selected memory transfer engine with visible DDR channels.",
+    { x: 8.4, y: 4.8, z: 6.4 },
+    [
+      port(
+        "in",
+        "Input queues",
+        "input",
+        "transaction",
+        [-4.2, 0, 0],
+        null,
+        "many",
+      ),
+      port(
+        "out",
+        "Output queues",
+        "output",
+        "transaction",
+        [4.2, 0, 0],
+        null,
+        "many",
+      ),
+    ],
+    {
+      latency: {
+        kind: "integer",
+        label: "Latency",
+        default: 1,
+        minimum: 1,
+        maximum: 4096,
+        step: 1,
+      },
+    },
+    { profile: "tma-memory", maxVisibleEntries: 8 },
   ),
   definition(
     "ac.dependency",

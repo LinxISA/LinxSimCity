@@ -613,6 +613,39 @@ code {
   box-shadow: inset 0 0 0 1px rgb(255 255 255 / 4%);
 }
 
+.engine-label {
+  display: inline-flex;
+  padding: 3px 6px;
+  border: 1px solid rgb(255 255 255 / 22%);
+  border-radius: 4px;
+  color: #dffaff;
+  background: rgb(3 9 13 / 82%);
+  box-shadow: 0 0 12px rgb(83 223 255 / 14%);
+  font:
+    600 9px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.engine-cube-label {
+  color: #ffb49e;
+}
+
+.engine-vector-label {
+  color: #ffd39f;
+}
+
+.engine-tma-label {
+  color: #9affda;
+}
+
+.engine-ddr-label {
+  color: #9edcff;
+}
+
 .scene-mode {
   top: 14px;
   left: 14px;

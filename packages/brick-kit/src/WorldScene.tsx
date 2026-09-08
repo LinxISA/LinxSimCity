@@ -65,7 +65,7 @@ function portlessVisualCenter(
   return [
     x,
     definition.kind === "queue"
-      ? QUEUE_ROUTE_DECK_Y + 1.25
+      ? QUEUE_ROUTE_DECK_Y
       : y + definition.size.y / 2,
     z,
   ];
@@ -89,41 +89,36 @@ function SceneContent(props: SceneContentProps) {
     [props.definitions, props.world.instances],
   );
   const routes = useMemo(() => {
-    const queueRoutes = props.world.queueCorridors.flatMap(
-      (corridor, corridorIndex) => {
-        const fromInstance = instances.get(corridor.from.instanceId);
-        const toInstance = instances.get(corridor.to.instanceId);
-        const queueInstance = instances.get(corridor.queueInstanceId);
-        if (!fromInstance || !toInstance || !queueInstance) return [];
-        const fromDefinition = props.definitions.get(fromInstance.definitionId);
-        const toDefinition = props.definitions.get(toInstance.definitionId);
-        const queueDefinition = props.definitions.get(
-          queueInstance.definitionId,
-        );
-        if (!fromDefinition || !toDefinition || !queueDefinition) return [];
-        const queueActivity = activity.get(corridor.queueInstanceId);
-        const capacity = queueInstance.parameters.capacity ?? 1;
-        return [
-          {
-            id: corridor.id,
-            queueInstanceId: corridor.queueInstanceId,
-            activity: queueActivity,
-            label: `${queueInstance.label ?? queueInstance.id} · ${queueActivity?.occupiedEntries ?? 0}/${capacity}`,
-            points: orthogonalRoute(
-              portWorldPosition(
-                fromInstance,
-                fromDefinition,
-                corridor.from.portId,
-              ),
-              portWorldPosition(toInstance, toDefinition, corridor.to.portId),
-              corridorIndex,
-              QUEUE_ROUTE_DECK_Y,
+    const queueRoutes = props.world.queueCorridors.flatMap((corridor) => {
+      const fromInstance = instances.get(corridor.from.instanceId);
+      const toInstance = instances.get(corridor.to.instanceId);
+      const queueInstance = instances.get(corridor.queueInstanceId);
+      if (!fromInstance || !toInstance || !queueInstance) return [];
+      const fromDefinition = props.definitions.get(fromInstance.definitionId);
+      const toDefinition = props.definitions.get(toInstance.definitionId);
+      const queueDefinition = props.definitions.get(queueInstance.definitionId);
+      if (!fromDefinition || !toDefinition || !queueDefinition) return [];
+      const queueActivity = activity.get(corridor.queueInstanceId);
+      const capacity = queueInstance.parameters.capacity ?? 1;
+      return [
+        {
+          id: corridor.id,
+          queueInstanceId: corridor.queueInstanceId,
+          activity: queueActivity,
+          label: `${queueInstance.label ?? queueInstance.id} · ${queueActivity?.occupiedEntries ?? 0}/${capacity}`,
+          points: orthogonalRoute(
+            portWorldPosition(
+              fromInstance,
+              fromDefinition,
+              corridor.from.portId,
             ),
-          },
-        ];
-      },
-    );
-    const directRoutes = props.world.links.flatMap((link, linkIndex) => {
+            portWorldPosition(toInstance, toDefinition, corridor.to.portId),
+            QUEUE_ROUTE_DECK_Y,
+          ),
+        },
+      ];
+    });
+    const directRoutes = props.world.links.flatMap((link) => {
       const fromInstance = instances.get(link.from.instanceId);
       const toInstance = instances.get(link.to.instanceId);
       if (!fromInstance || !toInstance) return [];
@@ -145,7 +140,7 @@ function SceneContent(props: SceneContentProps) {
           queueInstanceId: undefined,
           activity: undefined,
           label: undefined,
-          points: orthogonalRoute(start, end, linkIndex, 0),
+          points: orthogonalRoute(start, end, 0),
         },
       ];
     });

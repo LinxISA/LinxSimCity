@@ -305,7 +305,7 @@
     },
     {
       "id": "block.b006.vector.done",
-      "definitionId": "ac.transform",
+      "definitionId": "ac.vector-engine",
       "label": "vector_done",
       "parentId": "scope.vector.engine",
       "parameters": {
@@ -349,7 +349,7 @@
     },
     {
       "id": "block.b008.cube.done",
-      "definitionId": "ac.transform",
+      "definitionId": "ac.cube-engine",
       "label": "cube_done",
       "parentId": "scope.cube.engine",
       "parameters": {
@@ -372,7 +372,7 @@
     },
     {
       "id": "block.b009.tma.done",
-      "definitionId": "ac.transform",
+      "definitionId": "ac.tma-engine",
       "label": "tma_done",
       "parentId": "scope.tma.engine",
       "parameters": {

@@ -9,6 +9,11 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { DoubleSide } from "three";
 
 import {
+  SystolicArray,
+  TmaMemoryEngine,
+  VectorMacArray,
+} from "./EngineArrays.js";
+import {
   circularEntryLayout,
   entryIsOccupied,
   layeredEntryLayout,
@@ -27,6 +32,7 @@ const KIND_COLORS: Record<BrickKind, string> = {
   alu: "#ffb35c",
   vector: "#e67c48",
   cube: "#ff715b",
+  tma: "#42d2a2",
   arbiter: "#d08aff",
   crossbar: "#aa72ff",
   container: "#62768a",
@@ -98,7 +104,7 @@ function StorageEntries({ instance, definition, activity }: InteriorProps) {
             )
         : linearEntryLayout(logicalCount, definition.size, maxVisibleEntries);
   return (
-    <group position={[0, definition.size.y * 0.05, 0]}>
+    <group position={[0, definition.size.y * 0.52, 0]}>
       {profile === "rob-circular" ? (
         <>
           <mesh
@@ -259,53 +265,11 @@ function Interior({ instance, definition, activity }: InteriorProps) {
         </mesh>
       );
     case "vector":
-      return (
-        <group position={[0, y * 0.14, 0]}>
-          {[-1.5, -0.5, 0.5, 1.5].map((lane, index) => (
-            <RoundedBox
-              key={lane}
-              position={[0, 0, lane * (z / 5)]}
-              args={[x * 0.72, y * 0.42, z / 8]}
-              radius={0.11}
-              smoothness={3}
-            >
-              <meshPhysicalMaterial
-                color={index < 3 ? "#ffad68" : "#382b24"}
-                emissive={index < 3 ? "#b64f25" : "#080504"}
-                emissiveIntensity={index < 3 ? 0.38 : 0.04}
-                metalness={0.6}
-                roughness={0.22}
-                clearcoat={0.7}
-              />
-            </RoundedBox>
-          ))}
-        </group>
-      );
+      return <VectorMacArray size={definition.size} />;
     case "cube":
-      return (
-        <group position={[0, y * 0.13, 0]}>
-          {[-1, 0, 1].map((row) =>
-            [-1, 0, 1].map((column) => (
-              <RoundedBox
-                key={`${row}:${column}`}
-                position={[column * x * 0.2, 0, row * z * 0.2]}
-                args={[x * 0.14, y * 0.42, z * 0.14]}
-                radius={0.08}
-                smoothness={3}
-              >
-                <meshPhysicalMaterial
-                  color="#ff8268"
-                  emissive="#a43121"
-                  emissiveIntensity={0.42}
-                  metalness={0.64}
-                  roughness={0.19}
-                  clearcoat={0.75}
-                />
-              </RoundedBox>
-            )),
-          )}
-        </group>
-      );
+      return <SystolicArray size={definition.size} />;
+    case "tma":
+      return <TmaMemoryEngine size={definition.size} />;
     case "crossbar":
       return (
         <group position={[0, y * 0.16, 0]}>
@@ -451,9 +415,12 @@ export function Brick({
     "table-matrix",
     "rob-circular",
   ].includes(definition.visual.profile);
+  const rooftopEngine = ["vector", "cube", "tma"].includes(definition.kind);
   const chassisHeight = storageProfile
-    ? definition.size.y * 0.42
-    : definition.size.y;
+    ? definition.size.y * 0.78
+    : rooftopEngine
+      ? definition.size.y * 0.72
+      : definition.size.y;
   const rotation = [0, instance.transform.yawRadians, 0] as const;
   const pick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
@@ -496,7 +463,7 @@ export function Brick({
           clearcoat={0.82}
           clearcoatRoughness={0.18}
           transparent
-          opacity={storageProfile ? 0.9 : 0.78}
+          opacity={storageProfile || rooftopEngine ? 0.9 : 0.78}
         />
       </RoundedBox>
       <RoundedBox
@@ -523,7 +490,7 @@ export function Brick({
           key={port.id}
           position={[
             port.anchor[0],
-            definition.size.y / 2 + port.anchor[1],
+            definition.size.y + port.anchor[1],
             port.anchor[2],
           ]}
         >
@@ -542,18 +509,11 @@ export function Brick({
         </mesh>
       ))}
       {selected ? (
-        <mesh
-          position={[
-            0,
-            storageProfile ? definition.size.y * 0.48 : definition.size.y / 2,
-            0,
-          ]}
-        >
+        <mesh position={[0, definition.size.y / 2, 0]}>
           <boxGeometry
             args={[
               definition.size.x + 0.24,
-              (storageProfile ? definition.size.y * 0.58 : definition.size.y) +
-                0.24,
+              definition.size.y + 0.24,
               definition.size.z + 0.24,
             ]}
           />

@@ -734,7 +734,7 @@ export function generateWorldFromTopology(
       transform: {
         position: worldPosition(
           Math.round(position.x),
-          depth,
+          0,
           Math.round(position.z),
         ),
         yawRadians: 0,
@@ -762,7 +762,7 @@ export function generateWorldFromTopology(
       transform: {
         position: worldPosition(
           Math.round(position.x),
-          depth,
+          0,
           Math.round(position.z),
         ),
         yawRadians: definition.kind === "queue" ? queueYawRadians(node.id) : 0,
@@ -792,7 +792,7 @@ export function generateWorldFromTopology(
       transform: {
         position: worldPosition(
           Math.round(position.x),
-          depth,
+          0,
           Math.round(position.z),
         ),
         yawRadians: queueYawRadians(node.id),

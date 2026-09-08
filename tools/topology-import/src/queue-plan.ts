@@ -150,6 +150,15 @@ function scopeId(scope: string): string {
 }
 
 function definitionForBlock(block: QueuePlanBlock): string {
+  if (block.kind === "transform") {
+    const engineDefinition: Readonly<Record<string, string>> = {
+      "/vector_engine": "ac.vector-engine",
+      "/cube_engine": "ac.cube-engine",
+      "/tma_engine": "ac.tma-engine",
+    };
+    const specialized = engineDefinition[block.scope];
+    if (specialized) return specialized;
+  }
   const definition = SUPPORTED_BLOCK_DEFINITIONS[block.kind];
   if (!definition)
     throw new Error(`unsupported QueueGraph block kind ${block.kind}`);

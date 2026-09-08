@@ -61,12 +61,12 @@ test("port positions follow a rotated brick", () => {
     },
   };
   portWorldPosition(instance, definition, "out").forEach((value, index) =>
-    expect(value).toBeCloseTo([10, 1.1, 2.5][index]!),
+    expect(value).toBeCloseTo([10, 2.2, 2.5][index]!),
   );
 });
 
 test("connection routing stays orthogonal in X, Y, and Z", () => {
-  const points = orthogonalRoute([0, 1, 2], [10, 3, 8], 2);
+  const points = orthogonalRoute([0, 1, 2], [10, 3, 8]);
   for (let index = 1; index < points.length; index += 1) {
     const previous = points[index - 1]!;
     const current = points[index]!;
@@ -77,8 +77,13 @@ test("connection routing stays orthogonal in X, Y, and Z", () => {
 });
 
 test("queue routes share a deck above the module roofs", () => {
-  const points = orthogonalRoute([0, 2, 0], [10, 5, 8], 0, QUEUE_ROUTE_DECK_Y);
+  const points = orthogonalRoute([0, 2, 0], [10, 5, 8], QUEUE_ROUTE_DECK_Y);
   expect(
-    points.slice(1, -1).every((point) => point[1] > QUEUE_ROUTE_DECK_Y),
+    points.slice(1, -1).every((point) => point[1] === QUEUE_ROUTE_DECK_Y),
   ).toBe(true);
+});
+
+test("equal-height module ports produce no rising or falling pipe segments", () => {
+  const points = orthogonalRoute([0, 8, 2], [10, 8, 8], 8);
+  expect(points.every((point) => point[1] === 8)).toBe(true);
 });

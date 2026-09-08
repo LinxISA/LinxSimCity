@@ -2,8 +2,8 @@ import { Html, RoundedBox } from "@react-three/drei";
 import { useFrame } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import type { Mesh } from "three";
-import { Quaternion, Vector3 } from "three";
+import type { Group } from "three";
+import { AdditiveBlending, Quaternion, Vector3 } from "three";
 
 import type { BrickActivity } from "./entry-layout.js";
 
@@ -80,30 +80,42 @@ function FlowPackets({
   readonly segments: readonly RouteSegment[];
   readonly count: number;
 }) {
-  const refs = useRef<(Mesh | null)[]>([]);
+  const refs = useRef<(Group | null)[]>([]);
   useFrame(({ clock }) => {
     const phase = clock.getElapsedTime() * 0.115;
-    refs.current.forEach((mesh, index) => {
-      if (!mesh) return;
+    refs.current.forEach((packet, index) => {
+      if (!packet) return;
       const point = pointAlongRoute(segments, (phase + index / count) % 1);
-      mesh.position.copy(point);
+      packet.position.copy(point);
     });
   });
   return Array.from({ length: count }, (_, index) => (
-    <mesh
+    <group
       key={index}
-      ref={(mesh) => {
-        refs.current[index] = mesh;
+      ref={(packet) => {
+        refs.current[index] = packet;
       }}
     >
-      <boxGeometry args={[0.32, 0.2, 0.2]} />
-      <meshStandardMaterial
-        color="#d8fff7"
-        emissive="#49f4d0"
-        emissiveIntensity={1.8}
-        roughness={0.16}
-      />
-    </mesh>
+      <mesh>
+        <boxGeometry args={[0.42, 0.25, 0.25]} />
+        <meshStandardMaterial
+          color="#f0fffb"
+          emissive="#48ffd7"
+          emissiveIntensity={3.2}
+          roughness={0.1}
+        />
+      </mesh>
+      <mesh scale={1.9}>
+        <boxGeometry args={[0.42, 0.25, 0.25]} />
+        <meshBasicMaterial
+          color="#42ffd2"
+          transparent
+          opacity={0.17}
+          blending={AdditiveBlending}
+          depthWrite={false}
+        />
+      </mesh>
+    </group>
   ));
 }
 
@@ -159,44 +171,17 @@ export function RouteTube({
             castShadow={queue}
           >
             <meshPhysicalMaterial
-              color={queue ? "#1e625d" : "#285f73"}
-              emissive={queue ? "#0d4944" : "#0d3040"}
-              emissiveIntensity={selected ? 0.8 : queue ? 0.24 : 0.14}
-              metalness={0.64}
-              roughness={0.24}
-              clearcoat={0.76}
+              color={queue ? "#58b7ac" : "#438ca8"}
+              emissive={queue ? "#0b3c38" : "#0c2a37"}
+              emissiveIntensity={selected ? 0.42 : queue ? 0.1 : 0.08}
+              metalness={0.2}
+              roughness={0.12}
+              clearcoat={0.9}
+              transmission={queue ? 0.72 : 0.42}
+              thickness={0.22}
               transparent
-              opacity={queue ? 0.82 : 0.68}
-            />
-          </RoundedBox>
-          <RoundedBox
-            position={segment.midpoint}
-            args={[
-              Math.max(
-                0.07,
-                segment.scale[0] -
-                  (segment.scale[0] === thickness ? thickness * 0.72 : 0),
-              ),
-              Math.max(
-                0.07,
-                segment.scale[1] -
-                  (segment.scale[1] === thickness ? thickness * 0.72 : 0),
-              ),
-              Math.max(
-                0.07,
-                segment.scale[2] -
-                  (segment.scale[2] === thickness ? thickness * 0.72 : 0),
-              ),
-            ]}
-            radius={0.025}
-            smoothness={2}
-          >
-            <meshStandardMaterial
-              color={queue ? "#86f4dc" : "#83d9f7"}
-              emissive={queue ? "#2bc7a9" : "#2f91b4"}
-              emissiveIntensity={selected ? 1.2 : queue ? 0.52 : 0.32}
-              transparent
-              opacity={0.52}
+              opacity={selected ? 0.42 : queue ? 0.24 : 0.32}
+              depthWrite={false}
             />
           </RoundedBox>
         </group>

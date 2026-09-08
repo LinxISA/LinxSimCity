@@ -718,6 +718,14 @@ function NodeInspector({
       <section>
         <h3>模型信息</h3>
         <div className="parameter-list">
+          <div>
+            <span>definition</span>
+            <strong>{definition.id}</strong>
+          </div>
+          <div>
+            <span>visual profile</span>
+            <strong>{definition.visual.profile}</strong>
+          </div>
           {Object.entries(node.attributes ?? {}).map(([key, value]) => (
             <div key={key}>
               <span>{key}</span>

@@ -61,7 +61,7 @@ The scene uses a near-black blue background and restrained cyan, teal, amber, vi
 
 Typography uses the system sans family for interface text and a monospaced face for IDs, revisions, counts, and mode labels. UI spacing follows a compact 4/8/12/16 px rhythm.
 
-Modules use dark machined bases, rounded metal or ceramic shells, recessed state surfaces, selective clearcoat, and low emissive intensity. Queue pipes use straight rectangular glass-metal sections, square junctions, vertical risers, and luminous data packets. Preview motion is always labeled; trace-backed motion must replace it explicitly rather than silently falling back.
+Modules use dark machined bases, rounded metal or ceramic shells, recessed state surfaces, selective clearcoat, and low emissive intensity. All leaf modules use the same eight-unit roof height, and Queue ports sit directly on that roof plane. Queue pipes use transparent straight rectangular glass sections, square junctions, and fluorescent data packets. Preview motion is always labeled; trace-backed motion must replace it explicitly rather than silently falling back.
 
 ## Components
 
@@ -71,6 +71,9 @@ Modules use dark machined bases, rounded metal or ceramic shells, recessed state
 - **Matrix Table:** rows and columns come from catalog-declared dimension parameters; large logical arrays use representative sampling.
 - **ROB:** circular entry ring with head/tail markers and amber occupied entries.
 - **SRAM:** banked blocks with visible active/inactive bank treatment; bank and row counts remain parameters, not physical-area claims.
+- **Cube engine:** an open-roof 4×4 systolic array with row/column interconnects; every processing element flashes independently in preview mode.
+- **Vector engine:** an open-roof linear row of eight MAC cells with a staggered activity pulse.
+- **TMA engine:** an open-roof transfer controller, four explicit memory channels, moving access packets, and a stacked DDR endpoint. DDR is a visual subassembly of the TMA definition until the source topology provides a separate memory node.
 - **Compute/switch/interface modules:** distinct internal silhouettes inside a shared rounded industrial chassis.
 - **State legend:** always identifies occupied and empty colors and states whether the scene is preview or trace-backed.
 
@@ -100,7 +103,7 @@ Use concise engineering language. Keep canonical identifiers and source names un
 
 The current path uses React, TypeScript, Vite, Three.js, React Three Fiber, and Drei on WebGL2. New rendering work stays in `packages/brick-kit`; derived placement stays in `packages/world`; topology and catalog data remain independent of scene coordinates.
 
-Visual state is passed separately from topology. Large capacities use bounded representative geometry and must retain the logical capacity in labels and inspection. Queue nodes are collapsed into producer-to-consumer module edges for layout, while each rendered corridor retains the Queue ID and both source topology edge IDs. Module rank widths and lane depths use the scaled component bounding boxes. Queue routes use straight orthogonal segments above the tallest module class.
+Visual state is passed separately from topology. Large capacities use bounded representative geometry and must retain the logical capacity in labels and inspection. Queue nodes are collapsed into producer-to-consumer module edges for layout, while each rendered corridor retains the Queue ID and both source topology edge IDs. Module rank widths and lane depths use the scaled component bounding boxes. All module ports and Queue routes share the global roof plane, so normal routes contain no vertical segments. Engine-specific definition IDs are assigned by the QueueGraph importer from canonical scopes.
 
 Validation includes TypeScript, Vitest, ESLint, Prettier, production build, Pages verification, and browser screenshots at overview and close range. Rendering must dispose generated geometry through React Three Fiber lifecycle and avoid unbounded per-entry objects.
 

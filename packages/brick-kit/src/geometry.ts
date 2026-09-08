@@ -49,7 +49,7 @@ export function portWorldPosition(
   const anchor = rotateAnchor(port.anchor, instance.transform.yawRadians);
   return [
     base[0] + anchor[0],
-    base[1] + definition.size.y / 2 + anchor[1],
+    base[1] + definition.size.y + anchor[1],
     base[2] + anchor[2],
   ];
 }
@@ -57,11 +57,9 @@ export function portWorldPosition(
 export function orthogonalRoute(
   start: readonly [number, number, number],
   end: readonly [number, number, number],
-  lane = 0,
   minimumDeckY = 0,
 ): readonly (readonly [number, number, number])[] {
-  const travelY =
-    Math.max(start[1], end[1], minimumDeckY) + 1.25 + (lane % 7) * 0.18;
+  const travelY = Math.max(start[1], end[1], minimumDeckY);
   const bendX = start[0] + (end[0] - start[0]) * 0.5;
   const points: (readonly [number, number, number])[] = [
     start,
