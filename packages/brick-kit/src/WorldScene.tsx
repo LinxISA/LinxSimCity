@@ -15,6 +15,7 @@ import {
   QUEUE_ROUTE_DECK_Y,
 } from "./geometry.js";
 import { RouteTube } from "./RouteTube.js";
+import { localizeWorldForRendering } from "./scene-origin.js";
 
 interface SceneContentProps {
   readonly world: GeneratedWorld;
@@ -75,14 +76,18 @@ function portlessVisualCenter(
 }
 
 function SceneContent(props: SceneContentProps) {
+  const localWorld = useMemo(
+    () => localizeWorldForRendering(props.world, props.selectedInstanceId),
+    [props.selectedInstanceId, props.world],
+  );
   const instances = useMemo(
-    () => new Map(props.world.instances.map((item) => [item.id, item])),
-    [props.world.instances],
+    () => new Map(localWorld.instances.map((item) => [item.id, item])),
+    [localWorld.instances],
   );
   const activity = useMemo(
     () =>
       new Map(
-        props.world.instances.flatMap((instance) => {
+        localWorld.instances.flatMap((instance) => {
           const definition = props.definitions.get(instance.definitionId);
           return definition
             ? [
@@ -95,10 +100,10 @@ function SceneContent(props: SceneContentProps) {
             : [];
         }),
       ),
-    [props.activityByInstanceId, props.definitions, props.world.instances],
+    [localWorld.instances, props.activityByInstanceId, props.definitions],
   );
   const routes = useMemo(() => {
-    const queueRoutes = props.world.queueCorridors.flatMap((corridor) => {
+    const queueRoutes = localWorld.queueCorridors.flatMap((corridor) => {
       const fromInstance = instances.get(corridor.from.instanceId);
       const toInstance = instances.get(corridor.to.instanceId);
       const queueInstance = instances.get(corridor.queueInstanceId);
@@ -127,7 +132,7 @@ function SceneContent(props: SceneContentProps) {
         },
       ];
     });
-    const directRoutes = props.world.links.flatMap((link) => {
+    const directRoutes = localWorld.links.flatMap((link) => {
       const fromInstance = instances.get(link.from.instanceId);
       const toInstance = instances.get(link.to.instanceId);
       if (!fromInstance || !toInstance) return [];
@@ -154,7 +159,7 @@ function SceneContent(props: SceneContentProps) {
       ];
     });
     return [...queueRoutes, ...directRoutes];
-  }, [activity, instances, props.definitions, props.world]);
+  }, [activity, instances, localWorld, props.definitions]);
   return (
     <>
       <ambientLight intensity={0.55} />
@@ -187,7 +192,7 @@ function SceneContent(props: SceneContentProps) {
         <group>
           <SelectionFocus
             selectedInstanceId={props.selectedInstanceId}
-            world={props.world}
+            world={localWorld}
             definitions={props.definitions}
           />
           {routes.map((route) => (
@@ -203,7 +208,7 @@ function SceneContent(props: SceneContentProps) {
                 : {})}
             />
           ))}
-          {props.world.instances.map((instance) => {
+          {localWorld.instances.map((instance) => {
             const definition = props.definitions.get(instance.definitionId);
             const instanceActivity = activity.get(instance.id);
             if (

@@ -3,8 +3,10 @@ import { describe, expect, test } from "vitest";
 
 import {
   addPosition,
+  axisRelativeTo,
   generateWorldFromTopology,
   positionToTuple,
+  positionRelativeTo,
   stableTopologicalSort,
   topologyFingerprint,
   topologyHierarchy,
@@ -81,6 +83,37 @@ describe("world coordinates", () => {
     expect(
       positionToTuple(addPosition(worldPosition(63, 0, 0), [2, -1, 0])),
     ).toEqual([65, -1, 0]);
+  });
+
+  test("keeps chunk and local coordinates authoritative at large XYZ positions", () => {
+    const position = worldPosition(1_000_037, -1_000_065, 2_000_130);
+    expect(position).toEqual({
+      x: { chunk: 15_625, local: 37 },
+      y: { chunk: -15_627, local: 63 },
+      z: { chunk: 31_252, local: 2 },
+    });
+    expect(positionToTuple(position)).toEqual([
+      1_000_037, -1_000_065, 2_000_130,
+    ]);
+  });
+
+  test("converts positive and negative large XYZ coordinates relative to a local origin", () => {
+    const origin = worldPosition(1_000_000, -1_000_000, 1_000_000);
+    expect(
+      positionRelativeTo(worldPosition(1_000_037, -1_000_065, 999_870), origin),
+    ).toEqual([37, -65, -130]);
+    expect(
+      positionRelativeTo(
+        worldPosition(-1_000_037, 1_000_065, -999_870),
+        worldPosition(-1_000_000, 1_000_000, -1_000_000),
+      ),
+    ).toEqual([-37, 65, 130]);
+    expect(
+      axisRelativeTo(
+        { chunk: -15_626, local: 27 },
+        { chunk: -15_625, local: 0 },
+      ),
+    ).toBe(-37);
   });
 });
 

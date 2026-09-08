@@ -13,6 +13,8 @@ export interface WorldPosition {
   readonly z: AxisPosition;
 }
 
+export type LocalPosition = readonly [number, number, number];
+
 export interface BrickTransform {
   readonly position: WorldPosition;
   readonly yawRadians: number;

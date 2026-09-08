@@ -1,5 +1,5 @@
 import { CORE_BRICK_BY_ID } from "@linxsimcity/component-catalog";
-import { worldPosition } from "@linxsimcity/world";
+import { positionToTuple, worldPosition } from "@linxsimcity/world";
 import type { BrickInstance } from "@linxsimcity/world";
 import { expect, test } from "vitest";
 
@@ -10,6 +10,7 @@ import {
   QUEUE_ROUTE_DECK_Y,
   rotateAnchor,
 } from "./geometry.js";
+import { localizeWorldForRendering } from "./scene-origin.js";
 
 test("hierarchy district colors are stable and root remains neutral", () => {
   expect(districtColor("scope.root", 0)).toBe("#456677");
@@ -86,4 +87,49 @@ test("queue routes share a deck above the module roofs", () => {
 test("equal-height module ports produce no rising or falling pipe segments", () => {
   const points = orthogonalRoute([0, 8, 2], [10, 8, 8], 8);
   expect(points.every((point) => point[1] === 8)).toBe(true);
+});
+
+test("scene localization keeps large logical coordinates out of GPU geometry", () => {
+  const definition = CORE_BRICK_BY_ID.get("core.vector")!;
+  const instance = (id: string, x: number, y: number, z: number) => ({
+    id,
+    definitionId: definition.id,
+    parameters: { lanes: 8 },
+    hierarchyDepth: 0,
+    topologyRank: 0,
+    topologyOrder: 0,
+    laneId: "root",
+    transform: { position: worldPosition(x, y, z), yawRadians: 0 },
+  });
+  const first = instance("vector.negative", -1_000_020, 999_990, -1_000_030);
+  const selected = instance(
+    "vector.selected",
+    -1_000_000,
+    1_000_000,
+    -1_000_000,
+  );
+  const world = {
+    schema: "linxsimcity.generated-world",
+    schemaVersion: "1",
+    topologyId: "large-coordinates",
+    topologyRevision: "1",
+    topologyFingerprint: "fnv1a64:stable",
+    name: "Large coordinates",
+    instances: [first, selected],
+    links: [],
+    queueCorridors: [],
+  } as const;
+
+  const localized = localizeWorldForRendering(world, selected.id);
+  expect(localized).not.toBe(world);
+  expect(localized.topologyFingerprint).toBe(world.topologyFingerprint);
+  expect(positionToTuple(localized.instances[0]!.transform.position)).toEqual([
+    -20, -10, -30,
+  ]);
+  expect(positionToTuple(localized.instances[1]!.transform.position)).toEqual([
+    0, 0, 0,
+  ]);
+  expect(positionToTuple(world.instances[0]!.transform.position)).toEqual([
+    -1_000_020, 999_990, -1_000_030,
+  ]);
 });

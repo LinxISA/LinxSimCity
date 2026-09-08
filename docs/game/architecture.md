@@ -104,9 +104,10 @@ physical-floorplan mode explicitly opts into area-weighted geometry.
 
 Generated placement uses an integer chunk plus an integer position inside the
 chunk. `normalizeAxis` keeps the local component in `[0, chunkSize)` for all
-three axes. Rendering converts those logical coordinates to Three.js numbers.
-The representation supports the large-coordinate and camera-relative work
-planned for later milestones without making placement authoritative.
+three axes. Rendering subtracts a stable focus origin while positions are still
+in chunk/local form, then uploads only nearby relative coordinates to Three.js.
+Selecting a distant object changes the render origin without changing the
+authoritative world, topology fingerprint, or instance IDs.
 
 ## Run boundary
 
