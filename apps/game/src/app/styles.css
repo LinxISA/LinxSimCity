@@ -197,6 +197,31 @@ code {
   font-size: 13px;
 }
 
+.recorded-run-picker {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: rgb(7 18 25 / 72%);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recorded-run-picker select {
+  max-width: 126px;
+  border: 0;
+  color: #d9f7fc;
+  background: transparent;
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
 .command-actions .run-button {
   border-color: rgb(255 197 106 / 24%);
   color: #b09a78;

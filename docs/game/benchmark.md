@@ -74,10 +74,28 @@ producer currently writes only the trustworthy cycle-0 checkpoint; periodic
 checkpoints remain disabled until the producer can serialize a complete reducer
 state.
 
+The paired conflict run is stored at
+`apps/game/public/runs/superscalar-matmul-conflict.bundle`. It uses the same ELF
+and simulator revision with these functional overrides:
+
+```text
+cell.perfect_mode=false
+cell.cube_max_bank_per_cycle=1
+```
+
+Its configuration digest is
+`9943e6351b7894662ab34468412fb64cd459da32ba25be1e6dd44f22f6b9a68f`.
+It exited 0 after 68,785 cycles and emitted 296,107 current events with zero
+validator diagnostics. The model PMU recorded 362,905 bank-conflict cycles,
+815,151 non-winner waits, and 765,062 bank port-yields. The game run selector
+switches between the normal and conflict bundles without changing the topology
+or workload identity.
+
 Validate the pinned bundle with:
 
 ```sh
 npm run trace:verify -- apps/game/public/runs/superscalar-matmul.bundle
+npm run trace:verify -- apps/game/public/runs/superscalar-matmul-conflict.bundle
 ```
 
 ## Fixed M8 load

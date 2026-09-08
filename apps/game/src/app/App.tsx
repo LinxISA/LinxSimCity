@@ -47,10 +47,24 @@ const WorldScene = lazy(async () => {
   return { default: module.WorldScene };
 });
 
-const DEFAULT_RECORDED_RUN = {
-  path: "runs/superscalar-matmul.bundle",
-  initialCycle: "305",
-} as const;
+const RECORDED_RUNS = [
+  {
+    id: "normal",
+    label: "正常 Matmul",
+    shortLabel: "NORMAL",
+    path: "runs/superscalar-matmul.bundle",
+    initialCycle: "305",
+  },
+  {
+    id: "bank-conflict",
+    label: "Bank Conflict",
+    shortLabel: "BANK CONFLICT",
+    path: "runs/superscalar-matmul-conflict.bundle",
+    initialCycle: "305",
+  },
+] as const;
+
+type RecordedRunId = (typeof RECORDED_RUNS)[number]["id"];
 
 function nodeConnections(
   topology: ArchitectureTopology,
@@ -93,6 +107,7 @@ export function App() {
   const [cycleDraft, setCycleDraft] = useState("0");
   const [tracePlaying, setTracePlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
+  const [recordedRunId, setRecordedRunId] = useState<RecordedRunId>("normal");
   const importInput = useRef<HTMLInputElement>(null);
   const traceClient = useRef<TraceWorkerClient | undefined>(undefined);
   const traceRequestId = useRef(0);
@@ -208,6 +223,7 @@ export function App() {
       candidate.representation,
     ].some((value) => value.toLowerCase().includes(query));
   });
+  const recordedRun = RECORDED_RUNS.find((run) => run.id === recordedRunId)!;
 
   const closeTrace = useCallback(() => {
     const client = traceClient.current;
@@ -332,7 +348,7 @@ export function App() {
       client = TraceWorkerClient.spawn();
       traceClient.current = client;
       const baseUrl = new URL(
-        `${import.meta.env.BASE_URL}${DEFAULT_RECORDED_RUN.path}`,
+        `${import.meta.env.BASE_URL}${recordedRun.path}`,
         window.location.href,
       ).href;
       const [info, nextCatalog] = await Promise.all([
@@ -365,11 +381,11 @@ export function App() {
       setSelectedCandidateId(undefined);
       setBrowserMode("topology");
       const firstCycle = info.manifest.window.firstCycle;
-      const preferredCycle = BigInt(DEFAULT_RECORDED_RUN.initialCycle);
+      const preferredCycle = BigInt(recordedRun.initialCycle);
       const initialCycle =
         preferredCycle >= BigInt(firstCycle) &&
         preferredCycle <= BigInt(info.manifest.window.lastCycle)
-          ? DEFAULT_RECORDED_RUN.initialCycle
+          ? recordedRun.initialCycle
           : firstCycle;
       const requestId = ++traceRequestId.current;
       const snapshot = await client.seek("core", initialCycle, requestId);
@@ -377,7 +393,7 @@ export function App() {
       setTraceCycle(initialCycle);
       setCycleDraft(initialCycle);
       setNotice(
-        `已加载 ${info.manifest.simulator.name} ${info.manifest.runId}：${info.manifest.eventCount} 个真实事件。`,
+        `已加载 ${recordedRun.label}：${info.manifest.eventCount} 个真实事件。`,
       );
     } catch (error) {
       if (client && traceClient.current === client) {
@@ -389,7 +405,7 @@ export function App() {
         await client?.close();
       }
     }
-  }, [closeTrace]);
+  }, [closeTrace, recordedRun]);
 
   useEffect(() => {
     void loadRecordedTrace();
@@ -465,6 +481,21 @@ export function App() {
           <button type="button" onClick={() => void loadDefault()}>
             重新生成
           </button>
+          <label className="recorded-run-picker">
+            <span>Run</span>
+            <select
+              value={recordedRunId}
+              onChange={(event) =>
+                setRecordedRunId(event.target.value as RecordedRunId)
+              }
+            >
+              {RECORDED_RUNS.map((run) => (
+                <option key={run.id} value={run.id}>
+                  {run.label}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             className="run-button"
@@ -693,7 +724,7 @@ export function App() {
             </span>
             <small>
               {traceInfo
-                ? `TRACE · ${traceInfo.manifest.simulator.name.toUpperCase()}`
+                ? `TRACE · ${traceInfo.manifest.simulator.name.toUpperCase()} · ${recordedRun.shortLabel}`
                 : "PREVIEW · 非仿真状态"}
             </small>
           </div>

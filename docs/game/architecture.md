@@ -121,5 +121,7 @@ The browser may always inspect a valid topology. The default recorded run comes
 from SuperScalarModel revision
 `b975e75b1fc3c9453b55bc0f036ae757a8b0a981` and is labeled with its simulator,
 workload, configuration, and topology binding. Synthetic bundles remain test
-fixtures. Static hosting loads recorded runs; it does not pretend to run a
-local simulator.
+fixtures. A paired recording keeps the workload and topology fixed while
+enabling CellReg arbitration and reducing Cube bank bandwidth, so users can
+compare a normal run with a proven bank-conflict run. Static hosting loads
+recorded runs; it does not pretend to run a local simulator.

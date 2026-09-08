@@ -63,6 +63,30 @@ export function verifyPagesBuild(
       "Pages game has an invalid pinned SuperScalarModel trace bundle",
     );
   }
+  const conflictRoot = join(dist, "runs", "superscalar-matmul-conflict.bundle");
+  const conflictManifest = JSON.parse(
+    readFileSync(join(conflictRoot, "manifest.json"), "utf8"),
+  );
+  const conflictIndex = JSON.parse(
+    readFileSync(join(conflictRoot, "index.json"), "utf8"),
+  );
+  if (
+    conflictManifest.runId !== "superscalar-matmul-bank-conflict-m5" ||
+    conflictManifest.simulator?.revision !==
+      "b975e75b1fc3c9453b55bc0f036ae757a8b0a981" ||
+    conflictManifest.simulator?.configSha256 !==
+      "9943e6351b7894662ab34468412fb64cd459da32ba25be1e6dd44f22f6b9a68f" ||
+    conflictManifest.eventCount !== "296107" ||
+    conflictManifest.window?.lastCycle !== "68785" ||
+    conflictIndex.chunks?.length !== 17 ||
+    conflictIndex.checkpoints?.length !== 1 ||
+    !existsSync(join(conflictRoot, conflictIndex.chunks[0].path)) ||
+    !existsSync(join(conflictRoot, conflictIndex.checkpoints[0].path))
+  ) {
+    throw new Error(
+      "Pages game has an invalid pinned bank-conflict trace bundle",
+    );
+  }
   const topology = JSON.parse(
     readFileSync(
       join(dist, "topologies", "davincioo-queue-model.json"),
@@ -119,6 +143,7 @@ export function verifyPagesBuild(
     topologyEdges: topology.edges.length,
     catalogCandidates: catalog.candidates.length,
     traceEvents: Number(runManifest.eventCount),
+    conflictTraceEvents: Number(conflictManifest.eventCount),
   };
 }
 

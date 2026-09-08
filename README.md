@@ -40,7 +40,8 @@ implemented. The game keeps a synthetic bundle for contract tests and loads a
 pinned SuperScalarModel matmul run by default for Queue, Tile residency, and
 Cube lifecycle inspection. The recorded run contains 313,318 current events
 over 49,822 cycles and is bound to simulator revision
-`b975e75b1fc3c9453b55bc0f036ae757a8b0a981`.
+`b975e75b1fc3c9453b55bc0f036ae757a8b0a981`. The run selector also exposes a
+paired bank-conflict recording of the same workload.
 
 ## Run locally
 
