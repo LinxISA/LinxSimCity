@@ -1,0 +1,36 @@
+{
+  "schema": "linxsimcity.trace",
+  "schemaVersion": "1",
+  "runId": "superscalar-matmul-m5",
+  "topologyFingerprint": "fnv1a64:11492380829ce00b",
+  "simulator": {
+    "name": "SuperScalarModel",
+    "revision": "b975e75b1fc3c9453b55bc0f036ae757a8b0a981",
+    "configSha256": "30a646f8697fe06d4435c5adec3e526e20440a58f7e627a71ad9dda8cac3bfac"
+  },
+  "workload": {
+    "name": "supernpubench-matmul-fp32-m256-n256-k256",
+    "sha256": "4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928"
+  },
+  "timeDomains": [
+    {
+      "id": "core",
+      "unit": "cycle",
+      "tickRatio": { "numerator": 1, "denominator": 1 }
+    }
+  ],
+  "window": {
+    "firstCycle": "0",
+    "lastCycle": "49822",
+    "startsFromReset": true,
+    "complete": true
+  },
+  "eventCount": "313318",
+  "capabilities": [
+    "queue-lifecycle",
+    "tile-residency",
+    "instruction-link",
+    "compute-lifecycle"
+  ],
+  "loss": { "droppedEvents": "0", "truncated": false }
+}

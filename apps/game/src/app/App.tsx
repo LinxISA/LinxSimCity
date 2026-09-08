@@ -47,6 +47,11 @@ const WorldScene = lazy(async () => {
   return { default: module.WorldScene };
 });
 
+const DEFAULT_RECORDED_RUN = {
+  path: "runs/superscalar-matmul.bundle",
+  initialCycle: "305",
+} as const;
+
 function nodeConnections(
   topology: ArchitectureTopology,
   nodeId: string,
@@ -127,6 +132,7 @@ export function App() {
         (item) => item.storageNodeId === instance.id,
       );
       if (residencies.length > 0) {
+        const tileIds = [...new Set(residencies.map((item) => item.tileId))];
         activity.set(instance.id, {
           source: "trace",
           occupiedEntries: residencies.length,
@@ -142,10 +148,10 @@ export function App() {
               ),
             ),
           ],
-          labels: residencies.map(
-            (item) =>
-              `${item.tileId}@${item.bank === undefined ? "slot" : `B${item.bank}`}`,
-          ),
+          labels:
+            tileIds.length === 1
+              ? [tileIds[0]!]
+              : [`${tileIds.length} Tiles · ${residencies.length} fragments`],
         });
       }
     }
@@ -217,7 +223,10 @@ export function App() {
 
   useEffect(
     () => () => {
-      void traceClient.current?.close();
+      const client = traceClient.current;
+      traceClient.current = undefined;
+      traceRequestId.current += 1;
+      void client?.close();
     },
     [],
   );
@@ -256,10 +265,6 @@ export function App() {
       setNotice(message);
     }
   }, [closeTrace]);
-
-  useEffect(() => {
-    void loadDefault();
-  }, [loadDefault]);
 
   const importTopology = async (file: File) => {
     try {
@@ -320,15 +325,24 @@ export function App() {
 
   const loadRecordedTrace = useCallback(async () => {
     closeTrace();
-    setNotice("正在 Worker 中加载 current synthetic bundle…");
+    setNotice("正在 Worker 中加载 SuperScalarModel 真实回放…");
+    let client: TraceWorkerClient | undefined;
+    const loadRequestId = ++traceRequestId.current;
     try {
-      const client = TraceWorkerClient.spawn();
+      client = TraceWorkerClient.spawn();
       traceClient.current = client;
       const baseUrl = new URL(
-        `${import.meta.env.BASE_URL}runs/minimal.bundle`,
+        `${import.meta.env.BASE_URL}${DEFAULT_RECORDED_RUN.path}`,
         window.location.href,
       ).href;
-      const info = await client.load({ kind: "http-directory", baseUrl });
+      const [info, nextCatalog] = await Promise.all([
+        client.load({ kind: "http-directory", baseUrl }),
+        loadBundledCatalog(),
+      ]);
+      if (loadRequestId !== traceRequestId.current) {
+        await client.close();
+        return;
+      }
       const nextDiagnostics = validateArchitectureTopology(
         info.topology,
         CORE_CATALOG,
@@ -338,27 +352,48 @@ export function App() {
           `Trace topology 校验失败：${nextDiagnostics[0]!.path} ${nextDiagnostics[0]!.message}`,
         );
       }
+      const catalogDiagnostics = validateDavinciCatalogMapping(nextCatalog);
+      if (catalogDiagnostics.length > 0) {
+        throw new Error(
+          `H3 目录校验失败：${catalogDiagnostics[0]!.path} ${catalogDiagnostics[0]!.message}`,
+        );
+      }
       setTopology(info.topology);
+      setCatalog(nextCatalog);
       setTraceInfo(info);
       setSelectedNodeId(undefined);
       setSelectedCandidateId(undefined);
       setBrowserMode("topology");
       const firstCycle = info.manifest.window.firstCycle;
+      const preferredCycle = BigInt(DEFAULT_RECORDED_RUN.initialCycle);
+      const initialCycle =
+        preferredCycle >= BigInt(firstCycle) &&
+        preferredCycle <= BigInt(info.manifest.window.lastCycle)
+          ? DEFAULT_RECORDED_RUN.initialCycle
+          : firstCycle;
       const requestId = ++traceRequestId.current;
-      const snapshot = await client.seek("core", firstCycle, requestId);
+      const snapshot = await client.seek("core", initialCycle, requestId);
       setTraceSnapshot(snapshot);
-      setTraceCycle(firstCycle);
-      setCycleDraft(firstCycle);
+      setTraceCycle(initialCycle);
+      setCycleDraft(initialCycle);
       setNotice(
-        `已加载 ${info.manifest.runId}：${info.manifest.eventCount} events，Worker checkpoint 回放就绪。`,
+        `已加载 ${info.manifest.simulator.name} ${info.manifest.runId}：${info.manifest.eventCount} 个真实事件。`,
       );
     } catch (error) {
-      closeTrace();
-      setNotice(
-        error instanceof Error ? error.message : "无法加载 Trace bundle。",
-      );
+      if (client && traceClient.current === client) {
+        closeTrace();
+        setNotice(
+          error instanceof Error ? error.message : "无法加载 Trace bundle。",
+        );
+      } else {
+        await client?.close();
+      }
     }
   }, [closeTrace]);
+
+  useEffect(() => {
+    void loadRecordedTrace();
+  }, [loadRecordedTrace]);
 
   const stepTrace = useCallback(
     (delta: -1 | 1) => {
@@ -434,9 +469,9 @@ export function App() {
             type="button"
             className="run-button"
             onClick={() => void loadRecordedTrace()}
-            title="加载 current synthetic bundle，由 Worker 回放 Queue 与 Tile 状态"
+            title="加载 SuperScalarModel current bundle，由 Worker 回放 Queue、Tile 与 Cube 状态"
           >
-            {traceInfo ? "重新载入 Trace" : "载入合成回放"}
+            {traceInfo ? "重新载入真实回放" : "载入真实回放"}
           </button>
         </div>
       </header>
@@ -657,7 +692,9 @@ export function App() {
               <i className="entry-swatch entry-empty" /> 空闲管道
             </span>
             <small>
-              {traceInfo ? "TRACE · SYNTHETIC BUNDLE" : "PREVIEW · 非仿真状态"}
+              {traceInfo
+                ? `TRACE · ${traceInfo.manifest.simulator.name.toUpperCase()}`
+                : "PREVIEW · 非仿真状态"}
             </small>
           </div>
           <div className="axis-readout" aria-label="World axes">
@@ -767,7 +804,7 @@ export function App() {
         <span>
           <i className="status-dot" />{" "}
           {traceInfo
-            ? `Current synthetic trace · core cycle ${traceCycle}`
+            ? `${traceInfo.manifest.simulator.name} trace · core cycle ${traceCycle}`
             : "管道光点为数据流预览 · Trace 未载入"}
         </span>
       </footer>

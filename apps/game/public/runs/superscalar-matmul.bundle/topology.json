@@ -1,0 +1,98 @@
+{
+  "schema": "linxsimcity.topology",
+  "schemaVersion": "1",
+  "id": "davincioo.trace-minimal",
+  "name": "DavinciOO trace topology",
+  "revision": "superscalar-model-current",
+  "nodes": [
+    {
+      "id": "scope.root",
+      "definitionId": "core.container",
+      "label": "DavinciOO Core",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "SuperScalarModel:no-PPA-area"
+      }
+    },
+    {
+      "id": "source.lsu",
+      "definitionId": "ac.source",
+      "label": "LSU Source",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "SuperScalarModel:no-PPA-area"
+      }
+    },
+    {
+      "id": "queue.tload",
+      "definitionId": "core.queue",
+      "label": "Tile Load Queue",
+      "parentId": "scope.root",
+      "parameters": { "capacity": 32, "latency": 1 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "SuperScalarModel:no-PPA-area"
+      }
+    },
+    {
+      "id": "tma.bridge",
+      "definitionId": "ac.tma-engine",
+      "label": "TMA Bridge",
+      "parentId": "scope.root",
+      "parameters": { "latency": 1 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "SuperScalarModel:no-PPA-area"
+      }
+    },
+    {
+      "id": "sram.tile",
+      "definitionId": "core.sram",
+      "label": "Tile SRAM",
+      "parentId": "scope.root",
+      "parameters": { "banks": 8, "rows": 2560 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "SuperScalarModel:no-PPA-area"
+      }
+    },
+    {
+      "id": "compute.cube",
+      "definitionId": "core.cube",
+      "label": "Cube Engine",
+      "parentId": "scope.root",
+      "parameters": { "columns": 4, "rows": 16 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "SuperScalarModel:no-PPA-area"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.source-queue",
+      "from": { "nodeId": "source.lsu", "portId": "out" },
+      "to": { "nodeId": "queue.tload", "portId": "in" }
+    },
+    {
+      "id": "edge.queue-tma",
+      "from": { "nodeId": "queue.tload", "portId": "out" },
+      "to": { "nodeId": "tma.bridge", "portId": "in" }
+    }
+  ]
+}

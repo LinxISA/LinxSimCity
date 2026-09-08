@@ -34,7 +34,7 @@ export function verifyPagesBuild(
       "Pages game must not ship the retired viewer default trace",
     );
   }
-  const runRoot = join(dist, "runs", "minimal.bundle");
+  const runRoot = join(dist, "runs", "superscalar-matmul.bundle");
   const runManifest = JSON.parse(
     readFileSync(join(runRoot, "manifest.json"), "utf8"),
   );
@@ -44,15 +44,24 @@ export function verifyPagesBuild(
   if (
     runManifest.schema !== "linxsimcity.trace" ||
     runManifest.schemaVersion !== "1" ||
-    runManifest.topologyFingerprint !== "fnv1a64:815740de3e4b867f" ||
-    runManifest.eventCount !== "12" ||
+    runManifest.runId !== "superscalar-matmul-m5" ||
+    runManifest.topologyFingerprint !== "fnv1a64:11492380829ce00b" ||
+    runManifest.simulator?.name !== "SuperScalarModel" ||
+    runManifest.simulator?.revision !==
+      "b975e75b1fc3c9453b55bc0f036ae757a8b0a981" ||
+    runManifest.eventCount !== "313318" ||
+    runManifest.window?.lastCycle !== "49822" ||
+    runManifest.loss?.droppedEvents !== "0" ||
+    runManifest.loss?.truncated !== false ||
     runIndex.schema !== "linxsimcity.trace-index" ||
-    runIndex.chunks?.length !== 1 ||
+    runIndex.chunks?.length !== 13 ||
     runIndex.checkpoints?.length !== 1 ||
     !existsSync(join(runRoot, runIndex.chunks[0].path)) ||
     !existsSync(join(runRoot, runIndex.checkpoints[0].path))
   ) {
-    throw new Error("Pages game has an invalid current synthetic trace bundle");
+    throw new Error(
+      "Pages game has an invalid pinned SuperScalarModel trace bundle",
+    );
   }
   const topology = JSON.parse(
     readFileSync(

@@ -117,8 +117,9 @@ and cannot supply current performance results. The active runtime reads gzip
 chunks and checkpoints in a Worker and keeps cycle/address/identity values as
 lossless decimal strings.
 
-The browser may always inspect a valid topology. The current synthetic bundle
-demonstrates deterministic playback and is explicitly labeled synthetic.
-Execution requires an adapter that supports the topology components and
-parameters. Static hosting loads recorded runs; it does not pretend to run a
+The browser may always inspect a valid topology. The default recorded run comes
+from SuperScalarModel revision
+`b975e75b1fc3c9453b55bc0f036ae757a8b0a981` and is labeled with its simulator,
+workload, configuration, and topology binding. Synthetic bundles remain test
+fixtures. Static hosting loads recorded runs; it does not pretend to run a
 local simulator.

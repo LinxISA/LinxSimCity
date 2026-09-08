@@ -22,7 +22,10 @@ const sourceCatalog = join(
   repositoryRoot,
   "apps/game/public/catalogs/davincioo-h3.json",
 );
-const sourceRun = join(repositoryRoot, "apps/game/public/runs/minimal.bundle");
+const sourceRun = join(
+  repositoryRoot,
+  "apps/game/public/runs/superscalar-matmul.bundle",
+);
 function createPagesFixture(indexHtml: string): string {
   const root = mkdtempSync(join(tmpdir(), "linxsimcity-pages-"));
   const dist = join(root, "apps/game/dist");
@@ -34,7 +37,9 @@ function createPagesFixture(indexHtml: string): string {
   writeFileSync(join(dist, "assets/index.js"), "export {};\n");
   cpSync(sourceTopology, join(dist, "topologies/davincioo-queue-model.json"));
   cpSync(sourceCatalog, join(dist, "catalogs/davincioo-h3.json"));
-  cpSync(sourceRun, join(dist, "runs/minimal.bundle"), { recursive: true });
+  cpSync(sourceRun, join(dist, "runs/superscalar-matmul.bundle"), {
+    recursive: true,
+  });
   return root;
 }
 
@@ -62,7 +67,7 @@ test("accepts the base-prefixed chip city game without the retired trace", () =>
       topologyNodes: 39,
       topologyEdges: 32,
       catalogCandidates: 240,
-      traceEvents: 12,
+      traceEvents: 313318,
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -19,16 +19,14 @@ trace, random-seek seed, and raw results.
 ## Pinned first real workload
 
 - Model checkout: `/Users/zhoubot/Documents/.worktrees/SuperScalarModel-linxsimcity-trace`
-- Model revision: `18e73d63114d9ad3a8b440c65c115d68381dfaf3`
+- Model revision: `b975e75b1fc3c9453b55bc0f036ae757a8b0a981`
 - Workload: SuperNPUBench FP32 matmul, `M=N=K=256`, tile `32×32×32`
 - ELF: `/Users/zhoubot/Documents/supernpubench-smoke-20260807/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_M256_N256_K256_tM32_tN32_tK32.elf`
 - ELF SHA-256: `4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928`
 
-Existing model output and old `linxtrace` artifacts are provenance and
-source-observation evidence only. They are not an accepted game run. M5 must
-rerun this exact ELF at the pinned revision through the current producer and
-emit one current `linxsimcity.trace` bundle with topology, config, and workload
-hashes.
+The accepted M5 normal run is stored at
+`apps/game/public/runs/superscalar-matmul.bundle`. Old `linxtrace` artifacts
+remain provenance evidence only and are not accepted game runs.
 
 ## Dry-run and validation
 
@@ -37,7 +35,7 @@ This read-only preflight is executable now:
 ```sh
 MODEL=/Users/zhoubot/Documents/.worktrees/SuperScalarModel-linxsimcity-trace
 ELF=/Users/zhoubot/Documents/supernpubench-smoke-20260807/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_M256_N256_K256_tM32_tN32_tK32.elf
-test "$(git -C "$MODEL" rev-parse HEAD)" = 18e73d63114d9ad3a8b440c65c115d68381dfaf3
+test "$(git -C "$MODEL" rev-parse HEAD)" = b975e75b1fc3c9453b55bc0f036ae757a8b0a981
 test "$(shasum -a 256 "$ELF" | awk '{print $1}')" = 4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928
 test -x "$MODEL/bin/gfsim"
 ```
@@ -50,27 +48,36 @@ ELF=/Users/zhoubot/Documents/supernpubench-smoke-20260807/kernel/matmul/elf/kern
 "$MODEL/bin/gfsim" -f "$ELF"
 ```
 
-### Verified minimum run evidence
+### Verified current run evidence
 
-On 2026-09-09, the pinned `gfsim` executable ran the pinned ELF above and
-exited with status 0. Its stdout contained `FIFO_IN`, `BC_ALLOC`, `ISSUE`, and
-`DONE` observations, followed by Tile register utilization and BROB/BISQ stall
-statistics and the final `SuperScalar Report Stop` marker. This proves that the
-fixed workload completes in the selected model and that the model can expose
-the minimum queue/allocation/issue/completion chain plus storage and retirement
-statistics.
+On 2026-09-09, trace-enabled `gfsim` at the pinned revision ran the pinned ELF
+and exited with status 0. The run closed at cycle 49,822 and emitted 313,318
+current events in 13 gzip chunks with zero dropped events and no truncation.
+The current TypeScript validator reported zero diagnostics.
 
-That stdout is source evidence, not a current-format trace bundle. It does not
-prove that Queue and Tile identities satisfy `linxsimcity.trace`, that events
-can be deterministically replayed, or that any legacy bundle passes the current
-validator. M1/M5 still require the current writer and the missing producer
-instrumentation before this run can become an accepted game fixture.
+| Current event          |  Count |
+| ---------------------- | -----: |
+| Queue attempts/accept  |  1,024 |
+| Queue visible/read     |  1,024 |
+| Queue backpressure     | 10,725 |
+| Tile allocate          | 49,152 |
+| Tile read              | 60,576 |
+| Tile write             | 49,152 |
+| Tile release           | 45,760 |
+| Token/Tile association | 92,832 |
+| Compute start/complete |    512 |
 
-After M5 adds the current producer, its output must pass the current-format
-validator and must not be routed through legacy `linxtrace`:
+The runtime-off control also exited 0 with the same 49,822 total cycles,
+40,303 Cube cycles, and 10,497 TMA cycles. After removing trace configuration
+echoes and wall-clock throughput fields, functional logs were identical. The
+producer currently writes only the trustworthy cycle-0 checkpoint; periodic
+checkpoints remain disabled until the producer can serialize a complete reducer
+state.
+
+Validate the pinned bundle with:
 
 ```sh
-npm run trace:verify -- <current-run.json> <matching-topology.json>
+npm run trace:verify -- apps/game/public/runs/superscalar-matmul.bundle
 ```
 
 ## Fixed M8 load

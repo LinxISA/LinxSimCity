@@ -36,10 +36,11 @@ packages remain isolated only while the new trace path is implemented.
 
 The current trace schema, chunk/index/checkpoint bundle, TypeScript validator,
 C++ writer, deterministic Worker reducer, and game playback controls are
-implemented. The game can load a clearly labeled synthetic current bundle for
-Queue/Tile inspection. A real run remains unavailable until the first current
-SuperScalarModel adapter is connected; the UI does not fabricate runtime
-results.
+implemented. The game keeps a synthetic bundle for contract tests and loads a
+pinned SuperScalarModel matmul run by default for Queue, Tile residency, and
+Cube lifecycle inspection. The recorded run contains 313,318 current events
+over 49,822 cycles and is bound to simulator revision
+`b975e75b1fc3c9453b55bc0f036ae757a8b0a981`.
 
 ## Run locally
 
