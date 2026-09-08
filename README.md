@@ -62,6 +62,10 @@ npm run pages:verify
 npm run trace:verify -- fixtures/current/minimal.bundle
 ```
 
+The typed local SuperScalarModel companion is documented in
+[`docs/game/sim-runner.md`](docs/game/sim-runner.md). Build and test it with
+`npm run runner:build` and `npm run runner:test`.
+
 The C++ writer produces the same current bundle consumed by `simtrace`:
 
 ```sh
