@@ -1,0 +1,67 @@
+{
+  "schema": "linxsimcity.topology",
+  "schemaVersion": "1",
+  "id": "synthetic.queue-tile-compute",
+  "name": "Synthetic queue Tile compute flow",
+  "revision": "fixture",
+  "nodes": [
+    {
+      "id": "scope.root",
+      "definitionId": "core.container",
+      "label": "Synthetic core",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:unknown-child-area"
+      }
+    },
+    {
+      "id": "queue.ingress",
+      "definitionId": "core.queue",
+      "label": "Ingress Queue",
+      "parentId": "scope.root",
+      "parameters": { "capacity": 4, "latency": 1 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa-area"
+      }
+    },
+    {
+      "id": "sram.tile",
+      "definitionId": "core.sram",
+      "label": "Tile SRAM",
+      "parentId": "scope.root",
+      "parameters": { "banks": 4, "rows": 64 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa-area"
+      }
+    },
+    {
+      "id": "compute.vector",
+      "definitionId": "core.vector",
+      "label": "Vector Compute",
+      "parentId": "scope.root",
+      "parameters": { "lanes": 8 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa-area"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.queue-compute",
+      "from": { "nodeId": "queue.ingress", "portId": "out" },
+      "to": { "nodeId": "compute.vector", "portId": "issue" }
+    }
+  ]
+}

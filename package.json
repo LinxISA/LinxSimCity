@@ -19,6 +19,7 @@
     "dev": "npm run dev --workspace @linxsimcity/game",
     "topology:import": "node tools/topology-import/dist/main.js",
     "catalog:generate": "bash scripts/generate-davincioo-catalog.sh",
+    "trace:verify": "node tools/simtrace/dist/main.js validate",
     "test": "vitest run",
     "typecheck": "node scripts/run-workspaces.mjs typecheck",
     "lint": "eslint .",

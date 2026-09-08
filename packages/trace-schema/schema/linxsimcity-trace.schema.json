@@ -1,0 +1,991 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "manifest": {
+      "type": "object",
+      "properties": {
+        "schema": { "type": "string", "const": "linxsimcity.trace" },
+        "schemaVersion": { "type": "string", "const": "1" },
+        "runId": { "type": "string", "minLength": 1 },
+        "topologyFingerprint": { "type": "string", "minLength": 1 },
+        "simulator": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "revision": { "type": "string", "minLength": 1 },
+            "configSha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          },
+          "required": ["name", "revision", "configSha256"],
+          "additionalProperties": false
+        },
+        "workload": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          },
+          "required": ["name", "sha256"],
+          "additionalProperties": false
+        },
+        "timeDomains": {
+          "minItems": 1,
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "unit": { "type": "string", "const": "cycle" },
+              "tickRatio": {
+                "type": "object",
+                "properties": {
+                  "numerator": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "denominator": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["numerator", "denominator"],
+                "additionalProperties": false
+              }
+            },
+            "required": ["id", "unit", "tickRatio"],
+            "additionalProperties": false
+          }
+        },
+        "window": {
+          "type": "object",
+          "properties": {
+            "firstCycle": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "lastCycle": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "startsFromReset": { "type": "boolean" },
+            "complete": { "type": "boolean" }
+          },
+          "required": [
+            "firstCycle",
+            "lastCycle",
+            "startsFromReset",
+            "complete"
+          ],
+          "additionalProperties": false
+        },
+        "eventCount": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+        "capabilities": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "queue-lifecycle",
+              "tile-residency",
+              "instruction-link",
+              "compute-lifecycle"
+            ]
+          }
+        },
+        "loss": {
+          "type": "object",
+          "properties": {
+            "droppedEvents": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,19})$"
+            },
+            "truncated": { "type": "boolean" },
+            "reason": { "type": "string", "minLength": 1 }
+          },
+          "required": ["droppedEvents", "truncated"],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schema",
+        "schemaVersion",
+        "runId",
+        "topologyFingerprint",
+        "simulator",
+        "workload",
+        "timeDomains",
+        "window",
+        "eventCount",
+        "capabilities",
+        "loss"
+      ],
+      "additionalProperties": false
+    },
+    "event": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "queue.write-attempt" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "producerNodeId": { "type": "string", "minLength": 1 }
+              },
+              "required": ["tokenId", "producerNodeId"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "queue.accept" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "occupancy": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "capacity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "slot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["tokenId", "occupancy", "capacity", "slot"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "queue.visible" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "occupancy": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "capacity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "slot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": ["tokenId", "occupancy", "capacity", "slot"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "queue.read" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "occupancy": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "capacity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "slot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "consumerNodeId": { "type": "string", "minLength": 1 }
+              },
+              "required": [
+                "tokenId",
+                "occupancy",
+                "capacity",
+                "slot",
+                "consumerNodeId"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "queue.backpressure" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "occupancy": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "capacity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "reason": { "type": "string", "minLength": 1 }
+              },
+              "required": ["occupancy", "capacity", "reason"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "queue.cancel" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "occupancy": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "capacity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "reason": { "type": "string", "minLength": 1 }
+              },
+              "required": ["tokenId", "occupancy", "capacity", "reason"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "tile.allocate" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "residencyId": { "type": "string", "minLength": 1 },
+                "tileId": { "type": "string", "minLength": 1 },
+                "version": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "storageNodeId": { "type": "string", "minLength": 1 },
+                "allocationEpoch": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "bank": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "row": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "slot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "address": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "byteOffset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "byteLength": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "fragmentIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "fragmentCount": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "producerTokenId": { "type": "string", "minLength": 1 }
+              },
+              "required": [
+                "residencyId",
+                "tileId",
+                "version",
+                "storageNodeId",
+                "allocationEpoch",
+                "byteOffset",
+                "byteLength",
+                "fragmentIndex",
+                "fragmentCount"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "tile.read" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "residencyId": { "type": "string", "minLength": 1 },
+                "tileId": { "type": "string", "minLength": 1 },
+                "version": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "tokenId": { "type": "string", "minLength": 1 },
+                "byteOffset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "byteLength": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "residencyId",
+                "tileId",
+                "version",
+                "byteOffset",
+                "byteLength"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "tile.write" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "residencyId": { "type": "string", "minLength": 1 },
+                "tileId": { "type": "string", "minLength": 1 },
+                "version": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "tokenId": { "type": "string", "minLength": 1 },
+                "byteOffset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "byteLength": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                }
+              },
+              "required": [
+                "residencyId",
+                "tileId",
+                "version",
+                "byteOffset",
+                "byteLength"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "tile.move" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "residencyId": { "type": "string", "minLength": 1 },
+                "toResidencyId": { "type": "string", "minLength": 1 },
+                "tileId": { "type": "string", "minLength": 1 },
+                "version": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "toStorageNodeId": { "type": "string", "minLength": 1 },
+                "toAllocationEpoch": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "toBank": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toRow": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toSlot": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toAddress": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "toByteOffset": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toByteLength": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toFragmentIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "toFragmentCount": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "tokenId": { "type": "string", "minLength": 1 }
+              },
+              "required": [
+                "residencyId",
+                "toResidencyId",
+                "tileId",
+                "version",
+                "toStorageNodeId",
+                "toAllocationEpoch",
+                "toByteOffset",
+                "toByteLength",
+                "toFragmentIndex",
+                "toFragmentCount"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "tile.release" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "residencyId": { "type": "string", "minLength": 1 },
+                "tileId": { "type": "string", "minLength": 1 },
+                "version": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "reason": { "type": "string", "minLength": 1 }
+              },
+              "required": ["residencyId", "tileId", "version", "reason"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "link.associate" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "tileId": { "type": "string", "minLength": 1 },
+                "version": {
+                  "type": "string",
+                  "pattern": "^(0|[1-9][0-9]{0,19})$"
+                },
+                "relation": {
+                  "type": "string",
+                  "enum": ["produces", "consumes", "transfers"]
+                }
+              },
+              "required": ["tokenId", "tileId", "version", "relation"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "compute.start" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "operation": { "type": "string", "minLength": 1 },
+                "inputTileIds": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "outputTileIds": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                }
+              },
+              "required": [
+                "tokenId",
+                "operation",
+                "inputTileIds",
+                "outputTileIds"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "compute.complete" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "tokenId": { "type": "string", "minLength": 1 },
+                "operation": { "type": "string", "minLength": 1 },
+                "outputTileIds": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                },
+                "outcome": {
+                  "type": "string",
+                  "enum": ["completed", "cancelled", "fault"]
+                }
+              },
+              "required": ["tokenId", "operation", "outputTileIds", "outcome"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "run.reset" },
+            "payload": {
+              "type": "object",
+              "properties": { "reason": { "type": "string", "minLength": 1 } },
+              "required": ["reason"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "timeDomain": { "type": "string", "minLength": 1 },
+            "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+            "phase": {
+              "type": "string",
+              "enum": ["work", "xfer", "commit", "async"]
+            },
+            "sequence": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
+            "entityId": { "type": "string", "minLength": 1 },
+            "type": { "type": "string", "const": "run.flush" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "reason": { "type": "string", "minLength": 1 },
+                "tokenIds": {
+                  "type": "array",
+                  "items": { "type": "string", "minLength": 1 }
+                }
+              },
+              "required": ["reason", "tokenIds"],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "timeDomain",
+            "cycle",
+            "phase",
+            "sequence",
+            "entityId",
+            "type",
+            "payload"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "required": ["manifest", "event"],
+  "additionalProperties": false,
+  "$id": "https://linxisa.github.io/LinxSimCity/schema/linxsimcity-trace.schema.json",
+  "title": "LinxSimCity simulation trace contract"
+}

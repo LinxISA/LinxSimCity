@@ -1,4 +1,8 @@
-# Trace events
+# Legacy viewer trace events
+
+> Historical fixed-viewer contract. `apps/game` uses the current
+> [`linxsimcity.trace` contract](README.md); these events are not accepted by the
+> new game path.
 
 Every chunk line contains one event envelope:
 

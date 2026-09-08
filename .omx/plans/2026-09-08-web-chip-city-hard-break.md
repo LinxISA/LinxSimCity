@@ -97,10 +97,11 @@
 - [x] 默认网页场景由生成的 39-node / 32-edge DavinciOO QueueGraph topology 加载，并绑定 plan/model SHA-256 与 source revision。
 - [x] 再生成脚本在相同 revision 下产生逐字节一致的 topology；Pages 验证会拒绝缺失、脏相关输入或 hash 不符的默认 topology。
 - [x] 每个 topology node 强制记录 `µm²` 面积、状态与来源；QueueGraph 未提供的 PPA 数据保留为 unknown，容器保留为 aggregate。
+- [x] 定义当前 `linxsimcity.trace` manifest 和 16 类 queue/Tile/association/compute/run-control 事件；cycle、地址、版本和 epoch 使用无损 u64 字符串，并提供独立 `simtrace validate` CLI。
 
 - [ ] 重建 `packages/topology`、`packages/trace-schema`；新增 `packages/component-catalog`，定义积木、装配图、布局、存档、run、事件和快照。
 - [x] 编写 catalog import，从固定 pyCircuit commit 的 `catalog.json` 与 Git tree manifest 生成带出处和 hash 的 240 项映射报告；reported snapshot 状态与 committed source/test-path evidence 分开记录，不能把目录候选升级成执行拓扑。
-- [ ] 增加负向 fixture：重复 ID、悬空端口、类型/宽度/方向不符、重复 owner、错误配置 hash、无损整数溢出、非法事件顺序、旧格式、损坏或截断数据。
+- [x] 增加负向 fixture/contract matrix：重复 ID、悬空端口、类型/宽度/方向不符、重复 owner、错误配置 hash、无损整数类型/溢出、非法事件顺序、旧格式、丢事件或截断矛盾。
 - [ ] 提供至少一个新格式 synthetic bundle、一个 topology fixture 和一个 schema 校验入口；更新 `tools/linxtrace`、`sdk/cpp` 的最小 writer。
 
 **完成条件：** 240 项唯一候选全部有去向和来源；7/31 层级保持可追溯；错误 fixture 被定位拒绝；定义与实例数量分离；新契约可以生成并读取最小 bundle。

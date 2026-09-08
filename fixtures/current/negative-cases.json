@@ -1,0 +1,57 @@
+[
+  {
+    "id": "old-format",
+    "stage": "manifest-parse",
+    "expected": "schema"
+  },
+  {
+    "id": "numeric-u64",
+    "stage": "event-parse",
+    "expected": "cycle"
+  },
+  {
+    "id": "invalid-config-sha",
+    "stage": "manifest-parse",
+    "expected": "configSha256"
+  },
+  {
+    "id": "wrong-topology",
+    "stage": "validate",
+    "expected": "manifest_mismatch"
+  },
+  {
+    "id": "out-of-order",
+    "stage": "validate",
+    "expected": "out_of_order"
+  },
+  {
+    "id": "duplicate-order-key",
+    "stage": "validate",
+    "expected": "duplicate_order_key"
+  },
+  {
+    "id": "read-before-visible",
+    "stage": "validate",
+    "expected": "queue_lifecycle"
+  },
+  {
+    "id": "tile-double-allocate",
+    "stage": "validate",
+    "expected": "tile_lifecycle"
+  },
+  {
+    "id": "missing-entity",
+    "stage": "validate",
+    "expected": "missing_entity"
+  },
+  {
+    "id": "missing-capability",
+    "stage": "validate",
+    "expected": "missing_capability"
+  },
+  {
+    "id": "complete-with-loss",
+    "stage": "validate",
+    "expected": "loss_contract"
+  }
+]

@@ -12,6 +12,7 @@ export const declarationWorkspaces = Object.freeze([
   "@linxsimcity/world",
   "@linxsimcity/topology-import",
   "@linxsimcity/trace-schema",
+  "@linxsimcity/simtrace",
   "@linxsimcity/topology",
   "@linxsimcity/trace-runtime",
   "@linxsimcity/scene-core",

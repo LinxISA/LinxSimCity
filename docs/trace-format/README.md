@@ -1,80 +1,87 @@
-# Linx Trace Format 1.0
+# LinxSimCity simulation trace
 
-LinxSimCity reads a versioned logical trace bundle. A bundle is either a directory or a ZIP container with the `.linxtrace` extension. Both forms contain the same entries and must produce the same validation result.
+The current game trace contract is `linxsimcity.trace` with schema version `1`.
+It binds every run to one topology fingerprint, simulator revision and config,
+workload, time-domain set, observation capability set, event window, and loss
+record.
 
-## Bundle layout
+The contract currently covers manifest and event semantics. Chunked storage,
+checkpoints, Worker replay, and the CLI transition are implemented in M4. The
+old fixed-viewer bundle reader is isolated from `apps/game` and is not a
+compatibility path for this contract.
+
+## Lossless values and ordering
+
+Cycles, addresses, allocation epochs, Tile versions, event counts, and other
+unsigned 64-bit values are canonical decimal strings. JSON numbers are rejected
+for these fields, including values that appear small enough for JavaScript.
+
+Events are ordered independently within each declared time domain by:
 
 ```text
-manifest.json
-topology.json
-strings.json
-index.json
-chunks/000000.jsonl.gz
-checkpoints/000000.json.gz
+(cycle, phase, sequence)
 ```
 
-| Entry                   | Purpose                                                                      |
-| ----------------------- | ---------------------------------------------------------------------------- |
-| `manifest.json`         | Version, model, profile, cycle bounds, counts, and chunk/checkpoint spans    |
-| `topology.json`         | Stable hardware entities, hierarchy, capacity, ports, and placement hints    |
-| `strings.json`          | String dictionary with non-empty string keys and string values               |
-| `index.json`            | Per-chunk cycle bounds, count, compressed size, SHA-256, and checkpoint path |
-| `chunks/*.jsonl.gz`     | Gzip-compressed event envelopes, one JSON object per line                    |
-| `checkpoints/*.json.gz` | Gzip-compressed reducer state at a checkpoint boundary                       |
-
-`linxtrace pack` writes entries in lexical order. Entries already ending in `.gz` use ZIP STORE mode so the ZIP layer does not recompress them.
+Phase order is `work → xfer → commit → async`. Duplicate keys and backward
+movement are invalid. Cross-domain event order is not inferred; each domain's
+`tickRatio` supplies the later correlation boundary.
 
 ## Manifest
 
-| Field                      | Type         | Rule                                                       |
-| -------------------------- | ------------ | ---------------------------------------------------------- |
-| `schemaVersion`            | string       | Semantic version; readers in this release accept major `1` |
-| `modelVersion`             | string       | Non-empty model build or commit identifier                 |
-| `profile`                  | string       | `overview`, `pipeline`, or `forensic`                      |
-| `firstCycle`, `lastCycle`  | safe integer | Inclusive bounds; `lastCycle >= firstCycle`                |
-| `eventCount`, `chunkCount` | safe integer | Non-negative totals                                        |
-| `chunkCycleSpan`           | safe integer | Positive; default `4096`                                   |
-| `checkpointCycleSpan`      | safe integer | Positive; default `4096`                                   |
+The manifest records:
 
-Chunks cannot cross a `chunkCycleSpan` bucket. A chunk at cycle `c` uses `chunks/{floor(c / chunkCycleSpan), 6 digits}.jsonl.gz`. Its index entry points to the nearest preceding checkpoint bucket.
+- `runId` and exact `topologyFingerprint`;
+- simulator name, revision, and configuration SHA-256;
+- workload name and SHA-256;
+- time domains and rational tick ratios;
+- inclusive cycle window and whether it begins from reset;
+- exact event count and observation capabilities;
+- dropped-event count, truncation state, and required reason when loss exists.
 
-## Ordering and integrity
+A window marked complete cannot report truncation or dropped events.
 
-- Event order is strictly increasing by `(cycle, seq)` across the entire bundle.
-- Every `entity_id` resolves to one topology entity.
-- Each index hash is lowercase hexadecimal SHA-256 of the compressed chunk bytes.
-- `compressedBytes`, `eventCount`, and cycle bounds match the referenced chunk.
-- A checkpoint stores its boundary `cycle`, `seq: 0`, and an entity-state dictionary.
+## Event families
 
-The CLI validates incrementally and enforces bundle-wide entry, byte, chunk, and event limits.
+| Family      | Events                                                                 | Contract                                                                                |
+| ----------- | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Queue       | `write-attempt`, `accept`, `visible`, `read`, `backpressure`, `cancel` | Acceptance and visibility remain distinct; occupancy cannot exceed capacity             |
+| Tile        | `allocate`, `read`, `write`, `move`, `release`                         | Logical Tile/version and physical residency/allocation epoch are independent identities |
+| Association | `link.associate`                                                       | Joins transaction tokens to Tile production, consumption, or transfer                   |
+| Compute     | `start`, `complete`                                                    | Binds operation and input/output Tile identities to a token                             |
+| Run control | `reset`, `flush`                                                       | Clears or terminates the explicitly named runtime identities                            |
 
-## Profiles
+Queue and Tile events reference topology node IDs. A producer, consumer,
+storage node, or event entity missing from the bound topology is invalid.
 
-| Profile    | Intended content                                                                                               |
-| ---------- | -------------------------------------------------------------------------------------------------------------- |
-| `overview` | Module occupancy, major transfers, stalls, flushes, and user markers                                           |
-| `pipeline` | Overview plus instruction stages, queues, ROB, cache, CELL, Crossbar, CUBE, Vector, StgBufB, and TLSU activity |
-| `forensic` | Pipeline content plus implementation-specific addresses, request IDs, and diagnostic payload fields            |
+## Tile residency
 
-Profiles change event detail, not ordering, topology identity, or container rules.
+`tile.allocate` creates a unique `residencyId` carrying:
 
-## Compatibility
+- logical `tileId` and `version`;
+- physical `storageNodeId` and `allocationEpoch`;
+- optional bank, row, slot, and address coordinates;
+- byte range and fragment index/count.
 
-Readers accept `1.x.y`. Producers may add optional payload fields in a minor release; readers preserve unknown payload fields. Event envelope fields and metadata objects remain strict. A new required field, incompatible event meaning, or container change requires a new major version.
+Read/write events require an active matching residency. Move ends one residency
+and starts another. Release ends the residency. Reusing a residency without a
+matching terminal event is invalid when the window starts from reset.
 
-## CLI
+## Schema and fixtures
 
-```bash
-node tools/linxtrace/dist/main.js validate trace-dir --json
-node tools/linxtrace/dist/main.js inspect trace.linxtrace
-node tools/linxtrace/dist/main.js index trace-dir
-node tools/linxtrace/dist/main.js pack trace-dir trace.linxtrace
+- TypeScript contract: `packages/trace-schema/src/current-*.ts`
+- JSON Schema: `packages/trace-schema/schema/linxsimcity-trace.schema.json`
+- Positive flow: `fixtures/current/minimal.run.json`
+- Negative matrix: `fixtures/current/negative-cases.json`
+
+The negative matrix covers old-format input, number-coerced u64 values, invalid
+configuration hashes, topology mismatch, ordering and duplicate keys, queue
+read before visibility, duplicate Tile allocation, missing topology entities,
+missing capabilities, and a complete window that claims event loss.
+
+Validate the positive fixture against its bound topology with:
+
+```sh
+npm run trace:verify -- \
+  fixtures/current/minimal.run.json \
+  fixtures/current/minimal.topology.json
 ```
-
-| Exit code | Meaning                                                   |
-| --------- | --------------------------------------------------------- |
-| `0`       | Command completed; validation passed                      |
-| `1`       | Command usage, filesystem, archive, or execution failure  |
-| `2`       | Bundle opened successfully but contract validation failed |
-
-See [events.md](events.md) for event categories and [topology.md](topology.md) for entity identity.

@@ -1,0 +1,25 @@
+{
+  "name": "@linxsimcity/simtrace",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "simtrace": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/world",
+    "build": "tsc --project tsconfig.json",
+    "pretypecheck": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/world",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@linxsimcity/component-catalog": "0.1.0",
+    "@linxsimcity/trace-schema": "0.1.0",
+    "@linxsimcity/world": "0.1.0"
+  }
+}

@@ -51,6 +51,7 @@ Run the repository checks with:
 npm run check
 npm run build
 npm run pages:verify
+npm run trace:verify -- fixtures/current/minimal.run.json fixtures/current/minimal.topology.json
 ```
 
 The C++ trace SDK remains separately verifiable during the trace transition:
