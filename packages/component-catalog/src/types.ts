@@ -35,8 +35,9 @@ export interface BrickPortDefinition {
   readonly label: string;
   readonly direction: PortDirection;
   readonly protocol: PortProtocol;
-  readonly widthBits: number;
+  readonly widthBits: number | null;
   readonly anchor: readonly [number, number, number];
+  readonly cardinality: "one" | "many";
 }
 
 export interface IntegerParameterDefinition {

@@ -10,9 +10,17 @@ import type {
   TopologyEdge,
   TopologyNode,
 } from "@linxsimcity/world";
-import { lazy, Suspense, useMemo, useRef, useState } from "react";
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
-import { createDemoTopology, parseArchitectureTopology } from "./topology.js";
+import { loadBundledTopology, parseArchitectureTopology } from "./topology.js";
 import "./styles.css";
 
 const WorldScene = lazy(async () => {
@@ -31,31 +39,31 @@ function nodeConnections(
 }
 
 export function App() {
-  const [topology, setTopology] = useState(createDemoTopology);
+  const [topology, setTopology] = useState<ArchitectureTopology>();
+  const [loadError, setLoadError] = useState<string>();
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
   const [filter, setFilter] = useState("");
-  const [notice, setNotice] = useState(
-    "连接、组件实例与空间位置均由当前拓扑生成。",
-  );
+  const [notice, setNotice] = useState("正在加载 pyCircuit QueueGraph 拓扑…");
   const importInput = useRef<HTMLInputElement>(null);
   const diagnostics = useMemo(
-    () => validateArchitectureTopology(topology, CORE_CATALOG),
+    () =>
+      topology ? validateArchitectureTopology(topology, CORE_CATALOG) : [],
     [topology],
   );
   const world = useMemo(
     () =>
-      diagnostics.length === 0
+      topology && diagnostics.length === 0
         ? generateWorldFromTopology(topology, CORE_CATALOG)
         : undefined,
     [diagnostics.length, topology],
   );
-  const selectedNode = topology.nodes.find(
+  const selectedNode = topology?.nodes.find(
     (node) => node.id === selectedNodeId,
   );
   const selectedDefinition = selectedNode
     ? CORE_BRICK_BY_ID.get(selectedNode.definitionId)
     : undefined;
-  const visibleNodes = topology.nodes.filter((node) => {
+  const visibleNodes = (topology?.nodes ?? []).filter((node) => {
     const query = filter.trim().toLowerCase();
     if (!query) return true;
     const definition = CORE_BRICK_BY_ID.get(node.definitionId);
@@ -63,6 +71,33 @@ export function App() {
       .filter(Boolean)
       .some((value) => value!.toLowerCase().includes(query));
   });
+
+  const loadDefault = useCallback(async () => {
+    try {
+      setLoadError(undefined);
+      const next = await loadBundledTopology();
+      const nextDiagnostics = validateArchitectureTopology(next, CORE_CATALOG);
+      if (nextDiagnostics.length > 0) {
+        throw new Error(
+          `内置拓扑校验失败：${nextDiagnostics[0]!.path} ${nextDiagnostics[0]!.message}`,
+        );
+      }
+      setTopology(next);
+      setSelectedNodeId(undefined);
+      setNotice(
+        `已从 pyCircuit QueueGraph 生成 ${next.nodes.length} 个组件和 ${next.edges.length} 条连接。`,
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "无法加载内置拓扑。";
+      setLoadError(message);
+      setNotice(message);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadDefault();
+  }, [loadDefault]);
 
   const importTopology = async (file: File) => {
     try {
@@ -98,12 +133,14 @@ export function App() {
           </div>
         </div>
         <div className="run-identity" aria-label="Current topology identity">
-          <span>{topology.name}</span>
-          <code>{world?.topologyFingerprint.slice(-8) ?? "invalid"}</code>
+          <span>{topology?.name ?? "Loading topology"}</span>
+          <code>{world?.topologyFingerprint.slice(-8) ?? "loading"}</code>
           <span className={diagnostics.length === 0 ? "valid" : "invalid"}>
-            {diagnostics.length === 0
-              ? "拓扑有效"
-              : `${diagnostics.length} 个问题`}
+            {!topology
+              ? "加载中"
+              : diagnostics.length === 0
+                ? "拓扑有效"
+                : `${diagnostics.length} 个问题`}
           </span>
         </div>
         <div className="command-actions">
@@ -121,16 +158,8 @@ export function App() {
               if (file) void importTopology(file);
             }}
           />
-          <button
-            type="button"
-            onClick={() => {
-              const demo = createDemoTopology();
-              setTopology(demo);
-              setSelectedNodeId(undefined);
-              setNotice("已从内置 DavinciOO 示例拓扑重新生成城市。");
-            }}
-          >
-            载入示例
+          <button type="button" onClick={() => void loadDefault()}>
+            重新生成
           </button>
           <button
             type="button"
@@ -150,7 +179,7 @@ export function App() {
               <span className="eyebrow">TOPOLOGY</span>
               <h1>组件与连接</h1>
             </div>
-            <span className="count">{topology.nodes.length}</span>
+            <span className="count">{topology?.nodes.length ?? 0}</span>
           </div>
           <div className="topology-search">
             <label htmlFor="topology-filter">搜索组件</label>
@@ -165,7 +194,9 @@ export function App() {
           <div className="topology-list">
             {visibleNodes.map((node) => {
               const definition = CORE_BRICK_BY_ID.get(node.definitionId);
-              const connections = nodeConnections(topology, node.id);
+              const connections = topology
+                ? nodeConnections(topology, node.id)
+                : { incoming: [], outgoing: [] };
               return (
                 <button
                   type="button"
@@ -195,15 +226,15 @@ export function App() {
           <div className="topology-summary">
             <div>
               <span>节点</span>
-              <strong>{topology.nodes.length}</strong>
+              <strong>{topology?.nodes.length ?? 0}</strong>
             </div>
             <div>
               <span>边</span>
-              <strong>{topology.edges.length}</strong>
+              <strong>{topology?.edges.length ?? 0}</strong>
             </div>
             <div>
               <span>版本</span>
-              <strong>{topology.schemaVersion}</strong>
+              <strong>{topology?.source?.planVersion ?? "—"}</strong>
             </div>
           </div>
         </aside>
@@ -214,6 +245,7 @@ export function App() {
               fallback={<div className="scene-loading">正在生成 3D 拓扑…</div>}
             >
               <WorldScene
+                key={world.topologyFingerprint}
                 className="scene-canvas"
                 world={world}
                 definitions={CORE_BRICK_BY_ID}
@@ -222,11 +254,13 @@ export function App() {
                 onBlank={() => setSelectedNodeId(undefined)}
               />
             </Suspense>
-          ) : (
+          ) : loadError || diagnostics.length > 0 ? (
             <div className="scene-error" role="alert">
               <strong>无法生成场景</strong>
-              <span>{diagnostics[0]?.message ?? "拓扑无效"}</span>
+              <span>{loadError ?? diagnostics[0]?.message ?? "拓扑无效"}</span>
             </div>
+          ) : (
+            <div className="scene-loading">正在加载 pyCircuit 拓扑…</div>
           )}
           <div className="scene-mode">
             <span className="mode-light mode-topology" />
@@ -249,7 +283,7 @@ export function App() {
               <h2>{selectedNode?.label ?? "未选择节点"}</h2>
             </div>
           </div>
-          {selectedNode && selectedDefinition && world ? (
+          {selectedNode && selectedDefinition && world && topology ? (
             <NodeInspector
               node={selectedNode}
               definition={selectedDefinition}
@@ -310,6 +344,17 @@ function NodeInspector({
         <span>稳定拓扑 ID</span>
         <code>{node.id}</code>
       </div>
+      {topology.source ? (
+        <div className="source-provenance">
+          <span>pyCircuit · QueueGraph {topology.source.planVersion}</span>
+          <code>{topology.source.revision.slice(0, 12)}</code>
+          <strong>
+            {topology.source.relevantInputsDirty
+              ? "相关输入有修改"
+              : "相关输入已固定"}
+          </strong>
+        </div>
+      ) : null}
       <div className="position-grid">
         <div>
           <span>X</span>
@@ -328,6 +373,18 @@ function NodeInspector({
           <strong>{node.parentId ?? "root"}</strong>
         </div>
       </div>
+
+      <section>
+        <h3>模型信息</h3>
+        <div className="parameter-list">
+          {Object.entries(node.attributes ?? {}).map(([key, value]) => (
+            <div key={key}>
+              <span>{key}</span>
+              <strong>{String(value)}</strong>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section>
         <h3>参数</h3>
@@ -393,7 +450,8 @@ function NodeInspector({
               <span>
                 <strong>{port.label}</strong>
                 <small>
-                  {port.protocol} · {port.widthBits} bit
+                  {port.protocol} · {port.widthBits ?? "topology"}
+                  {port.widthBits === null ? " width" : " bit"}
                 </small>
               </span>
             </div>

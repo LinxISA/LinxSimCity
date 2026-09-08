@@ -31,11 +31,12 @@ export function topologyFingerprint(topology: ArchitectureTopology): string {
     id: topology.id,
     revision: topology.revision,
     nodes: [...topology.nodes]
-      .map(({ id, definitionId, parentId, parameters }) => ({
+      .map(({ id, definitionId, parentId, parameters, attributes }) => ({
         id,
         definitionId,
         ...(parentId ? { parentId } : {}),
         parameters,
+        ...(attributes ? { attributes } : {}),
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     edges: [...topology.edges]
@@ -73,6 +74,19 @@ export function validateArchitectureTopology(
   catalog: ComponentCatalog,
 ): TopologyDiagnostic[] {
   const diagnostics: TopologyDiagnostic[] = [];
+  if (
+    topology.source &&
+    (!topology.source.repository ||
+      !topology.source.revision ||
+      !/^[a-f0-9]{64}$/.test(topology.source.planSha256) ||
+      !/^[a-f0-9]{64}$/.test(topology.source.modelSha256))
+  ) {
+    diagnostics.push({
+      path: "source",
+      code: "invalid_source",
+      message: "provenance source, revision, and SHA-256 values are required",
+    });
+  }
   const definitionById = new Map(
     catalog.definitions.map((item) => [item.id, item]),
   );
@@ -169,7 +183,11 @@ export function validateArchitectureTopology(
         message: `${fromPort.protocol} cannot connect to ${toPort.protocol}`,
       });
     }
-    if (fromPort.widthBits !== toPort.widthBits) {
+    if (
+      fromPort.widthBits !== null &&
+      toPort.widthBits !== null &&
+      fromPort.widthBits !== toPort.widthBits
+    ) {
       diagnostics.push({
         path,
         code: "width_mismatch",
@@ -177,7 +195,7 @@ export function validateArchitectureTopology(
       });
     }
     const inputKey = `${edge.to.nodeId}.${edge.to.portId}`;
-    if (occupiedInputs.has(inputKey)) {
+    if (occupiedInputs.has(inputKey) && toPort.cardinality === "one") {
       diagnostics.push({
         path,
         code: "input_already_connected",

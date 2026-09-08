@@ -5,6 +5,10 @@ import { fileURLToPath, pathToFileURL, URL } from "node:url";
 
 const EXPECTED_ASSET_BASE = "/LinxSimCity/assets/";
 const EXPECTED_TITLE = "LinxSimCity · 芯片城市实验台";
+const EXPECTED_PLAN_SHA256 =
+  "a988cf3e5a423811424c41dcd1fcd900c9fe2de98f178fd71556c64947c580d9";
+const EXPECTED_MODEL_SHA256 =
+  "10845ecf3b737c28117af3c27c80eef361aa6a7ca73d9ca28ca7a53257366bb0";
 
 export function verifyPagesBuild(
   repositoryRoot = fileURLToPath(new URL("..", import.meta.url)),
@@ -28,10 +32,27 @@ export function verifyPagesBuild(
       "Pages game must not ship the retired viewer default trace",
     );
   }
+  const topology = JSON.parse(
+    readFileSync(
+      join(dist, "topologies", "davincioo-queue-model.json"),
+      "utf8",
+    ),
+  );
+  if (
+    topology.nodes?.length !== 39 ||
+    topology.edges?.length !== 32 ||
+    topology.source?.planSha256 !== EXPECTED_PLAN_SHA256 ||
+    topology.source?.modelSha256 !== EXPECTED_MODEL_SHA256 ||
+    topology.source?.relevantInputsDirty !== false
+  ) {
+    throw new Error("Pages game has an invalid generated pyCircuit topology");
+  }
   return {
     assetBase: EXPECTED_ASSET_BASE,
     app: "game",
     assets: assets.length,
+    topologyNodes: topology.nodes.length,
+    topologyEdges: topology.edges.length,
   };
 }
 

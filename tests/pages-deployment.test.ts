@@ -1,4 +1,5 @@
 import {
+  cpSync,
   readFileSync,
   mkdirSync,
   mkdtempSync,
@@ -13,12 +14,18 @@ import { expect, test } from "vitest";
 import { verifyPagesBuild } from "../scripts/verify-pages-build.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
+const sourceTopology = join(
+  repositoryRoot,
+  "apps/game/public/topologies/davincioo-queue-model.json",
+);
 function createPagesFixture(indexHtml: string): string {
   const root = mkdtempSync(join(tmpdir(), "linxsimcity-pages-"));
   const dist = join(root, "apps/game/dist");
   mkdirSync(join(dist, "assets"), { recursive: true });
+  mkdirSync(join(dist, "topologies"), { recursive: true });
   writeFileSync(join(dist, "index.html"), indexHtml);
   writeFileSync(join(dist, "assets/index.js"), "export {};\n");
+  cpSync(sourceTopology, join(dist, "topologies/davincioo-queue-model.json"));
   return root;
 }
 
@@ -43,6 +50,8 @@ test("accepts the base-prefixed chip city game without the retired trace", () =>
       assetBase: "/LinxSimCity/assets/",
       app: "game",
       assets: 1,
+      topologyNodes: 39,
+      topologyEdges: 32,
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

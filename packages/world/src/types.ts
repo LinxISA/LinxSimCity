@@ -35,6 +35,7 @@ export interface TopologyNode {
   readonly label?: string;
   readonly parentId?: string;
   readonly parameters: Readonly<Record<string, number>>;
+  readonly attributes?: Readonly<Record<string, string | number | boolean>>;
 }
 
 export interface TopologyEdge {
@@ -49,8 +50,21 @@ export interface ArchitectureTopology {
   readonly id: string;
   readonly name: string;
   readonly revision: string;
+  readonly source?: TopologySource;
   readonly nodes: readonly TopologyNode[];
   readonly edges: readonly TopologyEdge[];
+}
+
+export interface TopologySource {
+  readonly kind: string;
+  readonly repository: string;
+  readonly revision: string;
+  readonly worktreeDirty: boolean;
+  readonly relevantInputsDirty: boolean;
+  readonly planSchema: string;
+  readonly planVersion: string;
+  readonly planSha256: string;
+  readonly modelSha256: string;
 }
 
 export interface WorldLinkEndpoint {
@@ -87,6 +101,7 @@ export interface TopologyDiagnostic {
     | "protocol_mismatch"
     | "width_mismatch"
     | "input_already_connected"
-    | "invalid_parent";
+    | "invalid_parent"
+    | "invalid_source";
   readonly message: string;
 }

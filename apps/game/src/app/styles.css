@@ -567,6 +567,32 @@ code {
   white-space: nowrap;
 }
 
+.source-provenance {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 10px;
+  margin-bottom: 14px;
+  padding: 10px;
+  border: 1px solid rgb(111 229 189 / 20%);
+  border-radius: 7px;
+  background: rgb(32 96 79 / 10%);
+  font-size: 12px;
+}
+
+.source-provenance span {
+  color: #9bb4bd;
+}
+
+.source-provenance code {
+  color: #6f8993;
+}
+
+.source-provenance strong {
+  grid-column: 1 / -1;
+  color: #6fe5bd;
+  font-weight: 500;
+}
+
 .position-grid {
   grid-template-columns: repeat(4, 1fr);
 }
@@ -605,7 +631,11 @@ code {
 }
 
 .parameter-list strong {
+  max-width: 62%;
+  overflow: hidden;
   font-family: "SFMono-Regular", Consolas, monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .connection-list button {

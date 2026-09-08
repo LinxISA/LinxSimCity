@@ -90,6 +90,12 @@
 
 ### M1 — 新核心契约与 240 项映射清单（依赖 M0）
 
+已完成的 QueueGraph 前置切片：
+
+- [x] 从 pyCircuit canonical Agentic Circuit QueueGraph plan 导入 scope、block、SimQueue 和 producer/consumer edge。
+- [x] 默认网页场景由生成的 39-node / 32-edge DavinciOO QueueGraph topology 加载，并绑定 plan/model SHA-256 与 source revision。
+- [x] 再生成脚本在相同 revision 下产生逐字节一致的 topology；Pages 验证会拒绝缺失、脏相关输入或 hash 不符的默认 topology。
+
 - [ ] 重建 `packages/topology`、`packages/trace-schema`；新增 `packages/component-catalog`，定义积木、装配图、布局、存档、run、事件和快照。
 - [ ] 编写 `tools/catalog-import`，从固定 pyCircuit/DavinciOO 来源生成带出处和 hash 的 240 项映射报告；当前实现/可观测状态从实际模块与测试核对，不能照搬初始快照状态。
 - [ ] 增加负向 fixture：重复 ID、悬空端口、类型/宽度/方向不符、重复 owner、错误配置 hash、无损整数溢出、非法事件顺序、旧格式、损坏或截断数据。

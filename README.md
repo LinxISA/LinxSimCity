@@ -21,6 +21,8 @@ packages remain isolated only while the new trace path is implemented.
   protocol, width, and single-producer inputs
 - React Three Fiber workbench with an infinite grid and parameterized 3D
   components
+- Canonical QueueGraph importer and a generated 39-node, 32-edge pyCircuit
+  DavinciOO topology
 
 The trace button is intentionally disabled until the new trace contract and
 first real SuperScalarModel adapter are connected. The UI does not fabricate
@@ -53,6 +55,7 @@ ctest --test-dir build/sdk --output-on-failure
 
 Read [the game design](DESIGN.md),
 [architecture](docs/game/architecture.md), and
-[hard-break ledger](docs/game/hard-break.md) before extending the new path.
+[topology import](docs/game/topology-import.md) before extending the new path.
+The [hard-break ledger](docs/game/hard-break.md) tracks retired surfaces.
 Implementation is tracked in
 [issue #1](https://github.com/LinxISA/LinxSimCity/issues/1).

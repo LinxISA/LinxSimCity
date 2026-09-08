@@ -52,10 +52,16 @@ export function validateDefinition(
         message: "is unsupported",
       });
     }
-    if (!positiveInteger(item.widthBits)) {
+    if (item.widthBits !== null && !positiveInteger(item.widthBits)) {
       diagnostics.push({
         path: `${portPath}.widthBits`,
         message: "must be a positive safe integer",
+      });
+    }
+    if (!["one", "many"].includes(item.cardinality)) {
+      diagnostics.push({
+        path: `${portPath}.cardinality`,
+        message: "must be one or many",
       });
     }
     if (item.anchor.some((value) => !Number.isFinite(value))) {

@@ -1,6 +1,6 @@
 import type { BrickDefinition } from "@linxsimcity/component-catalog";
 import type { GeneratedWorld } from "@linxsimcity/world";
-import { Grid, Line, OrbitControls } from "@react-three/drei";
+import { Bounds, Grid, Line, OrbitControls } from "@react-three/drei";
 import { Canvas } from "@react-three/fiber";
 import { Suspense, useMemo } from "react";
 
@@ -41,59 +41,69 @@ function SceneContent(props: SceneContentProps) {
         sectionSize={8}
         sectionThickness={0.78}
         sectionColor="#2b7895"
-        fadeDistance={120}
+        fadeDistance={500}
         fadeStrength={1.3}
         infiniteGrid
       />
-      {props.world.instances.map((instance) => {
-        const definition = props.definitions.get(instance.definitionId);
-        if (!definition) return null;
-        return (
-          <Brick
-            key={instance.id}
-            instance={instance}
-            definition={definition}
-            selected={props.selectedInstanceId === instance.id}
-            onSelect={props.onSelect}
-          />
-        );
-      })}
-      {props.world.links.map((link) => {
-        const fromInstance = instances.get(link.from.instanceId);
-        const toInstance = instances.get(link.to.instanceId);
-        if (!fromInstance || !toInstance) return null;
-        const fromDefinition = props.definitions.get(fromInstance.definitionId);
-        const toDefinition = props.definitions.get(toInstance.definitionId);
-        if (!fromDefinition || !toDefinition) return null;
-        const start = portWorldPosition(
-          fromInstance,
-          fromDefinition,
-          link.from.portId,
-        );
-        const end = portWorldPosition(toInstance, toDefinition, link.to.portId);
-        const midY = Math.max(start[1], end[1]) + 1.2;
-        return (
-          <Line
-            key={link.id}
-            points={[
-              start,
-              [start[0], midY, start[2]],
-              [end[0], midY, end[2]],
-              end,
-            ]}
-            color="#79e7ff"
-            lineWidth={1.6}
-            transparent
-            opacity={0.72}
-          />
-        );
-      })}
+      <Bounds fit clip margin={1.2}>
+        <group>
+          {props.world.instances.map((instance) => {
+            const definition = props.definitions.get(instance.definitionId);
+            if (!definition) return null;
+            return (
+              <Brick
+                key={instance.id}
+                instance={instance}
+                definition={definition}
+                selected={props.selectedInstanceId === instance.id}
+                onSelect={props.onSelect}
+              />
+            );
+          })}
+          {props.world.links.map((link) => {
+            const fromInstance = instances.get(link.from.instanceId);
+            const toInstance = instances.get(link.to.instanceId);
+            if (!fromInstance || !toInstance) return null;
+            const fromDefinition = props.definitions.get(
+              fromInstance.definitionId,
+            );
+            const toDefinition = props.definitions.get(toInstance.definitionId);
+            if (!fromDefinition || !toDefinition) return null;
+            const start = portWorldPosition(
+              fromInstance,
+              fromDefinition,
+              link.from.portId,
+            );
+            const end = portWorldPosition(
+              toInstance,
+              toDefinition,
+              link.to.portId,
+            );
+            const midY = Math.max(start[1], end[1]) + 1.2;
+            return (
+              <Line
+                key={link.id}
+                points={[
+                  start,
+                  [start[0], midY, start[2]],
+                  [end[0], midY, end[2]],
+                  end,
+                ]}
+                color="#79e7ff"
+                lineWidth={1.6}
+                transparent
+                opacity={0.72}
+              />
+            );
+          })}
+        </group>
+      </Bounds>
       <OrbitControls
         makeDefault
         enableDamping
         dampingFactor={0.075}
         minDistance={8}
-        maxDistance={240}
+        maxDistance={1200}
         maxPolarAngle={Math.PI / 2.05}
         target={[2, 0, 1]}
       />
@@ -109,7 +119,7 @@ export function WorldScene({ className, ...props }: WorldSceneProps) {
   return (
     <div className={className}>
       <Canvas
-        camera={{ position: [23, 20, 27], fov: 38, near: 0.1, far: 1200 }}
+        camera={{ position: [23, 20, 27], fov: 38, near: 0.1, far: 3000 }}
         dpr={[1, 1.75]}
         gl={{
           antialias: true,
@@ -120,7 +130,7 @@ export function WorldScene({ className, ...props }: WorldSceneProps) {
         shadows="percentage"
       >
         <color attach="background" args={["#03080d"]} />
-        <fog attach="fog" args={["#03080d", 85, 260]} />
+        <fog attach="fog" args={["#03080d", 520, 1400]} />
         <Suspense fallback={null}>
           <SceneContent {...props} />
         </Suspense>
