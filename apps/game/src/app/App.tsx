@@ -1,11 +1,14 @@
 import {
+  buildDavinciCatalogIndex,
   CORE_BRICK_BY_ID,
   CORE_CATALOG,
+  locateDavinciCandidate,
   validateDavinciCatalogMapping,
 } from "@linxsimcity/component-catalog";
 import type {
   BrickDefinition,
   DavinciCandidateMapping,
+  DavinciCatalogIndexEntry,
   DavinciCatalogMapping,
 } from "@linxsimcity/component-catalog";
 import type { BrickActivity } from "@linxsimcity/brick-kit";
@@ -66,6 +69,87 @@ const RECORDED_RUNS = [
 
 type RecordedRunId = (typeof RECORDED_RUNS)[number]["id"];
 
+export interface CatalogH2Branch {
+  readonly id: string;
+  readonly label: string;
+  readonly candidates: readonly DavinciCandidateMapping[];
+}
+
+export interface CatalogH1Branch {
+  readonly id: string;
+  readonly label: string;
+  readonly candidateCount: number;
+  readonly subsystems: readonly CatalogH2Branch[];
+}
+
+function catalogCandidateMatches(
+  candidate: DavinciCandidateMapping,
+  query: string,
+): boolean {
+  return [
+    candidate.candidateId,
+    candidate.h1,
+    candidate.h2,
+    candidate.h3,
+    candidate.name,
+    candidate.representation,
+    candidate.dispositionRecommendation,
+    candidate.observedEvidenceStatus,
+  ].some((value) => value.toLowerCase().includes(query));
+}
+
+export function buildCatalogTree(
+  candidates: readonly DavinciCandidateMapping[],
+  filter: string,
+): readonly CatalogH1Branch[] {
+  const query = filter.trim().toLowerCase();
+  const hierarchy = new Map<string, Map<string, DavinciCandidateMapping[]>>();
+
+  for (const candidate of candidates) {
+    if (query && !catalogCandidateMatches(candidate, query)) continue;
+    let subsystems = hierarchy.get(candidate.h1);
+    if (!subsystems) {
+      subsystems = new Map();
+      hierarchy.set(candidate.h1, subsystems);
+    }
+    let branch = subsystems.get(candidate.h2);
+    if (!branch) {
+      branch = [];
+      subsystems.set(candidate.h2, branch);
+    }
+    branch.push(candidate);
+  }
+
+  return [...hierarchy].map(([h1, subsystems]) => {
+    const branches = [...subsystems].map(([h2, branch]) => ({
+      id: `${h1}:${h2}`,
+      label: h2,
+      candidates: branch,
+    }));
+    return {
+      id: h1,
+      label: h1,
+      candidateCount: branches.reduce(
+        (count, branch) => count + branch.candidates.length,
+        0,
+      ),
+      subsystems: branches,
+    };
+  });
+}
+
+export function findCatalogCandidateLocation(
+  candidates: readonly DavinciCandidateMapping[],
+  candidateId: string,
+):
+  | { readonly candidate: DavinciCandidateMapping; readonly branchId: string }
+  | undefined {
+  const candidate = candidates.find((item) => item.candidateId === candidateId);
+  return candidate
+    ? { candidate, branchId: `${candidate.h1}:${candidate.h2}` }
+    : undefined;
+}
+
 function nodeConnections(
   topology: ArchitectureTopology,
   nodeId: string,
@@ -99,6 +183,13 @@ export function App() {
   const [loadError, setLoadError] = useState<string>();
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>();
+  const [expandedCatalogH1, setExpandedCatalogH1] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [expandedCatalogH2, setExpandedCatalogH2] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [locatedOwnerId, setLocatedOwnerId] = useState<string>();
   const [filter, setFilter] = useState("");
   const [notice, setNotice] = useState("正在加载 pyCircuit QueueGraph 拓扑…");
   const [traceInfo, setTraceInfo] = useState<LoadedTraceInfo>();
@@ -109,6 +200,7 @@ export function App() {
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [recordedRunId, setRecordedRunId] = useState<RecordedRunId>("normal");
   const importInput = useRef<HTMLInputElement>(null);
+  const catalogCandidateElements = useRef(new Map<string, HTMLButtonElement>());
   const traceClient = useRef<TraceWorkerClient | undefined>(undefined);
   const traceRequestId = useRef(0);
   const diagnostics = useMemo(
@@ -191,6 +283,14 @@ export function App() {
   const selectedCandidate = catalog?.candidates.find(
     (candidate) => candidate.candidateId === selectedCandidateId,
   );
+  const catalogIndex = useMemo(
+    () => (catalog ? buildDavinciCatalogIndex(catalog) : undefined),
+    [catalog],
+  );
+  const selectedCatalogEntry =
+    catalogIndex && selectedCandidateId
+      ? locateDavinciCandidate(catalogIndex, selectedCandidateId)
+      : undefined;
   const orderedNodes = useMemo(() => {
     if (!topology || !world) return [];
     const nodeById = new Map(topology.nodes.map((node) => [node.id, node]));
@@ -211,19 +311,53 @@ export function App() {
       .filter(Boolean)
       .some((value) => value!.toLowerCase().includes(query));
   });
-  const visibleCandidates = (catalog?.candidates ?? []).filter((candidate) => {
-    const query = filter.trim().toLowerCase();
-    if (!query) return true;
-    return [
-      candidate.candidateId,
-      candidate.h1,
-      candidate.h2,
-      candidate.h3,
-      candidate.name,
-      candidate.representation,
-    ].some((value) => value.toLowerCase().includes(query));
-  });
+  const catalogTree = useMemo(
+    () => buildCatalogTree(catalog?.candidates ?? [], filter),
+    [catalog, filter],
+  );
+  const visibleCandidateCount = catalogTree.reduce(
+    (count, branch) => count + branch.candidateCount,
+    0,
+  );
+  const catalogSearchActive = filter.trim().length > 0;
   const recordedRun = RECORDED_RUNS.find((run) => run.id === recordedRunId)!;
+
+  const toggleCatalogBranch = (level: "h1" | "h2", id: string) => {
+    const setter = level === "h1" ? setExpandedCatalogH1 : setExpandedCatalogH2;
+    setter((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const locateCatalogOwner = (ownerCandidateId: string) => {
+    const location = findCatalogCandidateLocation(
+      catalog?.candidates ?? [],
+      ownerCandidateId,
+    );
+    if (!location) {
+      setNotice(`目录中找不到 owner ${ownerCandidateId}。`);
+      return;
+    }
+    const owner = location.candidate;
+    setBrowserMode("catalog");
+    setFilter("");
+    setExpandedCatalogH1((current) => new Set(current).add(owner.h1));
+    setExpandedCatalogH2((current) => new Set(current).add(location.branchId));
+    setSelectedNodeId(undefined);
+    setSelectedCandidateId(ownerCandidateId);
+    setLocatedOwnerId(ownerCandidateId);
+    setNotice(`已定位 canonical owner：${ownerCandidateId}。`);
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        catalogCandidateElements.current
+          .get(ownerCandidateId)
+          ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    });
+  };
 
   const closeTrace = useCallback(() => {
     const client = traceClient.current;
@@ -538,6 +672,7 @@ export function App() {
                 setBrowserMode("topology");
                 setFilter("");
                 setSelectedCandidateId(undefined);
+                setLocatedOwnerId(undefined);
               }}
             >
               运行拓扑
@@ -551,6 +686,7 @@ export function App() {
                 setBrowserMode("catalog");
                 setFilter("");
                 setSelectedNodeId(undefined);
+                setLocatedOwnerId(undefined);
               }}
             >
               H3 目录
@@ -565,7 +701,10 @@ export function App() {
               type="search"
               value={filter}
               placeholder="ID、类型或名称"
-              onChange={(event) => setFilter(event.target.value)}
+              onChange={(event) => {
+                setFilter(event.target.value);
+                setLocatedOwnerId(undefined);
+              }}
             />
           </div>
           <div className="topology-list">
@@ -608,34 +747,136 @@ export function App() {
                     </button>
                   );
                 })
-              : visibleCandidates.map((candidate) => (
-                  <button
-                    type="button"
-                    key={candidate.candidateId}
-                    className={
-                      selectedCandidateId === candidate.candidateId
-                        ? "topology-node catalog-node active"
-                        : "topology-node catalog-node"
-                    }
-                    onClick={() => {
-                      setSelectedCandidateId(candidate.candidateId);
-                      setSelectedNodeId(undefined);
-                    }}
-                  >
-                    <span
-                      className={`node-mark representation-${candidate.representation}`}
-                    />
-                    <span>
-                      <strong>
-                        {candidate.h1}.{candidate.h2}.{candidate.h3}
-                      </strong>
-                      <small>{candidate.name}</small>
-                    </span>
-                    <span className="candidate-kind">
-                      {candidate.representation}
-                    </span>
-                  </button>
-                ))}
+              : catalogTree.map((district) => {
+                  const districtExpanded =
+                    catalogSearchActive || expandedCatalogH1.has(district.id);
+                  return (
+                    <section className="catalog-district" key={district.id}>
+                      <button
+                        type="button"
+                        className="catalog-branch catalog-h1"
+                        aria-expanded={districtExpanded}
+                        onClick={() => toggleCatalogBranch("h1", district.id)}
+                      >
+                        <span className="catalog-chevron" aria-hidden="true">
+                          {districtExpanded ? "−" : "+"}
+                        </span>
+                        <span>
+                          <strong>{district.label}</strong>
+                          <small>H1 城区</small>
+                        </span>
+                        <span className="catalog-count">
+                          {district.candidateCount}
+                        </span>
+                      </button>
+                      {districtExpanded
+                        ? district.subsystems.map((subsystem) => {
+                            const subsystemExpanded =
+                              catalogSearchActive ||
+                              expandedCatalogH2.has(subsystem.id);
+                            return (
+                              <div
+                                className="catalog-subsystem"
+                                key={subsystem.id}
+                              >
+                                <button
+                                  type="button"
+                                  className="catalog-branch catalog-h2"
+                                  aria-expanded={subsystemExpanded}
+                                  onClick={() =>
+                                    toggleCatalogBranch("h2", subsystem.id)
+                                  }
+                                >
+                                  <span
+                                    className="catalog-chevron"
+                                    aria-hidden="true"
+                                  >
+                                    {subsystemExpanded ? "−" : "+"}
+                                  </span>
+                                  <span>
+                                    <strong>{subsystem.label}</strong>
+                                    <small>H2 子系统</small>
+                                  </span>
+                                  <span className="catalog-count">
+                                    {subsystem.candidates.length}
+                                  </span>
+                                </button>
+                                {subsystemExpanded ? (
+                                  <div className="catalog-candidates">
+                                    {subsystem.candidates.map((candidate) => (
+                                      <button
+                                        type="button"
+                                        key={candidate.candidateId}
+                                        ref={(element) => {
+                                          if (element) {
+                                            catalogCandidateElements.current.set(
+                                              candidate.candidateId,
+                                              element,
+                                            );
+                                          } else {
+                                            catalogCandidateElements.current.delete(
+                                              candidate.candidateId,
+                                            );
+                                          }
+                                        }}
+                                        className={[
+                                          "topology-node",
+                                          "catalog-node",
+                                          selectedCandidateId ===
+                                          candidate.candidateId
+                                            ? "active"
+                                            : "",
+                                          locatedOwnerId ===
+                                          candidate.candidateId
+                                            ? "owner-target"
+                                            : "",
+                                        ]
+                                          .filter(Boolean)
+                                          .join(" ")}
+                                        onClick={() => {
+                                          setSelectedCandidateId(
+                                            candidate.candidateId,
+                                          );
+                                          setSelectedNodeId(undefined);
+                                          setLocatedOwnerId(undefined);
+                                        }}
+                                      >
+                                        <span
+                                          className={`node-mark representation-${candidate.representation}`}
+                                        />
+                                        <span>
+                                          <strong>
+                                            {candidate.h3} · {candidate.name}
+                                          </strong>
+                                          <small>{candidate.candidateId}</small>
+                                          <span className="candidate-statuses">
+                                            <i>{candidate.representation}</i>
+                                            <i>
+                                              {
+                                                candidate.dispositionRecommendation
+                                              }
+                                            </i>
+                                            <i
+                                              className={`evidence-${candidate.observedEvidenceStatus}`}
+                                            >
+                                              {candidate.observedEvidenceStatus}
+                                            </i>
+                                          </span>
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                ) : null}
+                              </div>
+                            );
+                          })
+                        : null}
+                    </section>
+                  );
+                })}
+            {browserMode === "catalog" && visibleCandidateCount === 0 ? (
+              <div className="catalog-empty">没有匹配的 H3 候选。</div>
+            ) : null}
           </div>
           <div className="topology-summary">
             {browserMode === "topology" ? (
@@ -796,7 +1037,12 @@ export function App() {
             </div>
           </div>
           {selectedCandidate && catalog ? (
-            <CatalogInspector candidate={selectedCandidate} catalog={catalog} />
+            <CatalogInspector
+              candidate={selectedCandidate}
+              entry={selectedCatalogEntry}
+              catalog={catalog}
+              onLocateOwner={locateCatalogOwner}
+            />
           ) : selectedNode && selectedDefinition && world && topology ? (
             <NodeInspector
               node={selectedNode}
@@ -845,10 +1091,17 @@ export function App() {
 
 interface CatalogInspectorProps {
   readonly candidate: DavinciCandidateMapping;
+  readonly entry: DavinciCatalogIndexEntry | undefined;
   readonly catalog: DavinciCatalogMapping;
+  readonly onLocateOwner: (candidateId: string) => void;
 }
 
-function CatalogInspector({ candidate, catalog }: CatalogInspectorProps) {
+function CatalogInspector({
+  candidate,
+  entry,
+  catalog,
+  onLocateOwner,
+}: CatalogInspectorProps) {
   return (
     <div className="inspector-content">
       <div className="identity-block">
@@ -898,10 +1151,34 @@ function CatalogInspector({ candidate, catalog }: CatalogInspectorProps) {
           <div>
             <span>owner</span>
             <strong>
-              {candidate.ownerCandidateId ?? candidate.ownerStatus}
+              {entry?.owner.canonicalOwnerCandidateId ?? "unresolved"}
+            </strong>
+          </div>
+          <div>
+            <span>UI representation</span>
+            <strong>{entry?.capability.presentation ?? "unresolved"}</strong>
+          </div>
+          <div>
+            <span>执行能力</span>
+            <strong>
+              {entry?.capability.executionCapability ??
+                "not-established-by-catalog"}
             </strong>
           </div>
         </div>
+        {entry?.owner.canonicalOwnerCandidateId ? (
+          <button
+            type="button"
+            className="locate-owner"
+            onClick={() =>
+              onLocateOwner(entry.owner.canonicalOwnerCandidateId!)
+            }
+          >
+            定位 canonical owner
+          </button>
+        ) : (
+          <p className="owner-unresolved">Canonical owner 尚未解析</p>
+        )}
       </section>
 
       <section>

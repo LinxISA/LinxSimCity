@@ -97,10 +97,71 @@ export interface DavinciCandidateMapping {
     | "not-applicable";
   readonly card: string;
   readonly ownerCandidateId: string | null;
-  readonly ownerStatus: "self" | "unresolved";
+  readonly ownerStatus: "self" | "referenced" | "unresolved";
   readonly inputs: readonly DavinciCandidatePort[];
   readonly outputs: readonly DavinciCandidatePort[];
   readonly area: PhysicalArea;
+}
+
+export type DavinciOwnerResolutionStatus = "self" | "referenced" | "unresolved";
+
+export type DavinciPresentationCapability =
+  | "independent-owner"
+  | "owned-detail"
+  | "contained-state"
+  | "interface-only"
+  | "catalog-alias"
+  | "unresolved";
+
+export interface DavinciCapabilityEvidence {
+  readonly presentation: DavinciPresentationCapability;
+  readonly observedEvidenceStatus: DavinciCandidateMapping["observedEvidenceStatus"];
+  readonly reportedExecutionStatus: string;
+  readonly executionCapability: "not-established-by-catalog";
+}
+
+export interface DavinciOwnerResolution {
+  readonly status: DavinciOwnerResolutionStatus;
+  readonly canonicalOwnerCandidateId: string | null;
+}
+
+export interface DavinciCandidateLocation {
+  readonly h1Index: number;
+  readonly h2Index: number;
+  readonly candidateIndex: number;
+  readonly h1: string;
+  readonly h2: string;
+}
+
+export interface DavinciCatalogIndexEntry {
+  readonly candidate: DavinciCandidateMapping;
+  readonly location: DavinciCandidateLocation;
+  readonly owner: DavinciOwnerResolution;
+  readonly capability: DavinciCapabilityEvidence;
+}
+
+export interface DavinciCatalogH2Group {
+  readonly id: string;
+  readonly label: string;
+  readonly candidates: readonly DavinciCatalogIndexEntry[];
+}
+
+export interface DavinciCatalogH1Group {
+  readonly id: string;
+  readonly label: string;
+  readonly h2Groups: readonly DavinciCatalogH2Group[];
+}
+
+export interface DavinciOwnershipGroup {
+  readonly ownerCandidateId: string;
+  readonly candidateIds: readonly string[];
+}
+
+export interface DavinciCatalogIndex {
+  readonly h1Groups: readonly DavinciCatalogH1Group[];
+  readonly candidates: readonly DavinciCatalogIndexEntry[];
+  readonly candidateById: Readonly<Record<string, DavinciCatalogIndexEntry>>;
+  readonly ownershipGroups: readonly DavinciOwnershipGroup[];
 }
 
 export interface DavinciCatalogMapping {

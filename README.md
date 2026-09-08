@@ -31,8 +31,9 @@ packages remain isolated only while the new trace path is implemented.
   components
 - Canonical QueueGraph importer and a generated 39-node, 32-edge pyCircuit
   DavinciOO topology
-- Separate 240-entry DavinciOO H3 browser with 7/31 hierarchy, disposition,
-  committed source/test-path evidence, ownership state, and area status
+- A collapsible 7-city / 31-subsystem DavinciOO browser that locates all 240 H3
+  candidates and exposes disposition, evidence, canonical-owner status, and the
+  fact that catalog presence alone does not establish execution capability
 
 The current trace schema, chunk/index/checkpoint bundle, TypeScript validator,
 C++ writer, deterministic Worker reducer, and game playback controls are
