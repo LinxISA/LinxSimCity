@@ -109,7 +109,7 @@
 ### M2 — 精品积木库与新渲染内核（依赖 M0，使用 M1 稳定接口）
 
 - [ ] 重建 `packages/scene-core`；以 `packages/brick-kit` 替换旧分区专用 `packages/scene-modules` 主路径。
-- [ ] 完成首批 Queue、Table、SRAM、计算块、端口/连接，并逐步补齐约 10–15 种形态；支持参数变化、内部展开和统一材质。
+- [x] 完成首批 Queue、Table、SRAM、计算块、端口/连接，并逐步补齐约 10–15 种形态；支持参数变化、内部展开和统一材质。
 - [x] 层次区域使用由 topology ID 稳定派生的克制配色；SimQueue 使用带方向标记的透明管道，并由 producer/consumer 几何方向决定连续旋转，端口与边锚点共享同一变换。
 - [x] 将 SimQueue 与 topology edge 统一为高架 3D 管廊，使用体积管线、支柱和方向箭头替换灰色细线；Queue entry 按容量有界采样，有数据发光、空 entry 为深灰。
 - [x] 布局图中折叠 Queue 节点，以 Queue 的 producer→consumer 关系对真实模块重新拓扑排序；rank/lane 间距按放大后的模块包围盒计算。场景不再绘制独立 Queue 积木，Queue ID 绑定到横平竖直的管道及其数据流光点。
@@ -117,7 +117,7 @@
 - [x] 组件定义通过 `visual.profile` 声明视觉语义：一维 Table 使用线性槽位，多维 Table 使用矩阵/分层阵列，Reorder Window 使用带 head/tail 标记的 circular buffer；渲染器不依赖显示名猜测类型。
 - [x] 存储类积木使用开放式低基座，统一圆角金属/陶瓷外壳与状态材质；拓扑列表选中后相机聚焦到对应 3D 实例。
 - [x] 实现基础 instancing、LOD、拾取映射和静态资源释放；禁止由显示名推导硬件身份。
-- [ ] 建立积木展示场景与全景/近景/选中/阻塞的截图检查，核对几何、标识、端口和光照。
+- [x] 建立积木展示场景与全景/近景/选中/阻塞的截图检查，核对几何、标识、端口和光照。
 
 **完成条件：** 同一份定义可生成多种容量/实例；旋转后连接点仍准确；近景可读、远景可辨；无持续无意义闪烁；真实运行标识与美术预览分离。
 
@@ -159,7 +159,7 @@
 
 ### M7 — 运行、挑战与改进闭环（依赖 M5；完整交付结合 M6）
 
-- [ ] 新建 `tools/sim-runner` 和 `packages/scenarios`：声明受支持的 backend、workload、参数范围、配置导出与结果绑定。
+- [x] 新建 `tools/sim-runner` 和 `packages/scenarios`：声明受支持的 backend、workload、参数范围、配置导出与结果绑定。
 - [ ] 提供本机 runner 的启动、连接、任务状态、取消、失败诊断和结果导入；配置变更使旧结果标为旧 run，必须重新仿真才能生成新指标。
 - [ ] 至少完成三个引导挑战：解释拓扑、定位队列瓶颈、分析并改善 bank conflict 或 Tile 搬运；每项有固定 topology/config、可执行参数范围和独立完成判据。
 - [ ] 对相同 workload 的两次真实 run 显示周期、吞吐、等待或冲突等可观测指标；不以动画速度或渲染计数作为得分。
