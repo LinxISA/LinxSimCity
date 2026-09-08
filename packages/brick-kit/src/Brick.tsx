@@ -5,8 +5,18 @@ import type {
 import type { BrickInstance } from "@linxsimcity/world";
 import { positionToTuple } from "@linxsimcity/world";
 import { Html, RoundedBox } from "@react-three/drei";
+import { useFrame, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
-import { DoubleSide } from "three";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  DoubleSide,
+  InstancedMesh,
+  Matrix4,
+  MeshPhysicalMaterial,
+  Quaternion,
+  Vector3,
+} from "three";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 import {
   SystolicArray,
@@ -21,7 +31,13 @@ import {
   logicalEntryCount,
   matrixEntryLayout,
 } from "./entry-layout.js";
-import type { BrickActivity, EntryVisual } from "./entry-layout.js";
+import type { BrickActivity } from "./entry-layout.js";
+import {
+  entryDetailBudget,
+  groupEntryInstances,
+  includePriorityEntries,
+} from "./entry-instancing.js";
+import type { EntryInstanceGroup } from "./entry-instancing.js";
 import { districtColor } from "./geometry.js";
 
 const KIND_COLORS: Record<BrickKind, string> = {
@@ -45,34 +61,64 @@ interface InteriorProps {
   readonly activity: BrickActivity;
 }
 
-function EntryCell({
-  entry,
-  occupied,
+function InstancedEntryCells({
+  group,
   circular = false,
 }: {
-  readonly entry: EntryVisual;
-  readonly occupied: boolean;
+  readonly group: EntryInstanceGroup;
   readonly circular?: boolean;
 }) {
+  const mesh = useRef<InstancedMesh>(null);
+  const geometry = useMemo(() => new RoundedBoxGeometry(1, 1, 1, 3, 0.14), []);
+  const occupied = group.state === "occupied";
+  const material = useMemo(
+    () =>
+      new MeshPhysicalMaterial({
+        color: occupied ? (circular ? "#ffc86b" : "#84ffe0") : "#1a242b",
+        emissive: occupied ? (circular ? "#f08b2e" : "#21d8b2") : "#030608",
+        emissiveIntensity: occupied ? 1.1 : 0.04,
+        metalness: occupied ? 0.42 : 0.68,
+        roughness: occupied ? 0.2 : 0.48,
+        clearcoat: occupied ? 0.9 : 0.25,
+        clearcoatRoughness: 0.18,
+      }),
+    [circular, occupied],
+  );
+
+  useLayoutEffect(() => {
+    if (!mesh.current) return;
+    const matrix = new Matrix4();
+    const position = new Vector3();
+    const rotation = new Quaternion();
+    const scale = new Vector3();
+    for (const [index, entry] of group.entries.entries()) {
+      position.set(...entry.position);
+      rotation.setFromAxisAngle(new Vector3(0, 1, 0), entry.rotationY ?? 0);
+      scale.set(...entry.scale);
+      matrix.compose(position, rotation, scale);
+      mesh.current.setMatrixAt(index, matrix);
+    }
+    mesh.current.count = group.entries.length;
+    mesh.current.instanceMatrix.needsUpdate = true;
+    mesh.current.computeBoundingSphere();
+  }, [group.entries]);
+
+  useEffect(
+    () => () => {
+      geometry.dispose();
+      material.dispose();
+    },
+    [geometry, material],
+  );
+
   return (
-    <RoundedBox
-      position={entry.position}
-      rotation={[0, entry.rotationY ?? 0, 0]}
-      args={[entry.scale[0], entry.scale[1], entry.scale[2]]}
-      radius={Math.min(entry.scale[0], entry.scale[1], entry.scale[2]) * 0.16}
-      smoothness={3}
+    <instancedMesh
+      ref={mesh}
+      args={[geometry, material, Math.max(1, group.entries.length)]}
+      count={group.entries.length}
       castShadow
-    >
-      <meshPhysicalMaterial
-        color={occupied ? (circular ? "#ffc86b" : "#84ffe0") : "#1a242b"}
-        emissive={occupied ? (circular ? "#f08b2e" : "#21d8b2") : "#030608"}
-        emissiveIntensity={occupied ? 1.1 : 0.04}
-        metalness={occupied ? 0.42 : 0.68}
-        roughness={occupied ? 0.2 : 0.48}
-        clearcoat={occupied ? 0.9 : 0.25}
-        clearcoatRoughness={0.18}
-      />
-    </RoundedBox>
+      userData={{ logicalIndexByInstance: group.logicalIndexByInstance }}
+    />
   );
 }
 
@@ -86,23 +132,79 @@ function StorageEntries({ instance, definition, activity }: InteriorProps) {
   const logicalDimensions = dimensionParameters.map(
     (parameterId) => instance.parameters[parameterId] ?? 1,
   );
-  const entries =
-    profile === "rob-circular"
-      ? circularEntryLayout(logicalCount, definition.size, maxVisibleEntries)
-      : profile === "table-matrix"
-        ? logicalDimensions.length > 2
-          ? layeredEntryLayout(
-              logicalDimensions,
+  const camera = useThree((state) => state.camera);
+  const worldPosition = positionToTuple(instance.transform.position);
+  const brickPosition = useMemo(
+    () => new Vector3(worldPosition[0], worldPosition[1], worldPosition[2]),
+    [worldPosition[0], worldPosition[1], worldPosition[2]],
+  );
+  const distanceToCamera = () => camera.position.distanceTo(brickPosition);
+  const [detail, setDetail] = useState(() =>
+    entryDetailBudget(distanceToCamera(), logicalCount, maxVisibleEntries),
+  );
+  const detailRef = useRef(detail);
+  useFrame(({ camera: frameCamera }) => {
+    const next = entryDetailBudget(
+      frameCamera.position.distanceTo(brickPosition),
+      logicalCount,
+      maxVisibleEntries,
+    );
+    if (
+      detailRef.current.level === next.level &&
+      detailRef.current.visibleEntries === next.visibleEntries
+    ) {
+      return;
+    }
+    detailRef.current = next;
+    setDetail(next);
+  });
+  const laidOutEntries = useMemo(
+    () =>
+      profile === "rob-circular"
+        ? circularEntryLayout(
+            logicalCount,
+            definition.size,
+            detail.visibleEntries,
+          )
+        : profile === "table-matrix" || profile === "memory-banks"
+          ? logicalDimensions.length > 2
+            ? layeredEntryLayout(
+                logicalDimensions,
+                definition.size,
+                detail.visibleEntries,
+              )
+            : matrixEntryLayout(
+                logicalDimensions[0] ?? 1,
+                logicalDimensions[1] ?? 1,
+                definition.size,
+                detail.visibleEntries,
+              )
+          : linearEntryLayout(
+              logicalCount,
               definition.size,
-              maxVisibleEntries,
-            )
-          : matrixEntryLayout(
-              logicalDimensions[0] ?? 1,
-              logicalDimensions[1] ?? 1,
-              definition.size,
-              maxVisibleEntries,
-            )
-        : linearEntryLayout(logicalCount, definition.size, maxVisibleEntries);
+              detail.visibleEntries,
+            ),
+    [
+      definition.size,
+      detail.visibleEntries,
+      logicalCount,
+      logicalDimensions,
+      profile,
+    ],
+  );
+  const entries = useMemo(
+    () =>
+      includePriorityEntries(
+        laidOutEntries,
+        logicalCount,
+        activity.activeEntryIndices,
+      ),
+    [activity.activeEntryIndices, laidOutEntries, logicalCount],
+  );
+  const groups = useMemo(
+    () => groupEntryInstances(entries, logicalCount, activity, entryIsOccupied),
+    [activity, entries, logicalCount],
+  );
   return (
     <group position={[0, definition.size.y * 0.52, 0]}>
       {profile === "rob-circular" ? (
@@ -151,12 +253,11 @@ function StorageEntries({ instance, definition, activity }: InteriorProps) {
           />
         </RoundedBox>
       )}
-      {entries.map((entry) => (
-        <EntryCell
-          key={entry.logicalIndex}
-          entry={entry}
+      {groups.map((group) => (
+        <InstancedEntryCells
+          key={group.state}
+          group={group}
           circular={profile === "rob-circular"}
-          occupied={entryIsOccupied(entry.logicalIndex, logicalCount, activity)}
         />
       ))}
       {profile === "rob-circular" ? (
@@ -200,6 +301,7 @@ function Interior({ instance, definition, activity }: InteriorProps) {
   if (
     definition.visual.profile === "table-linear" ||
     definition.visual.profile === "table-matrix" ||
+    definition.visual.profile === "memory-banks" ||
     definition.visual.profile === "rob-circular"
   ) {
     return (
