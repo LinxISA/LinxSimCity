@@ -1,4 +1,6 @@
 export * from "./compatibility.js";
+export * from "./current-bundle-schemas.js";
+export * from "./current-bundle-types.js";
 export * from "./current-schemas.js";
 export * from "./current-types.js";
 export * from "./current-validate.js";

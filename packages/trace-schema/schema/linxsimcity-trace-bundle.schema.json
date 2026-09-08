@@ -1,0 +1,313 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "index": {
+      "type": "object",
+      "properties": {
+        "schema": { "type": "string", "const": "linxsimcity.trace-index" },
+        "schemaVersion": { "type": "string", "const": "1" },
+        "runId": { "type": "string", "minLength": 1 },
+        "topologyFingerprint": { "type": "string", "minLength": 1 },
+        "chunks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "minLength": 1 },
+              "timeDomain": { "type": "string", "minLength": 1 },
+              "firstCycle": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$"
+              },
+              "lastCycle": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$"
+              },
+              "eventCount": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$"
+              },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "compressedBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              },
+              "checkpointId": { "type": "string", "minLength": 1 }
+            },
+            "required": [
+              "id",
+              "path",
+              "timeDomain",
+              "firstCycle",
+              "lastCycle",
+              "eventCount",
+              "sha256",
+              "compressedBytes",
+              "checkpointId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "checkpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "path": { "type": "string", "minLength": 1 },
+              "timeDomain": { "type": "string", "minLength": 1 },
+              "cycle": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$"
+              },
+              "eventOrdinal": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]{0,19})$"
+              },
+              "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+              "compressedBytes": {
+                "type": "integer",
+                "exclusiveMinimum": 0,
+                "maximum": 9007199254740991
+              }
+            },
+            "required": [
+              "id",
+              "path",
+              "timeDomain",
+              "cycle",
+              "eventOrdinal",
+              "sha256",
+              "compressedBytes"
+            ],
+            "additionalProperties": false
+          }
+        }
+      },
+      "required": [
+        "schema",
+        "schemaVersion",
+        "runId",
+        "topologyFingerprint",
+        "chunks",
+        "checkpoints"
+      ],
+      "additionalProperties": false
+    },
+    "checkpoint": {
+      "type": "object",
+      "properties": {
+        "schema": { "type": "string", "const": "linxsimcity.trace-checkpoint" },
+        "schemaVersion": { "type": "string", "const": "1" },
+        "runId": { "type": "string", "minLength": 1 },
+        "topologyFingerprint": { "type": "string", "minLength": 1 },
+        "timeDomain": { "type": "string", "minLength": 1 },
+        "cycle": { "type": "string", "pattern": "^(0|[1-9][0-9]{0,19})$" },
+        "eventOrdinal": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]{0,19})$"
+        },
+        "state": {
+          "type": "object",
+          "properties": {
+            "queueTokens": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "tokenId": { "type": "string", "minLength": 1 },
+                  "queueId": { "type": "string", "minLength": 1 },
+                  "state": {
+                    "type": "string",
+                    "enum": ["accepted", "visible"]
+                  },
+                  "slot": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["tokenId", "queueId", "state", "slot"],
+                "additionalProperties": false
+              }
+            },
+            "queueOccupancy": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "queueId": { "type": "string", "minLength": 1 },
+                  "occupancy": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "capacity": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": ["queueId", "occupancy", "capacity"],
+                "additionalProperties": false
+              }
+            },
+            "tileResidencies": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "residencyId": { "type": "string", "minLength": 1 },
+                  "tileId": { "type": "string", "minLength": 1 },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$"
+                  },
+                  "storageNodeId": { "type": "string", "minLength": 1 },
+                  "allocationEpoch": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$"
+                  },
+                  "bank": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "row": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "slot": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "address": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$"
+                  },
+                  "byteOffset": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "byteLength": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "fragmentIndex": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "fragmentCount": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "residencyId",
+                  "tileId",
+                  "version",
+                  "storageNodeId",
+                  "allocationEpoch",
+                  "byteOffset",
+                  "byteLength",
+                  "fragmentIndex",
+                  "fragmentCount"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "associations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "tokenId": { "type": "string", "minLength": 1 },
+                  "tileId": { "type": "string", "minLength": 1 },
+                  "version": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$"
+                  },
+                  "relation": {
+                    "type": "string",
+                    "enum": ["produces", "consumes", "transfers"]
+                  }
+                },
+                "required": ["tokenId", "tileId", "version", "relation"],
+                "additionalProperties": false
+              }
+            },
+            "computations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "tokenId": { "type": "string", "minLength": 1 },
+                  "entityId": { "type": "string", "minLength": 1 },
+                  "operation": { "type": "string", "minLength": 1 },
+                  "inputTileIds": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 }
+                  },
+                  "outputTileIds": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 }
+                  },
+                  "startCycle": {
+                    "type": "string",
+                    "pattern": "^(0|[1-9][0-9]{0,19})$"
+                  },
+                  "startPhase": {
+                    "type": "string",
+                    "enum": ["work", "xfer", "commit", "async"]
+                  }
+                },
+                "required": [
+                  "tokenId",
+                  "entityId",
+                  "operation",
+                  "inputTileIds",
+                  "outputTileIds",
+                  "startCycle",
+                  "startPhase"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "queueTokens",
+            "queueOccupancy",
+            "tileResidencies",
+            "associations",
+            "computations"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "schema",
+        "schemaVersion",
+        "runId",
+        "topologyFingerprint",
+        "timeDomain",
+        "cycle",
+        "eventOrdinal",
+        "state"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "required": ["index", "checkpoint"],
+  "additionalProperties": false,
+  "$id": "https://linxisa.github.io/LinxSimCity/schema/linxsimcity-trace-bundle.schema.json",
+  "title": "LinxSimCity trace bundle index and checkpoint contract"
+}

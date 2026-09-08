@@ -1,0 +1,30 @@
+{
+  "schema": "linxsimcity.trace-index",
+  "schemaVersion": "1",
+  "runId": "synthetic.queue-tile-compute",
+  "topologyFingerprint": "fnv1a64:cc7483e2ea7b3c41",
+  "chunks": [
+    {
+      "id": "core-000",
+      "path": "chunks/core-000.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "0",
+      "lastCycle": "5",
+      "eventCount": "12",
+      "sha256": "f20f2fd66f1039eb585d8435ff0580d3bd4a2049605bf2c1576f466aaed15982",
+      "compressedBytes": 569,
+      "checkpointId": "core-000"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "core-000",
+      "path": "checkpoints/core-000.json.gz",
+      "timeDomain": "core",
+      "cycle": "0",
+      "eventOrdinal": "0",
+      "sha256": "5beef5d6462ecb46f93ac667b33d6e859e2fb377cd6266367a8f9f9b6e0350fd",
+      "compressedBytes": 277
+    }
+  ]
+}

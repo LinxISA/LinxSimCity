@@ -14,12 +14,17 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npm run build
-      - run: node tools/linxtrace/dist/main.js validate fixtures/synthetic/minimal.trace-dir
+      - run: npm run trace:verify -- fixtures/current/minimal.bundle
   cpp:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - run: npm ci
       - run: cmake -S sdk/cpp -B build/sdk -DBUILD_TESTING=ON
       - run: cmake --build build/sdk --parallel
       - run: ctest --test-dir build/sdk --output-on-failure
       - run: ./build/sdk/write_synthetic build/ci-synthetic.trace-dir
+      - run: npm run build --workspace @linxsimcity/simtrace
+      - run: npm run trace:verify -- build/ci-synthetic.trace-dir

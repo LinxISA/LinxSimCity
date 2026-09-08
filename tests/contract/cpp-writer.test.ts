@@ -6,16 +6,13 @@ import { gunzipSync } from "node:zlib";
 
 import { afterEach, expect, test } from "vitest";
 
+import { validateTraceBundle } from "../../tools/simtrace/src/bundle.js";
+
 const repositoryRoot = resolve(import.meta.dirname, "../..");
 const buildDirectory = join(repositoryRoot, "build/sdk");
 const writerPath = join(buildDirectory, "write_synthetic");
-const cliPath = join(repositoryRoot, "tools/linxtrace/src/main.ts");
+const cliPath = join(repositoryRoot, "tools/simtrace/src/main.ts");
 const tsxPath = join(repositoryRoot, "node_modules/tsx/dist/cli.mjs");
-const expectedPath = join(
-  repositoryRoot,
-  "fixtures/synthetic/minimal.expected.json",
-);
-
 const temporaryDirectories: string[] = [];
 
 function run(command: string, args: string[]) {
@@ -39,107 +36,81 @@ afterEach(async () => {
   );
 });
 
-test("C++ writer output validates identically as a directory and ZIP", async () => {
-  const root = await mkdtemp(join(tmpdir(), "linxsimcity-contract-"));
+test("C++ writer output satisfies the current TypeScript bundle contract", async () => {
+  const root = await mkdtemp(join(tmpdir(), "linxsimcity-current-contract-"));
   temporaryDirectories.push(root);
   const directory = join(root, "synthetic.trace-dir");
-  const archive = join(root, "synthetic.linxtrace");
 
   run("cmake", ["-S", "sdk/cpp", "-B", "build/sdk", "-DBUILD_TESTING=ON"]);
   run("cmake", ["--build", "build/sdk", "--target", "write_synthetic"]);
   run(writerPath, [directory]);
 
-  const directoryValidation = run(process.execPath, [
-    tsxPath,
-    cliPath,
-    "validate",
-    directory,
-    "--json",
+  const validation = validateTraceBundle(directory);
+  expect(validation.diagnostics).toEqual([]);
+  expect(validation.manifest).toMatchObject({
+    schema: "linxsimcity.trace",
+    schemaVersion: "1",
+    runId: "synthetic.queue-flow",
+    eventCount: "4",
+    capabilities: ["queue-lifecycle"],
+  });
+  expect(validation.index.chunks).toHaveLength(1);
+  expect(validation.index.checkpoints).toHaveLength(1);
+  expect(validation.events.map((event) => event.type)).toEqual([
+    "queue.write-attempt",
+    "queue.accept",
+    "queue.visible",
+    "queue.read",
   ]);
-  run(process.execPath, [tsxPath, cliPath, "pack", directory, archive]);
-  const archiveValidation = run(process.execPath, [
-    tsxPath,
-    cliPath,
-    "validate",
-    archive,
-    "--json",
-  ]);
+  expect(
+    validation.events.every((event) => typeof event.cycle === "string"),
+  ).toBe(true);
 
-  expect(JSON.parse(archiveValidation.stdout)).toEqual(
-    JSON.parse(directoryValidation.stdout),
-  );
+  const cli = run(process.execPath, [tsxPath, cliPath, "validate", directory]);
+  expect(JSON.parse(cli.stdout)).toMatchObject({
+    valid: true,
+    runId: "synthetic.queue-flow",
+    events: 4,
+    chunks: 1,
+    checkpoints: 1,
+    diagnostics: [],
+  });
 
-  const [manifest, topology, expected, chunk] = await Promise.all([
-    readFile(join(directory, "manifest.json"), "utf8").then(JSON.parse),
-    readFile(join(directory, "topology.json"), "utf8").then(JSON.parse),
-    readFile(expectedPath, "utf8").then(JSON.parse),
-    readFile(join(directory, "chunks/000000.jsonl.gz")),
+  const [index, chunkBytes] = await Promise.all([
+    readFile(join(directory, "index.json"), "utf8").then(JSON.parse),
+    readFile(join(directory, validation.index.chunks[0]!.path)),
   ]);
-  const events = gunzipSync(chunk)
+  const eventDocuments = gunzipSync(chunkBytes)
     .toString("utf8")
     .trimEnd()
     .split("\n")
-    .map((line) => JSON.parse(line));
-  expect({
-    eventCount: manifest.eventCount,
-    eventTypes: [...new Set(events.map(({ type }) => type))].toSorted(),
-    topologyIds: topology.entities
-      .map(({ id }: { id: string }) => id)
-      .toSorted(),
-  }).toEqual(expected);
-  expect(
-    events
-      .filter(({ cycle, type }) => cycle === 120 && type === "cell.read")
-      .map(({ entity_id }) => entity_id),
-  ).toEqual([
-    "pe0.bg.bank0.row0",
-    "pe0.bg.bank1.row0",
-    "pe0.bg.bank2.row0",
-    "pe0.bg.bank3.row0",
-  ]);
-  expect(events).toContainEqual(
-    expect.objectContaining({
-      cycle: 120,
-      type: "pipe.transfer",
-      entity_id: "pipe.b-broadcast",
-      payload: expect.objectContaining({
-        operand: "B",
-        direction: "vertical",
-        gmma: true,
-      }),
-    }),
-  );
-  expect(events).toContainEqual(
-    expect.objectContaining({
-      cycle: 201,
-      type: "rob.tail",
-      entity_id: "core.scalar.rob.slot0",
-      payload: expect.objectContaining({ wrap: true }),
-    }),
-  );
+    .map((line) => JSON.parse(line) as Record<string, unknown>);
+  expect(index.chunks[0]).toMatchObject({
+    firstCycle: "0",
+    lastCycle: "2",
+    eventCount: "4",
+  });
+  expect(eventDocuments[0]).toMatchObject({
+    timeDomain: "core",
+    cycle: "0",
+    phase: "work",
+    sequence: 0,
+    type: "queue.write-attempt",
+    entityId: "queue.issue",
+  });
 }, 30_000);
 
-test("checked-in malformed fixtures each contain one documented error", () => {
-  const fixtures = [
-    ["missing-entity.trace-dir", "missing_entity_reference"],
-    ["out-of-order.trace-dir", "event_order"],
-  ] as const;
-
-  for (const [fixture, expectedCode] of fixtures) {
-    const result = spawnSync(
-      process.execPath,
-      [
-        tsxPath,
-        cliPath,
-        "validate",
-        join(repositoryRoot, "fixtures/malformed", fixture),
-        "--json",
-      ],
-      { cwd: repositoryRoot, encoding: "utf8" },
-    );
-    expect(result.status).toBe(2);
-    expect(JSON.parse(result.stdout).errors).toEqual([
-      expect.objectContaining({ code: expectedCode }),
-    ]);
-  }
+test("the current CLI rejects a legacy viewer bundle", () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      tsxPath,
+      cliPath,
+      "validate",
+      join(repositoryRoot, "fixtures/synthetic/minimal.trace-dir"),
+    ],
+    { cwd: repositoryRoot, encoding: "utf8" },
+  );
+  expect(result.status).toBe(1);
+  expect(result.stderr).toMatch(/schema|current|invalid/i);
 });

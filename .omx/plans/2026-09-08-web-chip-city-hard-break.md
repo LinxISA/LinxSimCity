@@ -102,7 +102,7 @@
 - [ ] 重建 `packages/topology`、`packages/trace-schema`；新增 `packages/component-catalog`，定义积木、装配图、布局、存档、run、事件和快照。
 - [x] 编写 catalog import，从固定 pyCircuit commit 的 `catalog.json` 与 Git tree manifest 生成带出处和 hash 的 240 项映射报告；reported snapshot 状态与 committed source/test-path evidence 分开记录，不能把目录候选升级成执行拓扑。
 - [x] 增加负向 fixture/contract matrix：重复 ID、悬空端口、类型/宽度/方向不符、重复 owner、错误配置 hash、无损整数类型/溢出、非法事件顺序、旧格式、丢事件或截断矛盾。
-- [ ] 提供至少一个新格式 synthetic bundle、一个 topology fixture 和一个 schema 校验入口；更新 `tools/linxtrace`、`sdk/cpp` 的最小 writer。
+- [x] 提供当前格式 synthetic gzip bundle、topology fixture、index/checkpoint schema 和 `tools/simtrace` 目录校验入口；hard-break 重写 `sdk/cpp` 最小 writer，并由 CI 使用 TypeScript validator 互验其输出。旧 `tools/linxtrace` 仅为隔离的 viewer 历史路径，M8 随旧 viewer 删除。
 
 **完成条件：** 240 项唯一候选全部有去向和来源；7/31 层级保持可追溯；错误 fixture 被定位拒绝；定义与实例数量分离；新契约可以生成并读取最小 bundle。
 

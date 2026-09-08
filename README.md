@@ -11,14 +11,16 @@ packages remain isolated only while the new trace path is implemented.
 
 ## Current topology slice
 
-- Ten parameterized hardware component definitions with typed ports
+- Twelve parameterized hardware kinds with typed ports and declared visual profiles
 - Stable topology identities and hardware fingerprints
-- Directed connection validation with one generated 3D link per topology edge
-- Stable topological sorting, longest-path X ranks, scope Z swimlanes,
-  barycenter crossing reduction, and orthogonal connection routing
+- Directed connection validation; each SimQueue corridor retains the Queue ID
+  and both producer/consumer topology edge IDs
+- Queue-collapsed topological sorting, nine longest-path module ranks,
+  size-aware Z packing, barycenter crossing reduction, and orthogonal routing
 - Nested labeled districts generated from `parentId`, with hierarchy paths in
   the inspector
-- Stable scope colors and flow-aligned transparent SimQueue pipes
+- Stable scope colors, roof-level transparent SimQueue pipes, and fluorescent
+  preview packets
 - Mandatory physical-area records in square micrometres, including explicit
   unknown and aggregate evidence states
 - Read-only topology import, search, selection, connection navigation, and node
@@ -32,9 +34,10 @@ packages remain isolated only while the new trace path is implemented.
 - Separate 240-entry DavinciOO H3 browser with 7/31 hierarchy, disposition,
   committed source/test-path evidence, ownership state, and area status
 
-The trace button is intentionally disabled until the new trace contract and
-first real SuperScalarModel adapter are connected. The UI does not fabricate
-runtime results.
+The current trace schema, chunk/index/checkpoint bundle, TypeScript validator,
+and C++ writer are implemented. The game trace button remains disabled until
+the current Worker reducer and first real SuperScalarModel adapter are
+connected. The UI does not fabricate runtime results.
 
 ## Run locally
 
@@ -51,15 +54,17 @@ Run the repository checks with:
 npm run check
 npm run build
 npm run pages:verify
-npm run trace:verify -- fixtures/current/minimal.run.json fixtures/current/minimal.topology.json
+npm run trace:verify -- fixtures/current/minimal.bundle
 ```
 
-The C++ trace SDK remains separately verifiable during the trace transition:
+The C++ writer produces the same current bundle consumed by `simtrace`:
 
 ```sh
 cmake -S sdk/cpp -B build/sdk -DBUILD_TESTING=ON
 cmake --build build/sdk --parallel
 ctest --test-dir build/sdk --output-on-failure
+./build/sdk/write_synthetic build/cpp-current.trace-dir
+npm run trace:verify -- build/cpp-current.trace-dir
 ```
 
 Read [the game design](DESIGN.md),

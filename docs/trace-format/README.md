@@ -5,10 +5,10 @@ It binds every run to one topology fingerprint, simulator revision and config,
 workload, time-domain set, observation capability set, event window, and loss
 record.
 
-The contract currently covers manifest and event semantics. Chunked storage,
-checkpoints, Worker replay, and the CLI transition are implemented in M4. The
-old fixed-viewer bundle reader is isolated from `apps/game` and is not a
-compatibility path for this contract.
+The contract covers manifest and event semantics plus chunked gzip storage,
+hash-bound indexes, and recoverable checkpoints. Worker replay and game UI
+integration are implemented in M4. The old fixed-viewer bundle reader is
+isolated from `apps/game` and is not a compatibility path for this contract.
 
 ## Lossless values and ordering
 
@@ -70,7 +70,10 @@ matching terminal event is invalid when the window starts from reset.
 
 - TypeScript contract: `packages/trace-schema/src/current-*.ts`
 - JSON Schema: `packages/trace-schema/schema/linxsimcity-trace.schema.json`
+- Bundle JSON Schema:
+  `packages/trace-schema/schema/linxsimcity-trace-bundle.schema.json`
 - Positive flow: `fixtures/current/minimal.run.json`
+- Chunked positive bundle: `fixtures/current/minimal.bundle/`
 - Negative matrix: `fixtures/current/negative-cases.json`
 
 The negative matrix covers old-format input, number-coerced u64 values, invalid
@@ -84,4 +87,44 @@ Validate the positive fixture against its bound topology with:
 npm run trace:verify -- \
   fixtures/current/minimal.run.json \
   fixtures/current/minimal.topology.json
+```
+
+## Current bundle
+
+A directory bundle contains exactly the current public storage path:
+
+```text
+manifest.json
+topology.json
+index.json
+chunks/<domain>-<ordinal>.jsonl.gz
+checkpoints/<domain>-<ordinal>.json.gz
+```
+
+`index.json` uses schema `linxsimcity.trace-index` version `1`. Every chunk
+records its time domain, inclusive cycle bounds, decimal-string event count,
+compressed byte size, SHA-256, and nearest preceding checkpoint ID. Every
+checkpoint index entry records a decimal-string cycle and global event ordinal,
+compressed size, and SHA-256.
+
+A checkpoint uses schema `linxsimcity.trace-checkpoint` version `1` and binds
+the same run ID and topology fingerprint. Its strict reducer state contains
+Queue tokens and occupancy, Tile residencies, token/Tile associations, and
+in-flight computations. Versions, allocation epochs, cycles, addresses, and
+event ordinals remain lossless decimal strings.
+
+Validate all files, hashes, bindings, chunk bounds, checkpoint state, and event
+semantics with:
+
+```sh
+npm run trace:verify -- fixtures/current/minimal.bundle
+```
+
+The C++ SDK example emits the same format and is cross-validated by CI:
+
+```sh
+cmake -S sdk/cpp -B build/sdk -DBUILD_TESTING=ON
+cmake --build build/sdk --parallel
+./build/sdk/write_synthetic build/cpp-current.trace-dir
+npm run trace:verify -- build/cpp-current.trace-dir
 ```
