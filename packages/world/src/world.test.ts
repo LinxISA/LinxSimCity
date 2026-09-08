@@ -6,10 +6,18 @@ import {
   generateWorldFromTopology,
   positionToTuple,
   topologyFingerprint,
+  topologyHierarchy,
   validateArchitectureTopology,
   worldPosition,
 } from "./index.js";
 import type { ArchitectureTopology } from "./index.js";
+
+const unknownArea = {
+  value: null,
+  unit: "um2",
+  status: "unknown",
+  source: "test:no-area",
+} as const;
 
 function topology(): ArchitectureTopology {
   return {
@@ -23,16 +31,19 @@ function topology(): ArchitectureTopology {
         id: "queue.1",
         definitionId: "core.queue",
         parameters: { capacity: 16 },
+        area: unknownArea,
       },
       {
         id: "vector.1",
         definitionId: "core.vector",
         parameters: { lanes: 8 },
+        area: unknownArea,
       },
       {
         id: "sram.1",
         definitionId: "core.sram",
         parameters: { banks: 8 },
+        area: unknownArea,
       },
     ],
     edges: [
@@ -102,12 +113,74 @@ describe("topology-driven world generation", () => {
     expect(movedWorld.topologyFingerprint).toBe(first.topologyFingerprint);
   });
 
+  test("draws parent containers around children and preserves hierarchy depth", () => {
+    const source = topology();
+    const hierarchical: ArchitectureTopology = {
+      ...source,
+      nodes: [
+        {
+          id: "scope.root",
+          definitionId: "core.container",
+          parameters: {},
+          area: {
+            value: null,
+            unit: "um2",
+            status: "aggregate",
+            source: "test:children-have-unknown-area",
+          },
+        },
+        ...source.nodes.map((node) => ({ ...node, parentId: "scope.root" })),
+      ],
+    };
+    const world = generateWorldFromTopology(hierarchical, CORE_CATALOG);
+    const root = world.instances.find((item) => item.id === "scope.root")!;
+    const child = world.instances.find((item) => item.id === "queue.1")!;
+    expect(root.hierarchyDepth).toBe(0);
+    expect(child.hierarchyDepth).toBe(1);
+    expect(root.visualSize?.x).toBeGreaterThan(10);
+    expect(topologyHierarchy(hierarchical).map((item) => item.depth)).toEqual([
+      0, 1, 1, 1,
+    ]);
+  });
+
+  test("requires an evidence-qualified physical area on every node", () => {
+    const source = topology();
+    const invalid: ArchitectureTopology = {
+      ...source,
+      nodes: [
+        {
+          ...source.nodes[0]!,
+          area: {
+            value: null,
+            unit: "um2",
+            status: "measured",
+            source: "test:missing-value",
+          },
+        },
+        ...source.nodes.slice(1),
+      ],
+    };
+    expect(validateArchitectureTopology(invalid, CORE_CATALOG)).toContainEqual(
+      expect.objectContaining({ code: "invalid_area" }),
+    );
+  });
+
   test("rejects a tile edge into a transaction input", () => {
     const invalid: ArchitectureTopology = {
       ...topology(),
       nodes: [
-        { id: "sram.1", definitionId: "core.sram", parameters: {} },
-        { id: "alu.1", definitionId: "core.alu", parameters: {} },
+        {
+          id: "sram.1",
+          definitionId: "core.sram",
+          parameters: {},
+          area: unknownArea,
+        },
+        {
+          id: "alu.1",
+          definitionId: "core.alu",
+          parameters: {},
+          area: unknownArea,
+        },
       ],
       edges: [
         {

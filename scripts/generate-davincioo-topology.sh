@@ -9,6 +9,17 @@ artifact_root="${repository_root}/build/topology/davincioo-queue-model"
 plan_path="${artifact_root}/davincioo.queue-plan.json"
 output_path="${repository_root}/apps/game/public/topologies/davincioo-queue-model.json"
 
+revision="$(git -C "${PYCIRCUIT_ROOT}" rev-parse HEAD)"
+repository="$(git -C "${PYCIRCUIT_ROOT}" remote get-url origin)"
+if ! git -C "${PYCIRCUIT_ROOT}" diff --quiet -- \
+  examples/agentic-circuit/pipelines/davincioo_queue_model.py \
+  compiler/acir; then
+  printf '%s\n' \
+    "Refusing to replace the default topology: pyCircuit model/compiler inputs are dirty." \
+    >&2
+  exit 1
+fi
+
 mkdir -p "${artifact_root}" "$(dirname "${output_path}")"
 
 PYTHONPATH="${PYCIRCUIT_ROOT}/python/agentic-circuit/src" \
@@ -24,8 +35,6 @@ PYTHONPATH="${PYCIRCUIT_ROOT}/python/agentic-circuit/src" \
 
 npm run build --workspace @linxsimcity/topology-import
 
-revision="$(git -C "${PYCIRCUIT_ROOT}" rev-parse HEAD)"
-repository="$(git -C "${PYCIRCUIT_ROOT}" remote get-url origin)"
 import_command=(
   node "${repository_root}/tools/topology-import/dist/main.js"
   queue-plan "${plan_path}"
@@ -37,10 +46,4 @@ import_command=(
 if ! git -C "${PYCIRCUIT_ROOT}" diff --quiet; then
   import_command+=(--worktree-dirty)
 fi
-if ! git -C "${PYCIRCUIT_ROOT}" diff --quiet -- \
-  examples/agentic-circuit/pipelines/davincioo_queue_model.py \
-  compiler/acir; then
-  import_command+=(--relevant-inputs-dirty)
-fi
-
 "${import_command[@]}"

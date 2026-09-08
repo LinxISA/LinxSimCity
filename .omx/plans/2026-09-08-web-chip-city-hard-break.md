@@ -50,6 +50,7 @@
 
 - 先精制约 10–15 种参数化形态：Queue/FIFO、Table/CAM、SRAM/Bank、Register File、ALU、Vector、Cube/MAC、Arbiter、Crossbar、Port/Link、复合模块容器等。
 - 每个定义声明稳定类型 ID、参数、端口类型/方向/宽度/协议、状态字段、空间包围盒、吸附点、LOD、材质语义、数据绑定与来源。
+- 每个 topology node 必须携带物理面积记录，统一归一化为 `µm²`，并声明 `measured / estimated / aggregate / unknown` 与证据来源；缺少 PPA 数据时使用显式 unknown，不能用 3D 外形面积代替。
 - 240 个候选按 `leaf / contained-state / interface / alias / unresolved` 等明确归属映射。别名指向唯一 owner，内部状态在 owner 内展开，未决组件标识状态；不能重复分配同一状态。
 - 功能域映射城区，子系统映射街区，模块映射建筑；容量、bank、lane 等参数改变几何与可检查内容。容量数字不直接当作真实物理尺寸或面积估计。
 - 视觉方向：精密工业微缩城市，统一倒角、底座、端口、金属/陶瓷/玻璃材质、柔和阴影与克制发光。活动、阻塞、未知、选中各有固定语义，颜色同时配合形状或文字。
@@ -95,6 +96,7 @@
 - [x] 从 pyCircuit canonical Agentic Circuit QueueGraph plan 导入 scope、block、SimQueue 和 producer/consumer edge。
 - [x] 默认网页场景由生成的 39-node / 32-edge DavinciOO QueueGraph topology 加载，并绑定 plan/model SHA-256 与 source revision。
 - [x] 再生成脚本在相同 revision 下产生逐字节一致的 topology；Pages 验证会拒绝缺失、脏相关输入或 hash 不符的默认 topology。
+- [x] 每个 topology node 强制记录 `µm²` 面积、状态与来源；QueueGraph 未提供的 PPA 数据保留为 unknown，容器保留为 aggregate。
 
 - [ ] 重建 `packages/topology`、`packages/trace-schema`；新增 `packages/component-catalog`，定义积木、装配图、布局、存档、run、事件和快照。
 - [ ] 编写 `tools/catalog-import`，从固定 pyCircuit/DavinciOO 来源生成带出处和 hash 的 240 项映射报告；当前实现/可观测状态从实际模块与测试核对，不能照搬初始快照状态。
@@ -114,12 +116,13 @@
 
 ### M3 — 拓扑驱动的 XYZ 城市生成器（依赖 M1、M2）
 
-- [ ] 用 `apps/game` 替换旧 viewer 主入口，新增 `packages/world`；同步更新 workspace、构建和启动脚本，移除 editor 主路径。
-- [ ] 从拓扑节点、层级、组件尺寸和边生成确定性 XYZ 布局与端口连线；每条场景连接必须回指唯一 topology edge。
+- [x] 用 `apps/game` 替换旧 viewer 主入口，新增 `packages/world`；同步更新 workspace、构建和启动脚本，移除 editor 主路径。
+- [x] 从拓扑节点、层级、组件尺寸和边生成确定性 XYZ 布局与端口连线；每条场景连接必须回指唯一 topology edge。
+- [x] `parentId` 生成嵌套城区/街区/模块层次；容器从直接子节点计算展示包围盒，树视图、3D 分区和检查器路径使用同一父链。
 - [ ] 完成三维分块、局部坐标、相机、搜索、切片/展开和路径聚焦；不依赖有限大小的旧地板或固定城区坐标。
 - [ ] 支持 topology 导入、schema/语义诊断和只读节点检查；布局偏好单独保存且不能修改 topology hash。
 
-**完成条件：** 对同一拓扑重复生成得到相同节点坐标和边路由；拓扑边与场景连接 1:1；导入后无身份/连接丢失；在 XYZ 正负方向跨块生成后仍能准确定位和拾取。
+**完成条件：** 对同一拓扑重复生成得到相同节点坐标和边路由；拓扑边与场景连接 1:1；每个节点具有合法面积记录；父子节点位于匹配的嵌套分区；导入后无身份/连接丢失；在 XYZ 正负方向跨块生成后仍能准确定位和拾取。
 
 ### M4 — 确定性回放与 Tile 追踪（依赖 M1；可与 M2/M3 并行）
 

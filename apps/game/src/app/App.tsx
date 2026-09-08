@@ -3,6 +3,7 @@ import type { BrickDefinition } from "@linxsimcity/component-catalog";
 import {
   generateWorldFromTopology,
   positionToTuple,
+  topologyHierarchy,
   validateArchitectureTopology,
 } from "@linxsimcity/world";
 import type {
@@ -38,6 +39,20 @@ function nodeConnections(
   };
 }
 
+function topologyNodePath(
+  topology: ArchitectureTopology,
+  node: TopologyNode,
+): string {
+  const byId = new Map(topology.nodes.map((item) => [item.id, item]));
+  const path: string[] = [];
+  let current: TopologyNode | undefined = node;
+  while (current) {
+    path.unshift(current.label ?? current.id);
+    current = current.parentId ? byId.get(current.parentId) : undefined;
+  }
+  return path.join(" › ");
+}
+
 export function App() {
   const [topology, setTopology] = useState<ArchitectureTopology>();
   const [loadError, setLoadError] = useState<string>();
@@ -63,7 +78,11 @@ export function App() {
   const selectedDefinition = selectedNode
     ? CORE_BRICK_BY_ID.get(selectedNode.definitionId)
     : undefined;
-  const visibleNodes = (topology?.nodes ?? []).filter((node) => {
+  const hierarchy = useMemo(
+    () => (topology ? topologyHierarchy(topology) : []),
+    [topology],
+  );
+  const visibleNodes = hierarchy.filter(({ node }) => {
     const query = filter.trim().toLowerCase();
     if (!query) return true;
     const definition = CORE_BRICK_BY_ID.get(node.definitionId);
@@ -192,7 +211,7 @@ export function App() {
             />
           </div>
           <div className="topology-list">
-            {visibleNodes.map((node) => {
+            {visibleNodes.map(({ node, depth }) => {
               const definition = CORE_BRICK_BY_ID.get(node.definitionId);
               const connections = topology
                 ? nodeConnections(topology, node.id)
@@ -201,6 +220,7 @@ export function App() {
                 <button
                   type="button"
                   key={node.id}
+                  style={{ paddingLeft: `${9 + depth * 13}px` }}
                   className={
                     selectedNodeId === node.id
                       ? "topology-node active"
@@ -213,7 +233,9 @@ export function App() {
                   />
                   <span>
                     <strong>{node.label ?? node.id}</strong>
-                    <small>{definition?.label ?? node.definitionId}</small>
+                    <small>
+                      L{depth} · {definition?.label ?? node.definitionId}
+                    </small>
                   </span>
                   <span className="edge-count">
                     {connections.incoming.length}↓ {connections.outgoing.length}
@@ -233,8 +255,12 @@ export function App() {
               <strong>{topology?.edges.length ?? 0}</strong>
             </div>
             <div>
-              <span>版本</span>
-              <strong>{topology?.source?.planVersion ?? "—"}</strong>
+              <span>面积已知</span>
+              <strong>
+                {topology?.nodes.filter((node) => node.area.value !== null)
+                  .length ?? 0}
+                /{topology?.nodes.length ?? 0}
+              </strong>
             </div>
           </div>
         </aside>
@@ -369,10 +395,28 @@ function NodeInspector({
           <strong>{position[2]}</strong>
         </div>
         <div>
-          <span>层级</span>
-          <strong>{node.parentId ?? "root"}</strong>
+          <span>深度</span>
+          <strong>L{instance.hierarchyDepth}</strong>
         </div>
       </div>
+
+      <section>
+        <h3>层次路径</h3>
+        <div className="hierarchy-path">{topologyNodePath(topology, node)}</div>
+      </section>
+
+      <section>
+        <h3>物理面积</h3>
+        <div className={`area-record area-${node.area.status}`}>
+          <span>{node.area.status}</span>
+          <strong>
+            {node.area.value === null
+              ? "Unknown"
+              : `${node.area.value.toLocaleString()} µm²`}
+          </strong>
+          <small>{node.area.source}</small>
+        </div>
+      </section>
 
       <section>
         <h3>模型信息</h3>

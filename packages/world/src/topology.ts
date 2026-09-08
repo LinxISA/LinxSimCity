@@ -1,5 +1,6 @@
 import type {
   BrickDefinition,
+  BrickSize,
   ComponentCatalog,
 } from "@linxsimcity/component-catalog";
 
@@ -31,12 +32,13 @@ export function topologyFingerprint(topology: ArchitectureTopology): string {
     id: topology.id,
     revision: topology.revision,
     nodes: [...topology.nodes]
-      .map(({ id, definitionId, parentId, parameters, attributes }) => ({
+      .map(({ id, definitionId, parentId, parameters, attributes, area }) => ({
         id,
         definitionId,
         ...(parentId ? { parentId } : {}),
         parameters,
         ...(attributes ? { attributes } : {}),
+        area,
       }))
       .sort((left, right) => left.id.localeCompare(right.id)),
     edges: [...topology.edges]
@@ -111,6 +113,30 @@ export function validateArchitectureTopology(
       });
       return;
     }
+    const area = node.area;
+    const validAreaValue =
+      area &&
+      (area.value === null || (Number.isFinite(area.value) && area.value > 0));
+    const valueRequired =
+      area && ["measured", "estimated"].includes(area.status);
+    if (
+      !area ||
+      !["measured", "estimated", "aggregate", "unknown"].includes(
+        area.status,
+      ) ||
+      area.unit !== "um2" ||
+      !area.source ||
+      !validAreaValue ||
+      (valueRequired && area.value === null) ||
+      (area.status === "unknown" && area.value !== null)
+    ) {
+      diagnostics.push({
+        path: `${path}.area`,
+        code: "invalid_area",
+        message:
+          "area must use um2, carry a source, and match its evidence status",
+      });
+    }
     for (const [parameterId, value] of Object.entries(node.parameters)) {
       const parameter = definition.parameters[parameterId];
       if (
@@ -137,6 +163,31 @@ export function validateArchitectureTopology(
         code: "invalid_parent",
         message: `parent ${node.parentId} does not exist`,
       });
+    } else if (node.parentId) {
+      const parent = nodeById.get(node.parentId)!;
+      if (definitionById.get(parent.definitionId)?.kind !== "container") {
+        diagnostics.push({
+          path: `nodes[${index}].parentId`,
+          code: "invalid_parent",
+          message: `parent ${node.parentId} is not a hierarchy container`,
+        });
+      }
+      const visited = new Set([node.id]);
+      let ancestor: TopologyNode | undefined = parent;
+      while (ancestor) {
+        if (visited.has(ancestor.id)) {
+          diagnostics.push({
+            path: `nodes[${index}].parentId`,
+            code: "invalid_parent",
+            message: "hierarchy contains a parent cycle",
+          });
+          break;
+        }
+        visited.add(ancestor.id);
+        ancestor = ancestor.parentId
+          ? nodeById.get(ancestor.parentId)
+          : undefined;
+      }
     }
   });
 
@@ -254,6 +305,84 @@ function calculateLayers(topology: ArchitectureTopology): Map<string, number> {
   return layer;
 }
 
+export interface TopologyHierarchyEntry {
+  readonly node: TopologyNode;
+  readonly depth: number;
+}
+
+export function topologyHierarchy(
+  topology: ArchitectureTopology,
+): readonly TopologyHierarchyEntry[] {
+  const children = new Map<string | undefined, TopologyNode[]>();
+  for (const node of topology.nodes) {
+    const siblings = children.get(node.parentId) ?? [];
+    siblings.push(node);
+    children.set(node.parentId, siblings);
+  }
+  for (const siblings of children.values()) {
+    siblings.sort((left, right) => left.id.localeCompare(right.id));
+  }
+  const result: TopologyHierarchyEntry[] = [];
+  const visit = (node: TopologyNode, depth: number) => {
+    result.push({ node, depth });
+    for (const child of children.get(node.id) ?? []) visit(child, depth + 1);
+  };
+  for (const root of children.get(undefined) ?? []) visit(root, 0);
+  return result;
+}
+
+interface GridMetrics {
+  readonly size: BrickSize;
+  readonly positions: readonly (readonly [number, number])[];
+}
+
+const HIERARCHY_GAP = 5;
+
+function gridMetrics(sizes: readonly BrickSize[]): GridMetrics {
+  if (sizes.length === 0) {
+    return { size: { x: 10, y: 1, z: 8 }, positions: [] };
+  }
+  const columns = Math.ceil(Math.sqrt(sizes.length));
+  const rows = Math.ceil(sizes.length / columns);
+  const columnWidths = Array.from({ length: columns }, () => 0);
+  const rowDepths = Array.from({ length: rows }, () => 0);
+  sizes.forEach((size, index) => {
+    const column = index % columns;
+    const row = Math.floor(index / columns);
+    columnWidths[column] = Math.max(columnWidths[column]!, size.x);
+    rowDepths[row] = Math.max(rowDepths[row]!, size.z);
+  });
+  const width =
+    columnWidths.reduce((sum, value) => sum + value, 0) +
+    HIERARCHY_GAP * (columns + 1);
+  const depth =
+    rowDepths.reduce((sum, value) => sum + value, 0) +
+    HIERARCHY_GAP * (rows + 1);
+  const xCenters: number[] = [];
+  let x = -width / 2 + HIERARCHY_GAP;
+  for (const columnWidth of columnWidths) {
+    xCenters.push(x + columnWidth / 2);
+    x += columnWidth + HIERARCHY_GAP;
+  }
+  const zCenters: number[] = [];
+  let z = -depth / 2 + HIERARCHY_GAP;
+  for (const rowDepth of rowDepths) {
+    zCenters.push(z + rowDepth / 2);
+    z += rowDepth + HIERARCHY_GAP;
+  }
+  return {
+    size: {
+      x: width,
+      y: Math.max(...sizes.map((size) => size.y)) + 0.4,
+      z: depth,
+    },
+    positions: sizes.map((_, index) => [
+      xCenters[index % columns]!,
+      zCenters[Math.floor(index / columns)]!,
+    ]),
+  };
+}
+
 export function generateWorldFromTopology(
   topology: ArchitectureTopology,
   catalog: ComponentCatalog,
@@ -266,42 +395,70 @@ export function generateWorldFromTopology(
     catalog.definitions.map((item) => [item.id, item]),
   );
   const layers = calculateLayers(topology);
-  const byLayer = new Map<number, TopologyNode[]>();
+  const children = new Map<string | undefined, TopologyNode[]>();
   for (const node of topology.nodes) {
-    const nodeLayer = layers.get(node.id) ?? 0;
-    const values = byLayer.get(nodeLayer) ?? [];
+    const values = children.get(node.parentId) ?? [];
     values.push(node);
-    byLayer.set(nodeLayer, values);
+    children.set(node.parentId, values);
   }
+  for (const values of children.values()) {
+    values.sort((left, right) => {
+      const layerDifference =
+        (layers.get(left.id) ?? 0) - (layers.get(right.id) ?? 0);
+      return layerDifference || left.id.localeCompare(right.id);
+    });
+  }
+  const measured = new Map<string, BrickSize>();
+  const measure = (node: TopologyNode): BrickSize => {
+    const cached = measured.get(node.id);
+    if (cached) return cached;
+    const definition = definitionById.get(node.definitionId)!;
+    const childNodes = children.get(node.id) ?? [];
+    const size =
+      definition.kind === "container" && childNodes.length > 0
+        ? gridMetrics(childNodes.map(measure)).size
+        : definition.size;
+    measured.set(node.id, size);
+    return size;
+  };
   const instances: BrickInstance[] = [];
-  for (const [nodeLayer, nodes] of [...byLayer].sort(
-    ([left], [right]) => left - right,
-  )) {
-    nodes.sort((left, right) => left.id.localeCompare(right.id));
-    const totalDepth = nodes.reduce((sum, node) => {
-      const definition = definitionById.get(node.definitionId)!;
-      return sum + definition.size.z + 4;
-    }, 0);
-    let z = -totalDepth / 2;
-    for (const node of nodes) {
-      const definition = definitionById.get(node.definitionId)!;
-      z += definition.size.z / 2 + 2;
-      instances.push({
-        id: node.id,
-        definitionId: node.definitionId,
-        ...(node.label ? { label: node.label } : {}),
-        transform: {
-          position: worldPosition(nodeLayer * 13 - 13, 0, Math.round(z)),
-          yawQuarterTurns: 0,
-        },
-        parameters: {
-          ...defaultParameters(definition),
-          ...node.parameters,
-        },
-      });
-      z += definition.size.z / 2 + 2;
-    }
-  }
+  const place = (
+    node: TopologyNode,
+    x: number,
+    z: number,
+    hierarchyDepth: number,
+  ) => {
+    const definition = definitionById.get(node.definitionId)!;
+    const childNodes = children.get(node.id) ?? [];
+    const visualSize = measure(node);
+    instances.push({
+      id: node.id,
+      definitionId: node.definitionId,
+      ...(node.label ? { label: node.label } : {}),
+      transform: {
+        position: worldPosition(Math.round(x), hierarchyDepth, Math.round(z)),
+        yawQuarterTurns: 0,
+      },
+      parameters: {
+        ...defaultParameters(definition),
+        ...node.parameters,
+      },
+      ...(definition.kind === "container" ? { visualSize } : {}),
+      hierarchyDepth,
+    });
+    if (childNodes.length === 0) return;
+    const metrics = gridMetrics(childNodes.map(measure));
+    childNodes.forEach((child, index) => {
+      const [offsetX, offsetZ] = metrics.positions[index]!;
+      place(child, x + offsetX, z + offsetZ, hierarchyDepth + 1);
+    });
+  };
+  const roots = children.get(undefined) ?? [];
+  const rootMetrics = gridMetrics(roots.map(measure));
+  roots.forEach((root, index) => {
+    const [x, z] = rootMetrics.positions[index]!;
+    place(root, x, z, 0);
+  });
   return {
     schema: "linxsimcity.generated-world",
     schemaVersion: "1",

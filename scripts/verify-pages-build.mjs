@@ -38,12 +38,24 @@ export function verifyPagesBuild(
       "utf8",
     ),
   );
+  const everyNodeHasArea = topology.nodes?.every(
+    /** @param {{area?: {unit?: unknown, source?: unknown, status?: unknown}}} node */
+    (node) =>
+      node.area?.unit === "um2" &&
+      typeof node.area.source === "string" &&
+      node.area.source.length > 0 &&
+      typeof node.area.status === "string" &&
+      ["measured", "estimated", "aggregate", "unknown"].includes(
+        node.area.status,
+      ),
+  );
   if (
     topology.nodes?.length !== 39 ||
     topology.edges?.length !== 32 ||
     topology.source?.planSha256 !== EXPECTED_PLAN_SHA256 ||
     topology.source?.modelSha256 !== EXPECTED_MODEL_SHA256 ||
-    topology.source?.relevantInputsDirty !== false
+    topology.source?.relevantInputsDirty !== false ||
+    !everyNodeHasArea
   ) {
     throw new Error("Pages game has an invalid generated pyCircuit topology");
   }

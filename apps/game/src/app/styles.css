@@ -382,6 +382,10 @@ code {
   background: #8299a7;
 }
 
+.kind-io {
+  background: #5ee1a7;
+}
+
 .topology-summary,
 .position-grid {
   display: grid;
@@ -441,6 +445,22 @@ code {
 .scene-canvas {
   position: absolute;
   inset: 0;
+}
+
+.hierarchy-label {
+  display: block;
+  padding: 4px 7px;
+  border: 1px solid rgb(121 231 255 / 22%);
+  border-radius: 4px;
+  color: #a9c8d2;
+  background: rgb(4 12 17 / 82%);
+  font:
+    500 12px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 .scene-loading,
@@ -608,6 +628,60 @@ code {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
+}
+
+.hierarchy-path {
+  padding: 9px 10px;
+  border-left: 2px solid rgb(121 231 255 / 42%);
+  color: #a8c0c8;
+  background: rgb(14 31 40 / 42%);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.area-record {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: rgb(10 23 31 / 52%);
+}
+
+.area-record > span {
+  align-self: center;
+  color: #879ca5;
+  font:
+    500 12px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-transform: uppercase;
+}
+
+.area-record > strong {
+  justify-self: end;
+  color: #d7e7eb;
+  font-size: 14px;
+}
+
+.area-record > small {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  color: #6f858e;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.area-unknown,
+.area-aggregate {
+  border-color: rgb(255 197 106 / 18%);
+}
+
+.area-unknown > strong,
+.area-aggregate > strong {
+  color: #d6b77f;
 }
 
 .parameter-list,

@@ -15,6 +15,10 @@ packages remain isolated only while the new trace path is implemented.
 - Stable topology identities and hardware fingerprints
 - Directed connection validation with one generated 3D link per topology edge
 - Deterministic layered XYZ layout generated from graph dependencies
+- Nested labeled districts generated from `parentId`, with hierarchy paths in
+  the inspector
+- Mandatory physical-area records in square micrometres, including explicit
+  unknown and aggregate evidence states
 - Read-only topology import, search, selection, connection navigation, and node
   inspection
 - Validation for definitions, hierarchy, parameters, endpoints, port direction,

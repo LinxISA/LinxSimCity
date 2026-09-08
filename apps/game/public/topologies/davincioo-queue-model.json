@@ -21,6 +21,12 @@
       "definitionId": "core.container",
       "label": "davincioo_queue_model",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/"
@@ -32,6 +38,12 @@
       "label": "frontend",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/frontend"
@@ -43,6 +55,12 @@
       "label": "dependency",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/dependency"
@@ -54,6 +72,12 @@
       "label": "dispatch",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/dispatch"
@@ -65,6 +89,12 @@
       "label": "scalar_engine",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/scalar_engine"
@@ -76,6 +106,12 @@
       "label": "vector_engine",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/vector_engine"
@@ -87,6 +123,12 @@
       "label": "cube_engine",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/cube_engine"
@@ -98,6 +140,12 @@
       "label": "tma_engine",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/tma_engine"
@@ -109,6 +157,12 @@
       "label": "retire",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
       "attributes": {
         "sourceKind": "scope",
         "scope": "/retire"
@@ -120,6 +174,12 @@
       "label": "trace",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "source",
@@ -136,6 +196,12 @@
       "parentId": "scope.frontend",
       "parameters": {
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "block",
@@ -155,6 +221,12 @@
         "capacity": 8,
         "resources": 4
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "dependency",
@@ -170,6 +242,12 @@
       "label": "observe_5",
       "parentId": "scope.dependency",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "observe",
@@ -186,6 +264,12 @@
       "parentId": "scope.dispatch",
       "parameters": {
         "outputs": 4
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "block",
@@ -204,6 +288,12 @@
       "parameters": {
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "transform",
@@ -221,6 +311,12 @@
       "parameters": {
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "transform",
@@ -236,6 +332,12 @@
       "label": "observe_12",
       "parentId": "scope.vector.engine",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "observe",
@@ -252,6 +354,12 @@
       "parentId": "scope.cube.engine",
       "parameters": {
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "block",
@@ -270,6 +378,12 @@
       "parameters": {
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "transform",
@@ -285,6 +399,12 @@
       "label": "observe_17",
       "parentId": "scope.tma.engine",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "observe",
@@ -302,6 +422,12 @@
       "parameters": {
         "inputs": 4
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "merge",
@@ -317,6 +443,12 @@
       "label": "observe_19",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "observe",
@@ -333,6 +465,12 @@
       "parentId": "scope.root",
       "parameters": {
         "capacity": 64
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "block",
@@ -351,6 +489,12 @@
       "parameters": {
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "transform",
@@ -366,6 +510,12 @@
       "label": "sink_23",
       "parentId": "scope.root",
       "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "block",
         "blockKind": "sink",
@@ -384,6 +534,12 @@
         "capacity": 16,
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "queue",
         "sourceName": "trace",
@@ -400,6 +556,12 @@
       "parameters": {
         "capacity": 4,
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "queue",
@@ -418,6 +580,12 @@
         "capacity": 16,
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "queue",
         "sourceName": "scheduled",
@@ -434,6 +602,12 @@
       "parameters": {
         "capacity": 8,
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "queue",
@@ -452,6 +626,12 @@
         "capacity": 8,
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "queue",
         "sourceName": "vector",
@@ -468,6 +648,12 @@
       "parameters": {
         "capacity": 8,
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "queue",
@@ -486,6 +672,12 @@
         "capacity": 8,
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "queue",
         "sourceName": "tma",
@@ -502,6 +694,12 @@
       "parameters": {
         "capacity": 1,
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "queue",
@@ -520,6 +718,12 @@
         "capacity": 1,
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "queue",
         "sourceName": "vector_done",
@@ -536,6 +740,12 @@
       "parameters": {
         "capacity": 1,
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "queue",
@@ -554,6 +764,12 @@
         "capacity": 1,
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "queue",
         "sourceName": "tma_done",
@@ -570,6 +786,12 @@
       "parameters": {
         "capacity": 8,
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "queue",
@@ -588,6 +810,12 @@
         "capacity": 8,
         "latency": 1
       },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
       "attributes": {
         "sourceKind": "queue",
         "sourceName": "ordered",
@@ -604,6 +832,12 @@
       "parameters": {
         "capacity": 1,
         "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
       },
       "attributes": {
         "sourceKind": "queue",

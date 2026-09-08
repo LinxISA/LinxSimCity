@@ -15,6 +15,9 @@ LinxSimCity importer converts that plan as follows:
   rate, scope, and exact payload type metadata;
 - every producer-to-queue and queue-to-consumer relationship becomes one
   topology edge;
+- every block and queue receives an explicit `area` record. QueueGraph carries
+  no physical PPA area, so these records are `unknown` rather than invented;
+  scope containers are unresolved `aggregate` records;
 - unsupported block kinds, duplicate queue names, missing producers, invalid
   ports, and unsupported plan versions fail closed.
 

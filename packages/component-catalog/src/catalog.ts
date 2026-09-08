@@ -275,7 +275,7 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
   definition(
     "ac.source",
     "Traffic Source",
-    "container",
+    "io",
     "Agentic Circuit source boundary inferred from serial Python.",
     { x: 4.2, y: 2.4, z: 3.2 },
     [
@@ -506,7 +506,7 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
   definition(
     "ac.sink",
     "Traffic Sink",
-    "container",
+    "io",
     "Agentic Circuit sink boundary inferred from serial Python.",
     { x: 4.2, y: 2.4, z: 3.2 },
     [

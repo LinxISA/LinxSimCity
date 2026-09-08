@@ -9,6 +9,7 @@ export const BRICK_KINDS = [
   "arbiter",
   "crossbar",
   "container",
+  "io",
 ] as const;
 
 export type BrickKind = (typeof BRICK_KINDS)[number];

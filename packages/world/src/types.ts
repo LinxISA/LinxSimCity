@@ -1,3 +1,5 @@
+import type { BrickSize } from "@linxsimcity/component-catalog";
+
 export const WORLD_CHUNK_SIZE = 64;
 
 export interface AxisPosition {
@@ -22,6 +24,15 @@ export interface BrickInstance {
   readonly label?: string;
   readonly transform: BrickTransform;
   readonly parameters: Readonly<Record<string, number>>;
+  readonly visualSize?: BrickSize;
+  readonly hierarchyDepth: number;
+}
+
+export interface PhysicalArea {
+  readonly value: number | null;
+  readonly unit: "um2";
+  readonly status: "measured" | "estimated" | "aggregate" | "unknown";
+  readonly source: string;
 }
 
 export interface TopologyEndpoint {
@@ -36,6 +47,7 @@ export interface TopologyNode {
   readonly parentId?: string;
   readonly parameters: Readonly<Record<string, number>>;
   readonly attributes?: Readonly<Record<string, string | number | boolean>>;
+  readonly area: PhysicalArea;
 }
 
 export interface TopologyEdge {
@@ -102,6 +114,7 @@ export interface TopologyDiagnostic {
     | "width_mismatch"
     | "input_already_connected"
     | "invalid_parent"
-    | "invalid_source";
+    | "invalid_source"
+    | "invalid_area";
   readonly message: string;
 }

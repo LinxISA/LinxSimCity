@@ -7,7 +7,7 @@ describe("core component catalog", () => {
     expect(validateCatalog(CORE_CATALOG)).toEqual([]);
     expect(
       new Set(CORE_CATALOG.definitions.map((item) => item.kind)).size,
-    ).toBe(10);
+    ).toBe(11);
   });
 
   test("rejects duplicate definition and port IDs", () => {

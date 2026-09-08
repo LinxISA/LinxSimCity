@@ -21,6 +21,13 @@ const SUPPORTED_BLOCK_DEFINITIONS: Readonly<Record<string, string>> = {
   sink: "ac.sink",
 };
 
+const UNKNOWN_QUEUE_PLAN_AREA = {
+  value: null,
+  unit: "um2",
+  status: "unknown",
+  source: "agentic-circuit-queue-plan:no-physical-area",
+} as const;
+
 function record(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -175,6 +182,7 @@ function queueNode(queue: QueuePlanQueue, index: number): TopologyNode {
     label: queue.name,
     parentId: scopeId(queue.scope),
     parameters: { capacity: queue.depth, latency: queue.latency },
+    area: UNKNOWN_QUEUE_PLAN_AREA,
     attributes: {
       sourceKind: "queue",
       sourceName: queue.name,
@@ -192,6 +200,7 @@ function blockNode(block: QueuePlanBlock): TopologyNode {
     label: block.name,
     parentId: scopeId(block.scope),
     parameters: parametersForBlock(block),
+    area: UNKNOWN_QUEUE_PLAN_AREA,
     attributes: {
       sourceKind: "block",
       blockKind: block.kind,
@@ -220,6 +229,12 @@ export function convertAgenticQueuePlan(
       label: scope === "/" ? plan.system : parts.at(-1)!,
       ...(scope === "/" ? {} : { parentId: scopeId(parentPath) }),
       parameters: {},
+      area: {
+        value: null,
+        unit: "um2",
+        status: "aggregate",
+        source: "linxsimcity:children-have-unknown-area",
+      },
       attributes: { sourceKind: "scope", scope },
     };
   });

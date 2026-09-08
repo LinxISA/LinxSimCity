@@ -4,8 +4,8 @@ import type {
 } from "@linxsimcity/component-catalog";
 import type { BrickInstance } from "@linxsimcity/world";
 import { positionToTuple } from "@linxsimcity/world";
+import { Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
-import { useMemo } from "react";
 import { DoubleSide } from "three";
 
 const KIND_COLORS: Record<BrickKind, string> = {
@@ -19,6 +19,7 @@ const KIND_COLORS: Record<BrickKind, string> = {
   arbiter: "#d08aff",
   crossbar: "#aa72ff",
   container: "#62768a",
+  io: "#5ee1a7",
 };
 
 function Interior({ definition }: { readonly definition: BrickDefinition }) {
@@ -165,6 +166,21 @@ function Interior({ definition }: { readonly definition: BrickDefinition }) {
           <meshStandardMaterial color="#7890a4" side={DoubleSide} />
         </mesh>
       );
+    case "io":
+      return (
+        <group position={[0, y * 0.2, 0]}>
+          <mesh rotation={[0, Math.PI / 2, 0]}>
+            <torusGeometry args={[Math.min(y, z) * 0.28, 0.18, 12, 28]} />
+            <meshStandardMaterial
+              color="#78edb9"
+              emissive="#176a4b"
+              emissiveIntensity={0.42}
+              metalness={0.62}
+              roughness={0.24}
+            />
+          </mesh>
+        </group>
+      );
   }
 }
 
@@ -175,19 +191,73 @@ export interface BrickProps {
   readonly onSelect: (instanceId: string) => void;
 }
 
-export function Brick({
+function HierarchyDistrict({
   instance,
   definition,
   selected,
   onSelect,
 }: BrickProps) {
   const position = positionToTuple(instance.transform.position);
+  const size = instance.visualSize ?? definition.size;
+  const pick = (event: ThreeEvent<MouseEvent>) => {
+    event.stopPropagation();
+    onSelect(instance.id);
+  };
+  return (
+    <group position={[position[0], position[1], position[2]]} onClick={pick}>
+      <mesh position={[0, 0.12, 0]} receiveShadow>
+        <boxGeometry args={[size.x, 0.24, size.z]} />
+        <meshPhysicalMaterial
+          color="#294858"
+          metalness={0.58}
+          roughness={0.48}
+          transparent
+          opacity={selected ? 0.42 : 0.22}
+          depthWrite={false}
+        />
+      </mesh>
+      <mesh position={[0, 0.26, 0]}>
+        <boxGeometry args={[size.x, 0.48, size.z]} />
+        <meshBasicMaterial
+          color={selected ? "#bdeaff" : "#4f8296"}
+          wireframe
+          transparent
+          opacity={selected ? 0.8 : 0.32}
+        />
+      </mesh>
+      <Html position={[-size.x / 2 + 1.2, 0.62, -size.z / 2 + 0.8]}>
+        <span className="hierarchy-label">
+          {instance.label ?? instance.id} · L{instance.hierarchyDepth}
+        </span>
+      </Html>
+    </group>
+  );
+}
+
+export function Brick({
+  instance,
+  definition,
+  selected,
+  onSelect,
+}: BrickProps) {
+  if (definition.kind === "container") {
+    return (
+      <HierarchyDistrict
+        instance={instance}
+        definition={definition}
+        selected={selected}
+        onSelect={onSelect}
+      />
+    );
+  }
+  const position = positionToTuple(instance.transform.position);
   const color = KIND_COLORS[definition.kind];
   const emissive = selected ? "#bdeaff" : "#07141e";
-  const rotation = useMemo(
-    () => [0, instance.transform.yawQuarterTurns * (Math.PI / 2), 0] as const,
-    [instance.transform.yawQuarterTurns],
-  );
+  const rotation = [
+    0,
+    instance.transform.yawQuarterTurns * (Math.PI / 2),
+    0,
+  ] as const;
   const pick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
     onSelect(instance.id);
@@ -221,7 +291,7 @@ export function Brick({
           clearcoat={0.65}
           clearcoatRoughness={0.22}
           transparent
-          opacity={definition.kind === "container" ? 0.38 : 0.88}
+          opacity={0.88}
         />
       </mesh>
       <Interior definition={definition} />

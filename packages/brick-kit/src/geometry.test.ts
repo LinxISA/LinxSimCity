@@ -18,6 +18,7 @@ test("port positions follow a rotated brick", () => {
     id: "queue.1",
     definitionId: definition.id,
     parameters: { capacity: 8, latency: 1 },
+    hierarchyDepth: 0,
     transform: {
       position: worldPosition(10, 0, 5),
       yawQuarterTurns: 1 as const,

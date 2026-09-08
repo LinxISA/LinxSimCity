@@ -38,10 +38,46 @@ invalid parent, incompatible edge, missing endpoint, and duplicate input
 binding. The generator produces scene instances and links only from a valid
 topology. There is no UI operation that creates, deletes, or rewires an edge.
 
-The initial layout assigns graph layers from dependency order. Nodes in the
-same layer receive deterministic positions ordered by stable ID. Cyclic nodes
-remain renderable in deterministic trailing layers. Layout is derived data and
-is excluded from the topology fingerprint.
+The initial layout calculates dependency layers, then uses them to order
+siblings inside each parent. Stable IDs break ties. Cyclic nodes remain
+renderable in deterministic trailing positions. Layout is derived data and is
+excluded from the topology fingerprint.
+
+## Hierarchy rendering
+
+`parentId` is the only hierarchy authority. A parent must exist and must use a
+container definition; parent cycles are rejected. The generated world records a
+depth for every instance, measures container bounds from its immediate
+children, and places each child on the next raised level. The renderer draws
+containers as labeled district plates and ordinary modules as buildings inside
+those plates. The topology inspector uses the same parent chain, so the tree,
+3D districts, and selected-node path cannot disagree.
+
+Graph dependency order controls stable ordering within each parent. It never
+moves a child outside its declared parent to make an edge shorter. Cross-scope
+edges remain visible between district plates.
+
+## Physical area
+
+Every topology node carries one physical-area record:
+
+```json
+{
+  "value": 12500,
+  "unit": "um2",
+  "status": "measured",
+  "source": "ppa-report:sha256-or-stable-reference"
+}
+```
+
+The only storage unit is square micrometres. `measured` and `estimated` require
+a positive value and source. `unknown` requires `value: null`. Hierarchy
+containers use `aggregate`; they receive a numeric value only when their child
+areas can be completely and honestly aggregated.
+
+Physical area does not silently control the current schematic layout. The 3D
+component footprint remains a readable logical representation until a later
+physical-floorplan mode explicitly opts into area-weighted geometry.
 
 ## Coordinate model
 
