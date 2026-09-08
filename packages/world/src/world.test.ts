@@ -1,15 +1,54 @@
-import { CORE_CATALOG, CORE_BRICK_BY_ID } from "@linxsimcity/component-catalog";
+import { CORE_CATALOG } from "@linxsimcity/component-catalog";
 import { describe, expect, test } from "vitest";
 
 import {
   addPosition,
-  blueprintFingerprint,
-  createInstance,
-  emptyBlueprint,
+  generateWorldFromTopology,
   positionToTuple,
-  validateBlueprint,
+  topologyFingerprint,
+  validateArchitectureTopology,
   worldPosition,
 } from "./index.js";
+import type { ArchitectureTopology } from "./index.js";
+
+function topology(): ArchitectureTopology {
+  return {
+    schema: "linxsimcity.topology",
+    schemaVersion: "1",
+    id: "test.pipeline",
+    name: "Test pipeline",
+    revision: "test-revision",
+    nodes: [
+      {
+        id: "queue.1",
+        definitionId: "core.queue",
+        parameters: { capacity: 16 },
+      },
+      {
+        id: "vector.1",
+        definitionId: "core.vector",
+        parameters: { lanes: 8 },
+      },
+      {
+        id: "sram.1",
+        definitionId: "core.sram",
+        parameters: { banks: 8 },
+      },
+    ],
+    edges: [
+      {
+        id: "edge.queue-vector",
+        from: { nodeId: "queue.1", portId: "out" },
+        to: { nodeId: "vector.1", portId: "issue" },
+      },
+      {
+        id: "edge.sram-vector",
+        from: { nodeId: "sram.1", portId: "tile-out" },
+        to: { nodeId: "vector.1", portId: "tile" },
+      },
+    ],
+  };
+}
 
 describe("world coordinates", () => {
   test("normalize positive and negative positions across chunks", () => {
@@ -22,69 +61,63 @@ describe("world coordinates", () => {
   });
 });
 
-describe("blueprints", () => {
-  test("validate a typed connection and keep display position out of its fingerprint", () => {
-    const queue = createInstance(
+describe("topology-driven world generation", () => {
+  test("generates every scene connection directly from a valid topology edge", () => {
+    const source = topology();
+    expect(validateArchitectureTopology(source, CORE_CATALOG)).toEqual([]);
+    const world = generateWorldFromTopology(source, CORE_CATALOG);
+    expect(world.instances.map((item) => item.id).sort()).toEqual([
       "queue.1",
-      CORE_BRICK_BY_ID.get("core.queue")!,
-      [0, 0, 0],
-    );
-    const alu = createInstance(
-      "alu.1",
-      CORE_BRICK_BY_ID.get("core.alu")!,
-      [8, 0, 0],
-    );
-    const blueprint = {
-      ...emptyBlueprint(),
-      instances: [queue, alu],
-      links: [
-        {
-          id: "link.1",
-          from: { instanceId: queue.id, portId: "out" },
-          to: { instanceId: alu.id, portId: "issue" },
+      "sram.1",
+      "vector.1",
+    ]);
+    expect(world.links).toEqual([
+      {
+        id: "edge.queue-vector",
+        from: { instanceId: "queue.1", portId: "out" },
+        to: { instanceId: "vector.1", portId: "issue" },
+      },
+      {
+        id: "edge.sram-vector",
+        from: { instanceId: "sram.1", portId: "tile-out" },
+        to: { instanceId: "vector.1", portId: "tile" },
+      },
+    ]);
+    expect(world.topologyFingerprint).toBe(topologyFingerprint(source));
+  });
+
+  test("keeps generated layout out of the topology fingerprint", () => {
+    const source = topology();
+    const first = generateWorldFromTopology(source, CORE_CATALOG);
+    const movedWorld = {
+      ...first,
+      instances: first.instances.map((instance, index) => ({
+        ...instance,
+        transform: {
+          ...instance.transform,
+          position: worldPosition(index * 100, 0, 0),
         },
+      })),
+    };
+    expect(movedWorld.topologyFingerprint).toBe(first.topologyFingerprint);
+  });
+
+  test("rejects a tile edge into a transaction input", () => {
+    const invalid: ArchitectureTopology = {
+      ...topology(),
+      nodes: [
+        { id: "sram.1", definitionId: "core.sram", parameters: {} },
+        { id: "alu.1", definitionId: "core.alu", parameters: {} },
       ],
-    } as const;
-    expect(validateBlueprint(blueprint, CORE_CATALOG)).toEqual([]);
-    const moved = {
-      ...blueprint,
-      instances: [
-        queue,
+      edges: [
         {
-          ...alu,
-          transform: {
-            ...alu.transform,
-            position: worldPosition(800, 4, -200),
-          },
+          id: "edge.bad",
+          from: { nodeId: "sram.1", portId: "tile-out" },
+          to: { nodeId: "alu.1", portId: "issue" },
         },
       ],
     };
-    expect(blueprintFingerprint(moved)).toBe(blueprintFingerprint(blueprint));
-  });
-
-  test("rejects a tile link into a transaction input", () => {
-    const sram = createInstance(
-      "sram.1",
-      CORE_BRICK_BY_ID.get("core.sram")!,
-      [0, 0, 0],
-    );
-    const alu = createInstance(
-      "alu.1",
-      CORE_BRICK_BY_ID.get("core.alu")!,
-      [8, 0, 0],
-    );
-    const blueprint = {
-      ...emptyBlueprint(),
-      instances: [sram, alu],
-      links: [
-        {
-          id: "link.bad",
-          from: { instanceId: sram.id, portId: "tile-out" },
-          to: { instanceId: alu.id, portId: "issue" },
-        },
-      ],
-    } as const;
-    expect(validateBlueprint(blueprint, CORE_CATALOG)).toContainEqual(
+    expect(validateArchitectureTopology(invalid, CORE_CATALOG)).toContainEqual(
       expect.objectContaining({ code: "protocol_mismatch" }),
     );
   });

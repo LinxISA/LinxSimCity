@@ -8,6 +8,7 @@ only after its replacement protects the listed invariant.
 | `apps/viewer` entry point                | Retire from build and Pages immediately; delete after the new trace path is live | `apps/game`          | The site builds and opens a useful first screen         |
 | `packages/scene-modules` fixed districts | Remove after brick-kit parity for the first real trace                           | `packages/brick-kit` | Stable picking identity and scalable rendering          |
 | `linx-city-v1` fixed district layout     | Unsupported in the game path                                                     | `packages/world`     | Finite, valid coordinates and explicit routes           |
+| User-authored blueprint/editor path      | Removed; topology is the only connection authority                               | `packages/world`     | Typed ports, stable IDs, topology validation            |
 | Previous trace UI assumptions            | Keep isolated until the current reducer lands, then delete                       | trace packages       | Deterministic ordering, checkpoint seek, source binding |
 | Bundled FA viewer default                | Remove from Pages now; regenerate a current-format real-run fixture              | simulator adapter    | Real data is marked and reproducible                    |
 | Viewer-specific HUD and inspector        | Delete with old app                                                              | `apps/game`          | Selection, errors, and cycle evidence remain accessible |

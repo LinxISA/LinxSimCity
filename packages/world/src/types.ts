@@ -24,28 +24,58 @@ export interface BrickInstance {
   readonly parameters: Readonly<Record<string, number>>;
 }
 
-export interface LinkEndpoint {
+export interface TopologyEndpoint {
+  readonly nodeId: string;
+  readonly portId: string;
+}
+
+export interface TopologyNode {
+  readonly id: string;
+  readonly definitionId: string;
+  readonly label?: string;
+  readonly parentId?: string;
+  readonly parameters: Readonly<Record<string, number>>;
+}
+
+export interface TopologyEdge {
+  readonly id: string;
+  readonly from: TopologyEndpoint;
+  readonly to: TopologyEndpoint;
+}
+
+export interface ArchitectureTopology {
+  readonly schema: "linxsimcity.topology";
+  readonly schemaVersion: "1";
+  readonly id: string;
+  readonly name: string;
+  readonly revision: string;
+  readonly nodes: readonly TopologyNode[];
+  readonly edges: readonly TopologyEdge[];
+}
+
+export interface WorldLinkEndpoint {
   readonly instanceId: string;
   readonly portId: string;
 }
 
-export interface BlueprintLink {
+export interface WorldLink {
   readonly id: string;
-  readonly from: LinkEndpoint;
-  readonly to: LinkEndpoint;
+  readonly from: WorldLinkEndpoint;
+  readonly to: WorldLinkEndpoint;
 }
 
-export interface Blueprint {
-  readonly schema: "linxsimcity.blueprint";
+export interface GeneratedWorld {
+  readonly schema: "linxsimcity.generated-world";
   readonly schemaVersion: "1";
-  readonly id: string;
+  readonly topologyId: string;
+  readonly topologyRevision: string;
+  readonly topologyFingerprint: string;
   readonly name: string;
-  readonly revision: number;
   readonly instances: readonly BrickInstance[];
-  readonly links: readonly BlueprintLink[];
+  readonly links: readonly WorldLink[];
 }
 
-export interface BlueprintDiagnostic {
+export interface TopologyDiagnostic {
   readonly path: string;
   readonly code:
     | "duplicate_id"
@@ -57,6 +87,6 @@ export interface BlueprintDiagnostic {
     | "protocol_mismatch"
     | "width_mismatch"
     | "input_already_connected"
-    | "invalid_position";
+    | "invalid_parent";
   readonly message: string;
 }

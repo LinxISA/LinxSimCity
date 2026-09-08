@@ -1,26 +1,24 @@
 import type { BrickDefinition } from "@linxsimcity/component-catalog";
-import type { Blueprint } from "@linxsimcity/world";
+import type { GeneratedWorld } from "@linxsimcity/world";
 import { Grid, Line, OrbitControls } from "@react-three/drei";
-import { Canvas, type ThreeEvent } from "@react-three/fiber";
+import { Canvas } from "@react-three/fiber";
 import { Suspense, useMemo } from "react";
 
 import { Brick } from "./Brick.js";
 import { portWorldPosition } from "./geometry.js";
 
 interface SceneContentProps {
-  readonly blueprint: Blueprint;
+  readonly world: GeneratedWorld;
   readonly definitions: ReadonlyMap<string, BrickDefinition>;
   readonly selectedInstanceId: string | undefined;
-  readonly linkSourceInstanceId: string | undefined;
   readonly onSelect: (instanceId: string) => void;
-  readonly onGround: (position: readonly [number, number, number]) => void;
   readonly onBlank: () => void;
 }
 
 function SceneContent(props: SceneContentProps) {
   const instances = useMemo(
-    () => new Map(props.blueprint.instances.map((item) => [item.id, item])),
-    [props.blueprint.instances],
+    () => new Map(props.world.instances.map((item) => [item.id, item])),
+    [props.world.instances],
   );
   return (
     <>
@@ -47,22 +45,7 @@ function SceneContent(props: SceneContentProps) {
         fadeStrength={1.3}
         infiniteGrid
       />
-      <mesh
-        position={[0, -0.12, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        onClick={(event: ThreeEvent<MouseEvent>) => {
-          event.stopPropagation();
-          props.onGround([
-            Math.round(event.point.x),
-            0,
-            Math.round(event.point.z),
-          ]);
-        }}
-      >
-        <planeGeometry args={[2000, 2000]} />
-        <meshBasicMaterial transparent opacity={0} />
-      </mesh>
-      {props.blueprint.instances.map((instance) => {
+      {props.world.instances.map((instance) => {
         const definition = props.definitions.get(instance.definitionId);
         if (!definition) return null;
         return (
@@ -71,12 +54,11 @@ function SceneContent(props: SceneContentProps) {
             instance={instance}
             definition={definition}
             selected={props.selectedInstanceId === instance.id}
-            linkSource={props.linkSourceInstanceId === instance.id}
             onSelect={props.onSelect}
           />
         );
       })}
-      {props.blueprint.links.map((link) => {
+      {props.world.links.map((link) => {
         const fromInstance = instances.get(link.from.instanceId);
         const toInstance = instances.get(link.to.instanceId);
         if (!fromInstance || !toInstance) return null;

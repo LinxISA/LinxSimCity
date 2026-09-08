@@ -172,7 +172,6 @@ export interface BrickProps {
   readonly instance: BrickInstance;
   readonly definition: BrickDefinition;
   readonly selected: boolean;
-  readonly linkSource: boolean;
   readonly onSelect: (instanceId: string) => void;
 }
 
@@ -180,12 +179,11 @@ export function Brick({
   instance,
   definition,
   selected,
-  linkSource,
   onSelect,
 }: BrickProps) {
   const position = positionToTuple(instance.transform.position);
   const color = KIND_COLORS[definition.kind];
-  const emissive = selected ? "#bdeaff" : linkSource ? "#f5cc75" : "#07141e";
+  const emissive = selected ? "#bdeaff" : "#07141e";
   const rotation = useMemo(
     () => [0, instance.transform.yawQuarterTurns * (Math.PI / 2), 0] as const,
     [instance.transform.yawQuarterTurns],
@@ -217,7 +215,7 @@ export function Brick({
         <meshPhysicalMaterial
           color={color}
           emissive={emissive}
-          emissiveIntensity={selected || linkSource ? 0.52 : 0.05}
+          emissiveIntensity={selected ? 0.52 : 0.05}
           metalness={0.58}
           roughness={0.3}
           clearcoat={0.65}

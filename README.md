@@ -1,28 +1,30 @@
 # LinxSimCity
 
-LinxSimCity is a browser-based 3D chip construction and simulation game. Build
-a processor city from typed Queue, Table, SRAM, execution, arbitration, and
-interconnect bricks; validate the assembly; then use simulator traces to follow
-transactions and Tile residency.
+LinxSimCity is a browser-based 3D chip topology and simulation game. Load a
+typed architecture graph and it generates the processor city, component
+placement, and every connection; simulator traces then animate transactions and
+Tile residency on that graph.
 
 The repository is undergoing an intentional hard break from the previous fixed
 trace viewer. The current product path is `apps/game`; the old viewer and trace
-trace packages remain isolated only while the new trace path is implemented.
+packages remain isolated only while the new trace path is implemented.
 
-## Current playable slice
+## Current topology slice
 
-- Ten parameterized hardware brick definitions with typed ports
-- Stable blueprint identities and hardware fingerprints
-- Chunked XYZ coordinates and quarter-turn rotations
-- Place, select, rotate, connect, delete, undo, redo, import, export, and local
-  autosave
-- Blueprint validation for definitions, parameters, endpoints, port direction,
+- Ten parameterized hardware component definitions with typed ports
+- Stable topology identities and hardware fingerprints
+- Directed connection validation with one generated 3D link per topology edge
+- Deterministic layered XYZ layout generated from graph dependencies
+- Read-only topology import, search, selection, connection navigation, and node
+  inspection
+- Validation for definitions, hierarchy, parameters, endpoints, port direction,
   protocol, width, and single-producer inputs
-- React Three Fiber workbench with an infinite grid and parameterized 3D bricks
+- React Three Fiber workbench with an infinite grid and parameterized 3D
+  components
 
-The simulation button is intentionally disabled until the new trace contract and the first
-real SuperScalarModel adapter are connected. The UI does not fabricate runtime
-results.
+The trace button is intentionally disabled until the new trace contract and
+first real SuperScalarModel adapter are connected. The UI does not fabricate
+runtime results.
 
 ## Run locally
 

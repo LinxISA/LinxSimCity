@@ -10,7 +10,6 @@ describe("workspace execution plan", () => {
     expect(workspaceExecutionPlan("build")).toEqual([
       ["build", "@linxsimcity/component-catalog"],
       ["build", "@linxsimcity/world"],
-      ["build", "@linxsimcity/editor"],
       ["build", "@linxsimcity/trace-schema"],
       ["build", "@linxsimcity/topology"],
       ["build", "@linxsimcity/trace-runtime"],
@@ -32,7 +31,6 @@ describe("workspace execution plan", () => {
       ["root-typecheck", "linxsimcity"],
       ["typecheck", "@linxsimcity/component-catalog"],
       ["typecheck", "@linxsimcity/world"],
-      ["typecheck", "@linxsimcity/editor"],
       ["typecheck", "@linxsimcity/trace-schema"],
       ["typecheck", "@linxsimcity/topology"],
       ["typecheck", "@linxsimcity/trace-runtime"],

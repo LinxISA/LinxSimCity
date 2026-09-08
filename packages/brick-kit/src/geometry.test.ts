@@ -1,5 +1,6 @@
 import { CORE_BRICK_BY_ID } from "@linxsimcity/component-catalog";
-import { createInstance } from "@linxsimcity/world";
+import { worldPosition } from "@linxsimcity/world";
+import type { BrickInstance } from "@linxsimcity/world";
 import { expect, test } from "vitest";
 
 import { portWorldPosition, rotateAnchor } from "./geometry.js";
@@ -13,10 +14,12 @@ test("quarter-turn rotation keeps port anchors exact", () => {
 
 test("port positions follow a rotated brick", () => {
   const definition = CORE_BRICK_BY_ID.get("core.queue")!;
-  const instance = {
-    ...createInstance("queue.1", definition, [10, 0, 5]),
+  const instance: BrickInstance = {
+    id: "queue.1",
+    definitionId: definition.id,
+    parameters: { capacity: 8, latency: 1 },
     transform: {
-      ...createInstance("queue.1", definition, [10, 0, 5]).transform,
+      position: worldPosition(10, 0, 5),
       yawQuarterTurns: 1 as const,
     },
   };

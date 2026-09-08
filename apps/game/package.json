@@ -4,18 +4,17 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "prebuild": "npm run build --workspace @linxsimcity/editor && npm run build --workspace @linxsimcity/brick-kit",
+    "prebuild": "npm run build --workspace @linxsimcity/world && npm run build --workspace @linxsimcity/brick-kit",
     "build": "vite build",
     "build:pages": "vite build --base=/LinxSimCity/",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
-    "pretypecheck": "npm run build --workspace @linxsimcity/editor && npm run build --workspace @linxsimcity/brick-kit",
+    "pretypecheck": "npm run build --workspace @linxsimcity/world && npm run build --workspace @linxsimcity/brick-kit",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "@linxsimcity/brick-kit": "0.1.0",
     "@linxsimcity/component-catalog": "0.1.0",
-    "@linxsimcity/editor": "0.1.0",
     "@linxsimcity/world": "0.1.0",
     "@react-three/fiber": "9.7.0",
     "react": "19.2.8",
