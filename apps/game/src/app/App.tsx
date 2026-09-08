@@ -43,6 +43,13 @@ import {
   loadBundledTopology,
   parseArchitectureTopology,
 } from "./topology.js";
+import {
+  deriveTopologyView,
+  parseTopologyViewPreferences,
+  topologyPathForTraceAssociation,
+  type HierarchyDepthSlice,
+  type TopologyViewPreferences,
+} from "./topology-view.js";
 import "./styles.css";
 
 const WorldScene = lazy(async () => {
@@ -66,6 +73,17 @@ const RECORDED_RUNS = [
     initialCycle: "305",
   },
 ] as const;
+
+const TOPOLOGY_VIEW_STORAGE_KEY = "linxsimcity.topology-view";
+const DEPTH_SLICES: readonly {
+  readonly id: HierarchyDepthSlice;
+  readonly label: string;
+}[] = [
+  { id: "all", label: "All" },
+  { id: "l1", label: "L1" },
+  { id: "l2", label: "L2" },
+  { id: "leaf", label: "Leaf" },
+];
 
 type RecordedRunId = (typeof RECORDED_RUNS)[number]["id"];
 
@@ -199,6 +217,14 @@ export function App() {
   const [tracePlaying, setTracePlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const [recordedRunId, setRecordedRunId] = useState<RecordedRunId>("normal");
+  const [topologyViewPreferences, setTopologyViewPreferences] =
+    useState<TopologyViewPreferences>(() =>
+      parseTopologyViewPreferences(
+        typeof window === "undefined"
+          ? null
+          : window.localStorage.getItem(TOPOLOGY_VIEW_STORAGE_KEY),
+      ),
+    );
   const importInput = useRef<HTMLInputElement>(null);
   const catalogCandidateElements = useRef(new Map<string, HTMLButtonElement>());
   const traceClient = useRef<TraceWorkerClient | undefined>(undefined);
@@ -214,6 +240,13 @@ export function App() {
         ? generateWorldFromTopology(topology, CORE_CATALOG)
         : undefined,
     [diagnostics.length, topology],
+  );
+  const topologyView = useMemo(
+    () =>
+      topology
+        ? deriveTopologyView(topology, topologyViewPreferences)
+        : undefined,
+    [topology, topologyViewPreferences],
   );
   const traceActivity = useMemo(() => {
     if (!world || !traceSnapshot) return undefined;
@@ -303,7 +336,11 @@ export function App() {
       )
       .map((instance) => ({ instance, node: nodeById.get(instance.id)! }));
   }, [topology, world]);
-  const visibleNodes = orderedNodes.filter(({ node }) => {
+  const worldInstanceById = useMemo(
+    () => new Map(world?.instances.map((instance) => [instance.id, instance])),
+    [world],
+  );
+  const visibleNodes = (topologyView?.entries ?? []).filter(({ node }) => {
     const query = filter.trim().toLowerCase();
     if (!query) return true;
     const definition = CORE_BRICK_BY_ID.get(node.definitionId);
@@ -321,6 +358,61 @@ export function App() {
   );
   const catalogSearchActive = filter.trim().length > 0;
   const recordedRun = RECORDED_RUNS.find((run) => run.id === recordedRunId)!;
+
+  useEffect(() => {
+    window.localStorage.setItem(
+      TOPOLOGY_VIEW_STORAGE_KEY,
+      JSON.stringify(topologyViewPreferences),
+    );
+  }, [topologyViewPreferences]);
+
+  useEffect(() => {
+    if (
+      selectedNodeId &&
+      topologyView &&
+      !topologyView.visibleNodeIds.has(selectedNodeId)
+    ) {
+      setSelectedNodeId(undefined);
+    }
+  }, [selectedNodeId, topologyView]);
+
+  const setDepthSlice = (depthSlice: HierarchyDepthSlice) => {
+    setTopologyViewPreferences((current) => ({ ...current, depthSlice }));
+  };
+
+  const toggleTopologyNode = (nodeId: string) => {
+    setTopologyViewPreferences((current) => {
+      const collapsed = new Set(current.collapsedNodeIds);
+      if (collapsed.has(nodeId)) collapsed.delete(nodeId);
+      else collapsed.add(nodeId);
+      return { ...current, collapsedNodeIds: [...collapsed] };
+    });
+  };
+
+  const focusTopologyEdges = (edgeIds: readonly string[]) => {
+    setTopologyViewPreferences((current) => ({
+      ...current,
+      focusedEdgeIds: [...new Set(edgeIds)],
+    }));
+  };
+
+  const focusTraceAssociation = (
+    entityNodeId: string,
+    storageNodeId: string,
+  ) => {
+    if (!topology) return;
+    const path = topologyPathForTraceAssociation(
+      topology,
+      entityNodeId,
+      storageNodeId,
+    );
+    focusTopologyEdges(path?.edgeIds ?? []);
+    setNotice(
+      path?.edgeIds.length
+        ? `已聚焦 ${path.edgeIds.length} 条关联拓扑边。`
+        : "该 Trace 关联没有可回指的拓扑边。",
+    );
+  };
 
   const toggleCatalogBranch = (level: "h1" | "h2", id: string) => {
     const setter = level === "h1" ? setExpandedCatalogH1 : setExpandedCatalogH2;
@@ -654,7 +746,7 @@ export function App() {
             </div>
             <span className="count">
               {browserMode === "topology"
-                ? orderedNodes.length
+                ? (topologyView?.visibleNodeIds.size ?? 0)
                 : (catalog?.candidates.length ?? 0)}
             </span>
           </div>
@@ -707,44 +799,100 @@ export function App() {
               }}
             />
           </div>
+          {browserMode === "topology" ? (
+            <div className="hierarchy-controls" aria-label="层级深度切片">
+              <span>层级</span>
+              <div>
+                {DEPTH_SLICES.map((slice) => (
+                  <button
+                    type="button"
+                    key={slice.id}
+                    className={
+                      topologyViewPreferences.depthSlice === slice.id
+                        ? "active"
+                        : ""
+                    }
+                    aria-pressed={
+                      topologyViewPreferences.depthSlice === slice.id
+                    }
+                    onClick={() => setDepthSlice(slice.id)}
+                    title={
+                      slice.id === "leaf"
+                        ? "只显示没有子节点的模块"
+                        : slice.id === "all"
+                          ? "显示全部层级"
+                          : `显示到 ${slice.label} 层`
+                    }
+                  >
+                    {slice.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
           <div className="topology-list">
             {browserMode === "topology"
-              ? visibleNodes.map(({ node, instance }) => {
+              ? visibleNodes.map(({ node, depth, hasChildren, expanded }) => {
                   const definition = CORE_BRICK_BY_ID.get(node.definitionId);
+                  const instance = worldInstanceById.get(node.id);
                   const connections = topology
                     ? nodeConnections(topology, node.id)
                     : { incoming: [], outgoing: [] };
                   return (
-                    <button
-                      type="button"
+                    <div
                       key={node.id}
-                      className={
-                        selectedNodeId === node.id
-                          ? "topology-node active"
-                          : "topology-node"
-                      }
-                      onClick={() => {
-                        setSelectedNodeId(node.id);
-                        setSelectedCandidateId(undefined);
-                      }}
+                      className="topology-tree-row"
+                      style={{ paddingLeft: `${Math.min(depth, 5) * 12}px` }}
                     >
-                      <span
-                        className={`node-mark kind-${definition?.kind ?? "unknown"}`}
-                      />
-                      <span>
-                        <strong>{node.label ?? node.id}</strong>
-                        <small>
-                          {definition?.kind === "queue"
-                            ? "PIPE"
-                            : `R${instance.topologyRank}`}{" "}
-                          · {instance.laneId}
-                        </small>
-                      </span>
-                      <span className="edge-count">
-                        {connections.incoming.length}↓{" "}
-                        {connections.outgoing.length}↑
-                      </span>
-                    </button>
+                      {hasChildren ? (
+                        <button
+                          type="button"
+                          className="tree-toggle"
+                          aria-label={`${expanded ? "折叠" : "展开"} ${node.label ?? node.id}`}
+                          aria-expanded={expanded}
+                          onClick={() => toggleTopologyNode(node.id)}
+                        >
+                          {expanded ? "−" : "+"}
+                        </button>
+                      ) : (
+                        <span className="tree-toggle-placeholder" />
+                      )}
+                      <button
+                        type="button"
+                        className={[
+                          "topology-node",
+                          selectedNodeId === node.id ? "active" : "",
+                          topologyView?.focusedNodeIds.has(node.id)
+                            ? "path-node"
+                            : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                        onClick={() => {
+                          setSelectedNodeId(node.id);
+                          setSelectedCandidateId(undefined);
+                        }}
+                      >
+                        <span
+                          className={`node-mark kind-${definition?.kind ?? "unknown"}`}
+                        />
+                        <span>
+                          <strong>{node.label ?? node.id}</strong>
+                          <small>
+                            L{depth} ·{" "}
+                            {definition?.kind === "queue"
+                              ? "PIPE"
+                              : instance
+                                ? `R${instance.topologyRank} · ${instance.laneId}`
+                                : "CONTAINER"}
+                          </small>
+                        </span>
+                        <span className="edge-count">
+                          {connections.incoming.length}↓{" "}
+                          {connections.outgoing.length}↑
+                        </span>
+                      </button>
+                    </div>
                   );
                 })
               : catalogTree.map((district) => {
@@ -932,6 +1080,8 @@ export function App() {
                 world={world}
                 definitions={CORE_BRICK_BY_ID}
                 activityByInstanceId={traceActivity}
+                visibleInstanceIds={topologyView?.visibleNodeIds}
+                focusedTopologyEdgeIds={topologyView?.focusedEdgeIds}
                 selectedInstanceId={selectedNodeId}
                 onSelect={(nodeId) => {
                   setSelectedNodeId(nodeId);
@@ -956,6 +1106,17 @@ export function App() {
             <span className="mode-light mode-topology" />
             Queue 折叠排序 · 尺寸感知布局 · SimQueue 管道
           </div>
+          {topologyView?.focusedEdgeIds.size ? (
+            <div className="path-focus-banner">
+              <span>
+                PATH FOCUS · {topologyView.focusedEdgeIds.size} EDGE
+                {topologyView.focusedEdgeIds.size === 1 ? "" : "S"}
+              </span>
+              <button type="button" onClick={() => focusTopologyEdges([])}>
+                清除聚焦
+              </button>
+            </div>
+          ) : null}
           <div className="scene-state-legend" aria-label="Entry state legend">
             <span>
               <i className="entry-swatch entry-occupied" /> 数据流动
@@ -1054,6 +1215,8 @@ export function App() {
                 setSelectedNodeId(nodeId);
                 setSelectedCandidateId(undefined);
               }}
+              onFocusEdge={(edgeId) => focusTopologyEdges([edgeId])}
+              onFocusAssociation={focusTraceAssociation}
             />
           ) : (
             <div className="empty-inspector">
@@ -1248,6 +1411,11 @@ interface NodeInspectorProps {
   readonly world: ReturnType<typeof generateWorldFromTopology>;
   readonly snapshot?: SimTraceSnapshot | undefined;
   readonly onSelect: (nodeId: string) => void;
+  readonly onFocusEdge: (edgeId: string) => void;
+  readonly onFocusAssociation: (
+    entityNodeId: string,
+    storageNodeId: string,
+  ) => void;
 }
 
 function NodeInspector({
@@ -1257,6 +1425,8 @@ function NodeInspector({
   world,
   snapshot,
   onSelect,
+  onFocusEdge,
+  onFocusAssociation,
 }: NodeInspectorProps) {
   const instance = world.instances.find((item) => item.id === node.id)!;
   const position = positionToTuple(instance.transform.position);
@@ -1413,7 +1583,10 @@ function NodeInspector({
                 <button
                   type="button"
                   key={item.residencyId}
-                  onClick={() => onSelect(item.storageNodeId)}
+                  onClick={() => {
+                    onFocusAssociation(node.id, item.storageNodeId);
+                    onSelect(item.storageNodeId);
+                  }}
                 >
                   <span className="direction outgoing">TILE</span>
                   <span>
@@ -1441,7 +1614,10 @@ function NodeInspector({
                 <button
                   type="button"
                   key={`${item.entityId}:${item.tokenId}:${item.tileId}`}
-                  onClick={() => onSelect(item.entityId)}
+                  onClick={() => {
+                    onFocusAssociation(item.entityId, node.id);
+                    onSelect(item.entityId);
+                  }}
                 >
                   <span className="direction incoming">TOKEN</span>
                   <span>
@@ -1480,7 +1656,10 @@ function NodeInspector({
             <button
               type="button"
               key={edge.id}
-              onClick={() => onSelect(edge.from.nodeId)}
+              onClick={() => {
+                onFocusEdge(edge.id);
+                onSelect(edge.from.nodeId);
+              }}
             >
               <span className="direction incoming">IN</span>
               <span>
@@ -1495,7 +1674,10 @@ function NodeInspector({
             <button
               type="button"
               key={edge.id}
-              onClick={() => onSelect(edge.to.nodeId)}
+              onClick={() => {
+                onFocusEdge(edge.id);
+                onSelect(edge.to.nodeId);
+              }}
             >
               <span className="direction outgoing">OUT</span>
               <span>

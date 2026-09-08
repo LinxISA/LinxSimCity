@@ -25,6 +25,8 @@ interface SceneContentProps {
   readonly onBlank: () => void;
   readonly activityByInstanceId?:
     ReadonlyMap<string, BrickActivity> | undefined;
+  readonly visibleInstanceIds?: ReadonlySet<string> | undefined;
+  readonly focusedTopologyEdgeIds?: ReadonlySet<string> | undefined;
 }
 
 function SelectionFocus({
@@ -108,6 +110,14 @@ function SceneContent(props: SceneContentProps) {
       const toInstance = instances.get(corridor.to.instanceId);
       const queueInstance = instances.get(corridor.queueInstanceId);
       if (!fromInstance || !toInstance || !queueInstance) return [];
+      if (
+        props.visibleInstanceIds &&
+        (!props.visibleInstanceIds.has(fromInstance.id) ||
+          !props.visibleInstanceIds.has(toInstance.id) ||
+          !props.visibleInstanceIds.has(queueInstance.id))
+      ) {
+        return [];
+      }
       const fromDefinition = props.definitions.get(fromInstance.definitionId);
       const toDefinition = props.definitions.get(toInstance.definitionId);
       const queueDefinition = props.definitions.get(queueInstance.definitionId);
@@ -117,6 +127,7 @@ function SceneContent(props: SceneContentProps) {
       return [
         {
           id: corridor.id,
+          topologyEdgeIds: corridor.topologyEdgeIds,
           queueInstanceId: corridor.queueInstanceId,
           activity: queueActivity,
           label: `${queueInstance.label ?? queueInstance.id} · ${queueActivity?.occupiedEntries ?? 0}/${capacity}`,
@@ -136,6 +147,13 @@ function SceneContent(props: SceneContentProps) {
       const fromInstance = instances.get(link.from.instanceId);
       const toInstance = instances.get(link.to.instanceId);
       if (!fromInstance || !toInstance) return [];
+      if (
+        props.visibleInstanceIds &&
+        (!props.visibleInstanceIds.has(fromInstance.id) ||
+          !props.visibleInstanceIds.has(toInstance.id))
+      ) {
+        return [];
+      }
       const fromDefinition = props.definitions.get(fromInstance.definitionId);
       const toDefinition = props.definitions.get(toInstance.definitionId);
       if (!fromDefinition || !toDefinition) return [];
@@ -151,6 +169,7 @@ function SceneContent(props: SceneContentProps) {
       return [
         {
           id: link.id,
+          topologyEdgeIds: [link.id],
           queueInstanceId: undefined,
           activity: undefined,
           label: undefined,
@@ -158,8 +177,22 @@ function SceneContent(props: SceneContentProps) {
         },
       ];
     });
-    return [...queueRoutes, ...directRoutes];
-  }, [activity, instances, localWorld, props.definitions]);
+    const allRoutes = [...queueRoutes, ...directRoutes];
+    return props.focusedTopologyEdgeIds?.size
+      ? allRoutes.filter((route) =>
+          route.topologyEdgeIds.some((edgeId) =>
+            props.focusedTopologyEdgeIds?.has(edgeId),
+          ),
+        )
+      : allRoutes;
+  }, [
+    activity,
+    instances,
+    localWorld,
+    props.definitions,
+    props.focusedTopologyEdgeIds,
+    props.visibleInstanceIds,
+  ]);
   return (
     <>
       <ambientLight intensity={0.55} />
@@ -200,7 +233,12 @@ function SceneContent(props: SceneContentProps) {
               key={route.id}
               points={route.points}
               queue={route.queueInstanceId !== undefined}
-              selected={props.selectedInstanceId === route.queueInstanceId}
+              selected={
+                props.selectedInstanceId === route.queueInstanceId ||
+                route.topologyEdgeIds.some((edgeId) =>
+                  props.focusedTopologyEdgeIds?.has(edgeId),
+                )
+              }
               {...(route.activity ? { activity: route.activity } : {})}
               {...(route.label ? { label: route.label } : {})}
               {...(route.queueInstanceId
@@ -214,7 +252,9 @@ function SceneContent(props: SceneContentProps) {
             if (
               !definition ||
               !instanceActivity ||
-              definition.kind === "queue"
+              definition.kind === "queue" ||
+              (props.visibleInstanceIds &&
+                !props.visibleInstanceIds.has(instance.id))
             ) {
               return null;
             }
