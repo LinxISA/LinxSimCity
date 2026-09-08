@@ -28,3 +28,25 @@ export function portWorldPosition(
     base[2] + anchor[2],
   ];
 }
+
+export function orthogonalRoute(
+  start: readonly [number, number, number],
+  end: readonly [number, number, number],
+  lane = 0,
+): readonly (readonly [number, number, number])[] {
+  const travelY = Math.max(start[1], end[1]) + 1.5 + (lane % 7) * 0.18;
+  const bendX = start[0] + (end[0] - start[0]) * 0.5;
+  const points: (readonly [number, number, number])[] = [
+    start,
+    [start[0], travelY, start[2]],
+    [bendX, travelY, start[2]],
+    [bendX, travelY, end[2]],
+    [end[0], travelY, end[2]],
+    end,
+  ];
+  return points.filter(
+    (point, index) =>
+      index === 0 ||
+      point.some((value, axis) => value !== points[index - 1]![axis]),
+  );
+}

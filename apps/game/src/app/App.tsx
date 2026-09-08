@@ -3,7 +3,6 @@ import type { BrickDefinition } from "@linxsimcity/component-catalog";
 import {
   generateWorldFromTopology,
   positionToTuple,
-  topologyHierarchy,
   validateArchitectureTopology,
 } from "@linxsimcity/world";
 import type {
@@ -78,11 +77,19 @@ export function App() {
   const selectedDefinition = selectedNode
     ? CORE_BRICK_BY_ID.get(selectedNode.definitionId)
     : undefined;
-  const hierarchy = useMemo(
-    () => (topology ? topologyHierarchy(topology) : []),
-    [topology],
-  );
-  const visibleNodes = hierarchy.filter(({ node }) => {
+  const orderedNodes = useMemo(() => {
+    if (!topology || !world) return [];
+    const nodeById = new Map(topology.nodes.map((node) => [node.id, node]));
+    return world.instances
+      .filter((instance) => instance.topologyOrder >= 0)
+      .sort(
+        (left, right) =>
+          left.topologyRank - right.topologyRank ||
+          left.topologyOrder - right.topologyOrder,
+      )
+      .map((instance) => ({ instance, node: nodeById.get(instance.id)! }));
+  }, [topology, world]);
+  const visibleNodes = orderedNodes.filter(({ node }) => {
     const query = filter.trim().toLowerCase();
     if (!query) return true;
     const definition = CORE_BRICK_BY_ID.get(node.definitionId);
@@ -196,9 +203,9 @@ export function App() {
           <div className="panel-heading">
             <div>
               <span className="eyebrow">TOPOLOGY</span>
-              <h1>组件与连接</h1>
+              <h1>拓扑顺序</h1>
             </div>
-            <span className="count">{topology?.nodes.length ?? 0}</span>
+            <span className="count">{orderedNodes.length}</span>
           </div>
           <div className="topology-search">
             <label htmlFor="topology-filter">搜索组件</label>
@@ -211,7 +218,7 @@ export function App() {
             />
           </div>
           <div className="topology-list">
-            {visibleNodes.map(({ node, depth }) => {
+            {visibleNodes.map(({ node, instance }) => {
               const definition = CORE_BRICK_BY_ID.get(node.definitionId);
               const connections = topology
                 ? nodeConnections(topology, node.id)
@@ -220,7 +227,6 @@ export function App() {
                 <button
                   type="button"
                   key={node.id}
-                  style={{ paddingLeft: `${9 + depth * 13}px` }}
                   className={
                     selectedNodeId === node.id
                       ? "topology-node active"
@@ -234,7 +240,7 @@ export function App() {
                   <span>
                     <strong>{node.label ?? node.id}</strong>
                     <small>
-                      L{depth} · {definition?.label ?? node.definitionId}
+                      R{instance.topologyRank} · {instance.laneId}
                     </small>
                   </span>
                   <span className="edge-count">
@@ -255,11 +261,15 @@ export function App() {
               <strong>{topology?.edges.length ?? 0}</strong>
             </div>
             <div>
-              <span>面积已知</span>
+              <span>拓扑层</span>
               <strong>
-                {topology?.nodes.filter((node) => node.area.value !== null)
-                  .length ?? 0}
-                /{topology?.nodes.length ?? 0}
+                {orderedNodes.length > 0
+                  ? Math.max(
+                      ...orderedNodes.map(
+                        ({ instance }) => instance.topologyRank,
+                      ),
+                    ) + 1
+                  : 0}
               </strong>
             </div>
           </div>
@@ -290,7 +300,7 @@ export function App() {
           )}
           <div className="scene-mode">
             <span className="mode-light mode-topology" />
-            拓扑生成 · 自动分层布局
+            拓扑排序 · Scope 泳道 · 正交连线
           </div>
           <div className="axis-readout" aria-label="World axes">
             <span className="axis-x">X</span>

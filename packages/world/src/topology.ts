@@ -269,40 +269,80 @@ function defaultParameters(
   );
 }
 
-function calculateLayers(topology: ArchitectureTopology): Map<string, number> {
-  const incoming = new Map(topology.nodes.map((node) => [node.id, 0]));
+export interface TopologicalSortResult {
+  readonly orderedNodeIds: readonly string[];
+  readonly rankByNodeId: ReadonlyMap<string, number>;
+  readonly cyclicNodeIds: readonly string[];
+  readonly rankCount: number;
+}
+
+export function stableTopologicalSort(
+  topology: ArchitectureTopology,
+  catalog: ComponentCatalog,
+): TopologicalSortResult {
+  const definitionById = new Map(
+    catalog.definitions.map((definition) => [definition.id, definition]),
+  );
+  const graphNodes = topology.nodes.filter(
+    (node) => definitionById.get(node.definitionId)?.kind !== "container",
+  );
+  const graphNodeIds = new Set(graphNodes.map((node) => node.id));
+  const indegree = new Map(graphNodes.map((node) => [node.id, 0]));
   const outgoing = new Map<string, string[]>();
   for (const edge of topology.edges) {
-    incoming.set(edge.to.nodeId, (incoming.get(edge.to.nodeId) ?? 0) + 1);
+    if (
+      !graphNodeIds.has(edge.from.nodeId) ||
+      !graphNodeIds.has(edge.to.nodeId)
+    ) {
+      continue;
+    }
     const targets = outgoing.get(edge.from.nodeId) ?? [];
-    targets.push(edge.to.nodeId);
-    outgoing.set(edge.from.nodeId, targets);
+    if (!targets.includes(edge.to.nodeId)) {
+      targets.push(edge.to.nodeId);
+      targets.sort();
+      outgoing.set(edge.from.nodeId, targets);
+      indegree.set(edge.to.nodeId, (indegree.get(edge.to.nodeId) ?? 0) + 1);
+    }
   }
-  const queue = topology.nodes
-    .filter((node) => incoming.get(node.id) === 0)
-    .map((node) => node.id);
-  const layer = new Map(topology.nodes.map((node) => [node.id, 0]));
-  for (let cursor = 0; cursor < queue.length; cursor += 1) {
-    const nodeId = queue[cursor]!;
+  const ready = graphNodes
+    .filter((node) => indegree.get(node.id) === 0)
+    .map((node) => node.id)
+    .sort();
+  const orderedNodeIds: string[] = [];
+  const rankByNodeId = new Map(graphNodes.map((node) => [node.id, 0]));
+  while (ready.length > 0) {
+    const nodeId = ready.shift()!;
+    orderedNodeIds.push(nodeId);
     for (const target of outgoing.get(nodeId) ?? []) {
-      layer.set(
+      rankByNodeId.set(
         target,
-        Math.max(layer.get(target) ?? 0, (layer.get(nodeId) ?? 0) + 1),
+        Math.max(
+          rankByNodeId.get(target) ?? 0,
+          (rankByNodeId.get(nodeId) ?? 0) + 1,
+        ),
       );
-      const remaining = (incoming.get(target) ?? 1) - 1;
-      incoming.set(target, remaining);
-      if (remaining === 0) queue.push(target);
+      const remaining = (indegree.get(target) ?? 1) - 1;
+      indegree.set(target, remaining);
+      if (remaining === 0) {
+        ready.push(target);
+        ready.sort();
+      }
     }
   }
-  const resolved = new Set(queue);
-  let cycleLayer = Math.max(0, ...layer.values()) + 1;
-  for (const node of topology.nodes) {
-    if (!resolved.has(node.id)) {
-      layer.set(node.id, cycleLayer);
-      cycleLayer += 1;
-    }
-  }
-  return layer;
+  const ordered = new Set(orderedNodeIds);
+  const cyclicNodeIds = graphNodes
+    .map((node) => node.id)
+    .filter((id) => !ordered.has(id))
+    .sort();
+  const trailingRank = Math.max(0, ...rankByNodeId.values()) + 1;
+  cyclicNodeIds.forEach((id) => rankByNodeId.set(id, trailingRank));
+  orderedNodeIds.push(...cyclicNodeIds);
+  return {
+    orderedNodeIds,
+    rankByNodeId,
+    cyclicNodeIds,
+    rankCount: Math.max(0, ...rankByNodeId.values()) + 1,
+  };
 }
 
 export interface TopologyHierarchyEntry {
@@ -331,56 +371,57 @@ export function topologyHierarchy(
   return result;
 }
 
-interface GridMetrics {
-  readonly size: BrickSize;
-  readonly positions: readonly (readonly [number, number])[];
+interface Point2 {
+  readonly x: number;
+  readonly z: number;
 }
 
-const HIERARCHY_GAP = 5;
+interface Bounds2 {
+  readonly minX: number;
+  readonly maxX: number;
+  readonly minZ: number;
+  readonly maxZ: number;
+}
 
-function gridMetrics(sizes: readonly BrickSize[]): GridMetrics {
-  if (sizes.length === 0) {
-    return { size: { x: 10, y: 1, z: 8 }, positions: [] };
+const RANK_GAP = 7;
+const NODE_GAP = 3.5;
+const LANE_GAP = 8;
+const CONTAINER_PADDING = 4;
+
+function hierarchyDepthByNode(
+  topology: ArchitectureTopology,
+): ReadonlyMap<string, number> {
+  return new Map(
+    topologyHierarchy(topology).map(({ node, depth }) => [node.id, depth]),
+  );
+}
+
+function laneForNode(
+  node: TopologyNode,
+  nodeById: ReadonlyMap<string, TopologyNode>,
+): string {
+  const ancestors: TopologyNode[] = [];
+  let current = node.parentId ? nodeById.get(node.parentId) : undefined;
+  while (current) {
+    ancestors.push(current);
+    current = current.parentId ? nodeById.get(current.parentId) : undefined;
   }
-  const columns = Math.ceil(Math.sqrt(sizes.length));
-  const rows = Math.ceil(sizes.length / columns);
-  const columnWidths = Array.from({ length: columns }, () => 0);
-  const rowDepths = Array.from({ length: rows }, () => 0);
-  sizes.forEach((size, index) => {
-    const column = index % columns;
-    const row = Math.floor(index / columns);
-    columnWidths[column] = Math.max(columnWidths[column]!, size.x);
-    rowDepths[row] = Math.max(rowDepths[row]!, size.z);
-  });
-  const width =
-    columnWidths.reduce((sum, value) => sum + value, 0) +
-    HIERARCHY_GAP * (columns + 1);
-  const depth =
-    rowDepths.reduce((sum, value) => sum + value, 0) +
-    HIERARCHY_GAP * (rows + 1);
-  const xCenters: number[] = [];
-  let x = -width / 2 + HIERARCHY_GAP;
-  for (const columnWidth of columnWidths) {
-    xCenters.push(x + columnWidth / 2);
-    x += columnWidth + HIERARCHY_GAP;
-  }
-  const zCenters: number[] = [];
-  let z = -depth / 2 + HIERARCHY_GAP;
-  for (const rowDepth of rowDepths) {
-    zCenters.push(z + rowDepth / 2);
-    z += rowDepth + HIERARCHY_GAP;
-  }
-  return {
-    size: {
-      x: width,
-      y: Math.max(...sizes.map((size) => size.y)) + 0.4,
-      z: depth,
-    },
-    positions: sizes.map((_, index) => [
-      xCenters[index % columns]!,
-      zCenters[Math.floor(index / columns)]!,
-    ]),
-  };
+  if (ancestors.length === 0) return "lane.unscoped";
+  return ancestors.length === 1
+    ? ancestors[0]!.id
+    : ancestors[ancestors.length - 2]!.id;
+}
+
+function barycenter(
+  nodeId: string,
+  neighbors: ReadonlyMap<string, readonly string[]>,
+  order: ReadonlyMap<string, number>,
+): number | undefined {
+  const positions = (neighbors.get(nodeId) ?? [])
+    .map((id) => order.get(id))
+    .filter((value): value is number => value !== undefined);
+  if (positions.length === 0) return undefined;
+  return positions.reduce((sum, value) => sum + value, 0) / positions.length;
 }
 
 export function generateWorldFromTopology(
@@ -394,71 +435,286 @@ export function generateWorldFromTopology(
   const definitionById = new Map(
     catalog.definitions.map((item) => [item.id, item]),
   );
-  const layers = calculateLayers(topology);
+  const nodeById = new Map(topology.nodes.map((node) => [node.id, node]));
+  const hierarchyDepths = hierarchyDepthByNode(topology);
+  const sort = stableTopologicalSort(topology, catalog);
+  const graphNodes = sort.orderedNodeIds.map((id) => nodeById.get(id)!);
+  const laneByNode = new Map(
+    graphNodes.map((node) => [node.id, laneForNode(node, nodeById)]),
+  );
+  const laneIds = [...new Set(laneByNode.values())].sort((left, right) => {
+    const minimumRank = (laneId: string) =>
+      Math.min(
+        ...graphNodes
+          .filter((node) => laneByNode.get(node.id) === laneId)
+          .map((node) => sort.rankByNodeId.get(node.id) ?? 0),
+      );
+    return minimumRank(left) - minimumRank(right) || left.localeCompare(right);
+  });
+  const laneIndex = new Map(laneIds.map((id, index) => [id, index]));
+  const incoming = new Map<string, string[]>();
+  const outgoing = new Map<string, string[]>();
+  for (const edge of topology.edges) {
+    const predecessors = incoming.get(edge.to.nodeId) ?? [];
+    predecessors.push(edge.from.nodeId);
+    incoming.set(edge.to.nodeId, predecessors);
+    const successors = outgoing.get(edge.from.nodeId) ?? [];
+    successors.push(edge.to.nodeId);
+    outgoing.set(edge.from.nodeId, successors);
+  }
+  const nodesByRank = new Map<number, string[]>();
+  for (const node of graphNodes) {
+    const rank = sort.rankByNodeId.get(node.id) ?? 0;
+    const nodes = nodesByRank.get(rank) ?? [];
+    nodes.push(node.id);
+    nodesByRank.set(rank, nodes);
+  }
+  const compareInitial = (left: string, right: string) =>
+    (laneIndex.get(laneByNode.get(left)!) ?? 0) -
+      (laneIndex.get(laneByNode.get(right)!) ?? 0) || left.localeCompare(right);
+  for (const nodes of nodesByRank.values()) nodes.sort(compareInitial);
+
+  const order = new Map<string, number>();
+  const refreshOrder = () => {
+    for (const nodes of nodesByRank.values()) {
+      nodes.forEach((id, index) => order.set(id, index));
+    }
+  };
+  refreshOrder();
+  const sweepRank = (
+    rank: number,
+    neighbors: ReadonlyMap<string, readonly string[]>,
+  ) => {
+    const nodes = nodesByRank.get(rank);
+    if (!nodes) return;
+    nodes.sort((left, right) => {
+      const laneDifference =
+        (laneIndex.get(laneByNode.get(left)!) ?? 0) -
+        (laneIndex.get(laneByNode.get(right)!) ?? 0);
+      if (laneDifference !== 0) return laneDifference;
+      const leftCenter = barycenter(left, neighbors, order);
+      const rightCenter = barycenter(right, neighbors, order);
+      if (leftCenter !== undefined && rightCenter !== undefined) {
+        return leftCenter - rightCenter || left.localeCompare(right);
+      }
+      if (leftCenter !== undefined) return -1;
+      if (rightCenter !== undefined) return 1;
+      return left.localeCompare(right);
+    });
+    nodes.forEach((id, index) => order.set(id, index));
+  };
+  for (let iteration = 0; iteration < 4; iteration += 1) {
+    for (let rank = 1; rank < sort.rankCount; rank += 1) {
+      sweepRank(rank, incoming);
+    }
+    for (let rank = sort.rankCount - 2; rank >= 0; rank -= 1) {
+      sweepRank(rank, outgoing);
+    }
+  }
+
+  const rankWidths = Array.from({ length: sort.rankCount }, (_, rank) =>
+    Math.max(
+      1,
+      ...(nodesByRank.get(rank) ?? []).map(
+        (id) => definitionById.get(nodeById.get(id)!.definitionId)!.size.x,
+      ),
+    ),
+  );
+  const totalWidth =
+    rankWidths.reduce((sum, width) => sum + width, 0) +
+    RANK_GAP * Math.max(0, rankWidths.length - 1);
+  const rankX: number[] = [];
+  let cursorX = -totalWidth / 2;
+  for (const width of rankWidths) {
+    rankX.push(cursorX + width / 2);
+    cursorX += width + RANK_GAP;
+  }
+
+  const laneHeights = new Map<string, number>();
+  for (const laneId of laneIds) {
+    let maximum = 0;
+    for (let rank = 0; rank < sort.rankCount; rank += 1) {
+      const nodes = (nodesByRank.get(rank) ?? []).filter(
+        (id) => laneByNode.get(id) === laneId,
+      );
+      const depth = nodes.reduce(
+        (sum, id, index) =>
+          sum +
+          definitionById.get(nodeById.get(id)!.definitionId)!.size.z +
+          (index > 0 ? NODE_GAP : 0),
+        0,
+      );
+      maximum = Math.max(maximum, depth);
+    }
+    laneHeights.set(laneId, Math.max(maximum + 2 * CONTAINER_PADDING, 10));
+  }
+  const totalLaneDepth =
+    laneIds.reduce((sum, id) => sum + laneHeights.get(id)!, 0) +
+    LANE_GAP * Math.max(0, laneIds.length - 1);
+  const laneZ = new Map<string, number>();
+  let cursorZ = -totalLaneDepth / 2;
+  for (const laneId of laneIds) {
+    const height = laneHeights.get(laneId)!;
+    laneZ.set(laneId, cursorZ + height / 2);
+    cursorZ += height + LANE_GAP;
+  }
+
+  const positions = new Map<string, Point2>();
+  for (let rank = 0; rank < sort.rankCount; rank += 1) {
+    for (const laneId of laneIds) {
+      const nodes = (nodesByRank.get(rank) ?? []).filter(
+        (id) => laneByNode.get(id) === laneId,
+      );
+      const totalDepth = nodes.reduce(
+        (sum, id, index) =>
+          sum +
+          definitionById.get(nodeById.get(id)!.definitionId)!.size.z +
+          (index > 0 ? NODE_GAP : 0),
+        0,
+      );
+      let z = laneZ.get(laneId)! - totalDepth / 2;
+      for (const id of nodes) {
+        const size = definitionById.get(nodeById.get(id)!.definitionId)!.size;
+        positions.set(id, { x: rankX[rank]!, z: z + size.z / 2 });
+        z += size.z + NODE_GAP;
+      }
+    }
+  }
+
   const children = new Map<string | undefined, TopologyNode[]>();
   for (const node of topology.nodes) {
     const values = children.get(node.parentId) ?? [];
     values.push(node);
     children.set(node.parentId, values);
   }
-  for (const values of children.values()) {
-    values.sort((left, right) => {
-      const layerDifference =
-        (layers.get(left.id) ?? 0) - (layers.get(right.id) ?? 0);
-      return layerDifference || left.id.localeCompare(right.id);
+  const boundsByNode = new Map<string, Bounds2>();
+  for (const node of graphNodes) {
+    const position = positions.get(node.id)!;
+    const size = definitionById.get(node.definitionId)!.size;
+    boundsByNode.set(node.id, {
+      minX: position.x - size.x / 2,
+      maxX: position.x + size.x / 2,
+      minZ: position.z - size.z / 2,
+      maxZ: position.z + size.z / 2,
     });
   }
-  const measured = new Map<string, BrickSize>();
-  const measure = (node: TopologyNode): BrickSize => {
-    const cached = measured.get(node.id);
-    if (cached) return cached;
-    const definition = definitionById.get(node.definitionId)!;
-    const childNodes = children.get(node.id) ?? [];
-    const size =
-      definition.kind === "container" && childNodes.length > 0
-        ? gridMetrics(childNodes.map(measure)).size
-        : definition.size;
-    measured.set(node.id, size);
-    return size;
-  };
+  const containerNodes = topologyHierarchy(topology)
+    .filter(
+      ({ node }) => definitionById.get(node.definitionId)?.kind === "container",
+    )
+    .sort(
+      (left, right) =>
+        right.depth - left.depth || left.node.id.localeCompare(right.node.id),
+    );
+  const containerSize = new Map<string, BrickSize>();
+  const containerPosition = new Map<string, Point2>();
+  for (const { node } of containerNodes) {
+    const childBounds = (children.get(node.id) ?? [])
+      .map((child) => boundsByNode.get(child.id))
+      .filter((bounds): bounds is Bounds2 => bounds !== undefined);
+    const fallbackLane = laneZ.get(node.id) ?? 0;
+    const bounds =
+      childBounds.length > 0
+        ? {
+            minX:
+              Math.min(...childBounds.map((item) => item.minX)) -
+              CONTAINER_PADDING,
+            maxX:
+              Math.max(...childBounds.map((item) => item.maxX)) +
+              CONTAINER_PADDING,
+            minZ:
+              Math.min(...childBounds.map((item) => item.minZ)) -
+              CONTAINER_PADDING,
+            maxZ:
+              Math.max(...childBounds.map((item) => item.maxZ)) +
+              CONTAINER_PADDING,
+          }
+        : {
+            minX: -5,
+            maxX: 5,
+            minZ: fallbackLane - 4,
+            maxZ: fallbackLane + 4,
+          };
+    boundsByNode.set(node.id, bounds);
+    containerSize.set(node.id, {
+      x: bounds.maxX - bounds.minX,
+      y: 0.5,
+      z: bounds.maxZ - bounds.minZ,
+    });
+    containerPosition.set(node.id, {
+      x: (bounds.minX + bounds.maxX) / 2,
+      z: (bounds.minZ + bounds.maxZ) / 2,
+    });
+  }
+
+  const topologyOrder = new Map(
+    sort.orderedNodeIds.map((id, index) => [id, index]),
+  );
+  const hierarchyEntries = topologyHierarchy(topology);
   const instances: BrickInstance[] = [];
-  const place = (
-    node: TopologyNode,
-    x: number,
-    z: number,
-    hierarchyDepth: number,
-  ) => {
+  for (const { node, depth } of hierarchyEntries.filter(
+    ({ node }) => definitionById.get(node.definitionId)?.kind === "container",
+  )) {
     const definition = definitionById.get(node.definitionId)!;
-    const childNodes = children.get(node.id) ?? [];
-    const visualSize = measure(node);
+    const position = containerPosition.get(node.id) ?? { x: 0, z: 0 };
+    const descendantRanks = topologyHierarchy(topology)
+      .filter(
+        ({ node: candidate }) =>
+          candidate.id !== node.id &&
+          candidate.parentId === node.id &&
+          sort.rankByNodeId.has(candidate.id),
+      )
+      .map(({ node: candidate }) => sort.rankByNodeId.get(candidate.id)!);
     instances.push({
       id: node.id,
       definitionId: node.definitionId,
       ...(node.label ? { label: node.label } : {}),
       transform: {
-        position: worldPosition(Math.round(x), hierarchyDepth, Math.round(z)),
+        position: worldPosition(
+          Math.round(position.x),
+          depth,
+          Math.round(position.z),
+        ),
         yawQuarterTurns: 0,
       },
       parameters: {
         ...defaultParameters(definition),
         ...node.parameters,
       },
-      ...(definition.kind === "container" ? { visualSize } : {}),
-      hierarchyDepth,
+      visualSize: containerSize.get(node.id) ?? definition.size,
+      hierarchyDepth: depth,
+      topologyRank:
+        descendantRanks.length > 0 ? Math.min(...descendantRanks) : 0,
+      topologyOrder: -1,
+      laneId: node.id,
     });
-    if (childNodes.length === 0) return;
-    const metrics = gridMetrics(childNodes.map(measure));
-    childNodes.forEach((child, index) => {
-      const [offsetX, offsetZ] = metrics.positions[index]!;
-      place(child, x + offsetX, z + offsetZ, hierarchyDepth + 1);
+  }
+  for (const node of graphNodes) {
+    const definition = definitionById.get(node.definitionId)!;
+    const position = positions.get(node.id)!;
+    const depth = hierarchyDepths.get(node.id) ?? 0;
+    instances.push({
+      id: node.id,
+      definitionId: node.definitionId,
+      ...(node.label ? { label: node.label } : {}),
+      transform: {
+        position: worldPosition(
+          Math.round(position.x),
+          depth,
+          Math.round(position.z),
+        ),
+        yawQuarterTurns: 0,
+      },
+      parameters: {
+        ...defaultParameters(definition),
+        ...node.parameters,
+      },
+      hierarchyDepth: depth,
+      topologyRank: sort.rankByNodeId.get(node.id) ?? 0,
+      topologyOrder: topologyOrder.get(node.id) ?? 0,
+      laneId: laneByNode.get(node.id)!,
     });
-  };
-  const roots = children.get(undefined) ?? [];
-  const rootMetrics = gridMetrics(roots.map(measure));
-  roots.forEach((root, index) => {
-    const [x, z] = rootMetrics.positions[index]!;
-    place(root, x, z, 0);
-  });
+  }
   return {
     schema: "linxsimcity.generated-world",
     schemaVersion: "1",

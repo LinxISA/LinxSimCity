@@ -26,6 +26,9 @@ export interface BrickInstance {
   readonly parameters: Readonly<Record<string, number>>;
   readonly visualSize?: BrickSize;
   readonly hierarchyDepth: number;
+  readonly topologyRank: number;
+  readonly topologyOrder: number;
+  readonly laneId: string;
 }
 
 export interface PhysicalArea {

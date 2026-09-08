@@ -5,7 +5,7 @@ import { Canvas } from "@react-three/fiber";
 import { Suspense, useMemo } from "react";
 
 import { Brick } from "./Brick.js";
-import { portWorldPosition } from "./geometry.js";
+import { orthogonalRoute, portWorldPosition } from "./geometry.js";
 
 interface SceneContentProps {
   readonly world: GeneratedWorld;
@@ -60,7 +60,7 @@ function SceneContent(props: SceneContentProps) {
               />
             );
           })}
-          {props.world.links.map((link) => {
+          {props.world.links.map((link, linkIndex) => {
             const fromInstance = instances.get(link.from.instanceId);
             const toInstance = instances.get(link.to.instanceId);
             if (!fromInstance || !toInstance) return null;
@@ -79,18 +79,14 @@ function SceneContent(props: SceneContentProps) {
               toDefinition,
               link.to.portId,
             );
-            const midY = Math.max(start[1], end[1]) + 1.2;
+            const targetIsQueue =
+              toDefinition.kind === "queue" && fromDefinition.kind !== "queue";
             return (
               <Line
                 key={link.id}
-                points={[
-                  start,
-                  [start[0], midY, start[2]],
-                  [end[0], midY, end[2]],
-                  end,
-                ]}
-                color="#79e7ff"
-                lineWidth={1.6}
+                points={orthogonalRoute(start, end, linkIndex)}
+                color={targetIsQueue ? "#55d6aa" : "#79e7ff"}
+                lineWidth={1.45}
                 transparent
                 opacity={0.72}
               />

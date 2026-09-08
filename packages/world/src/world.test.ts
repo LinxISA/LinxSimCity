@@ -5,6 +5,7 @@ import {
   addPosition,
   generateWorldFromTopology,
   positionToTuple,
+  stableTopologicalSort,
   topologyFingerprint,
   topologyHierarchy,
   validateArchitectureTopology,
@@ -73,6 +74,77 @@ describe("world coordinates", () => {
 });
 
 describe("topology-driven world generation", () => {
+  test("performs a stable topological sort before assigning X positions", () => {
+    const source = topology();
+    const sorted = stableTopologicalSort(source, CORE_CATALOG);
+    expect(sorted.orderedNodeIds).toEqual(["queue.1", "sram.1", "vector.1"]);
+    expect(sorted.rankByNodeId.get("queue.1")).toBe(0);
+    expect(sorted.rankByNodeId.get("sram.1")).toBe(0);
+    expect(sorted.rankByNodeId.get("vector.1")).toBe(1);
+    expect(sorted.cyclicNodeIds).toEqual([]);
+    expect(
+      stableTopologicalSort(
+        {
+          ...source,
+          nodes: [...source.nodes].reverse(),
+          edges: [...source.edges].reverse(),
+        },
+        CORE_CATALOG,
+      ).orderedNodeIds,
+    ).toEqual(sorted.orderedNodeIds);
+
+    const world = generateWorldFromTopology(source, CORE_CATALOG);
+    const xById = new Map(
+      world.instances.map((instance) => [
+        instance.id,
+        positionToTuple(instance.transform.position)[0],
+      ]),
+    );
+    for (const edge of source.edges) {
+      expect(xById.get(edge.from.nodeId)!).toBeLessThan(
+        xById.get(edge.to.nodeId)!,
+      );
+    }
+  });
+
+  test("barycenter ordering removes a simple two-edge crossing", () => {
+    const node = (id: string) => ({
+      id,
+      definitionId: "ac.transform",
+      parameters: { latency: 1 },
+      area: unknownArea,
+    });
+    const crossing: ArchitectureTopology = {
+      schema: "linxsimcity.topology",
+      schemaVersion: "1",
+      id: "test.crossing",
+      name: "Crossing reduction",
+      revision: "test-revision",
+      nodes: [node("a"), node("b"), node("c"), node("d")],
+      edges: [
+        {
+          id: "edge.a-d",
+          from: { nodeId: "a", portId: "out" },
+          to: { nodeId: "d", portId: "in" },
+        },
+        {
+          id: "edge.b-c",
+          from: { nodeId: "b", portId: "out" },
+          to: { nodeId: "c", portId: "in" },
+        },
+      ],
+    };
+    const world = generateWorldFromTopology(crossing, CORE_CATALOG);
+    const z = new Map(
+      world.instances.map((instance) => [
+        instance.id,
+        positionToTuple(instance.transform.position)[2],
+      ]),
+    );
+    expect(z.get("a")!).toBeLessThan(z.get("b")!);
+    expect(z.get("d")!).toBeLessThan(z.get("c")!);
+  });
+
   test("generates every scene connection directly from a valid topology edge", () => {
     const source = topology();
     expect(validateArchitectureTopology(source, CORE_CATALOG)).toEqual([]);

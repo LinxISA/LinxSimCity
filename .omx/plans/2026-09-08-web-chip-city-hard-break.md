@@ -117,7 +117,7 @@
 ### M3 — 拓扑驱动的 XYZ 城市生成器（依赖 M1、M2）
 
 - [x] 用 `apps/game` 替换旧 viewer 主入口，新增 `packages/world`；同步更新 workspace、构建和启动脚本，移除 editor 主路径。
-- [x] 从拓扑节点、层级、组件尺寸和边生成确定性 XYZ 布局与端口连线；每条场景连接必须回指唯一 topology edge。
+- [x] 对数据流节点执行稳定拓扑排序和最长路径分层，以 X 轴表达 producer→consumer 顺序；scope 使用 Z 轴泳道，rank 内通过双向 barycenter sweep 减少交叉，连线使用正交路由；每条场景连接必须回指唯一 topology edge。
 - [x] `parentId` 生成嵌套城区/街区/模块层次；容器从直接子节点计算展示包围盒，树视图、3D 分区和检查器路径使用同一父链。
 - [ ] 完成三维分块、局部坐标、相机、搜索、切片/展开和路径聚焦；不依赖有限大小的旧地板或固定城区坐标。
 - [ ] 支持 topology 导入、schema/语义诊断和只读节点检查；布局偏好单独保存且不能修改 topology hash。

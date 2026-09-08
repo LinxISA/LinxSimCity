@@ -38,24 +38,32 @@ invalid parent, incompatible edge, missing endpoint, and duplicate input
 binding. The generator produces scene instances and links only from a valid
 topology. There is no UI operation that creates, deletes, or rewires an edge.
 
-The initial layout calculates dependency layers, then uses them to order
-siblings inside each parent. Stable IDs break ties. Cyclic nodes remain
-renderable in deterministic trailing positions. Layout is derived data and is
-excluded from the topology fingerprint.
+The layout first removes hierarchy-only containers from the data-flow graph and
+runs a stable Kahn topological sort. Longest-path rank becomes the X-axis: every
+producer is left of its consumer. Stable IDs break ties, so shuffled source JSON
+produces the same order. Cyclic nodes are reported by the sorter and placed in a
+deterministic trailing rank rather than being silently treated as acyclic.
+
+Within each rank, four forward/backward barycenter sweeps use predecessor and
+successor positions to reduce edge crossings. Parent scope becomes a Z-axis
+swimlane. Node dimensions determine rank spacing and lane height, preventing
+adjacent buildings from overlapping. Layout is derived data and is excluded
+from the topology fingerprint.
 
 ## Hierarchy rendering
 
 `parentId` is the only hierarchy authority. A parent must exist and must use a
-container definition; parent cycles are rejected. The generated world records a
-depth for every instance, measures container bounds from its immediate
-children, and places each child on the next raised level. The renderer draws
-containers as labeled district plates and ordinary modules as buildings inside
-those plates. The topology inspector uses the same parent chain, so the tree,
-3D districts, and selected-node path cannot disagree.
+container definition; parent cycles are rejected. After graph nodes have been
+placed in ranks and scope lanes, container bounds are calculated bottom-up from
+their immediate children. Each hierarchy depth receives a raised Y level. The
+renderer draws containers as labeled district plates and ordinary modules as
+buildings inside those plates. The topology inspector uses the same parent
+chain, so 3D districts and the selected-node path cannot disagree.
 
-Graph dependency order controls stable ordering within each parent. It never
-moves a child outside its declared parent to make an edge shorter. Cross-scope
-edges remain visible between district plates.
+The sorter never changes `parentId` to make an edge shorter. Cross-scope edges
+remain visible between district plates and use orthogonal X/Y/Z routes. Small
+per-edge routing heights keep coincident links distinguishable while preserving
+their exact endpoints.
 
 ## Physical area
 

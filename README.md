@@ -14,7 +14,8 @@ packages remain isolated only while the new trace path is implemented.
 - Ten parameterized hardware component definitions with typed ports
 - Stable topology identities and hardware fingerprints
 - Directed connection validation with one generated 3D link per topology edge
-- Deterministic layered XYZ layout generated from graph dependencies
+- Stable topological sorting, longest-path X ranks, scope Z swimlanes,
+  barycenter crossing reduction, and orthogonal connection routing
 - Nested labeled districts generated from `parentId`, with hierarchy paths in
   the inspector
 - Mandatory physical-area records in square micrometres, including explicit
