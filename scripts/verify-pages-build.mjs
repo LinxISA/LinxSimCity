@@ -9,6 +9,8 @@ const EXPECTED_PLAN_SHA256 =
   "a988cf3e5a423811424c41dcd1fcd900c9fe2de98f178fd71556c64947c580d9";
 const EXPECTED_MODEL_SHA256 =
   "10845ecf3b737c28117af3c27c80eef361aa6a7ca73d9ca28ca7a53257366bb0";
+const EXPECTED_CATALOG_SHA256 =
+  "c12dd85baccdee37b6dc446906e0bff1ac74931f8c660d854f6b6a6c4bdffbb6";
 
 export function verifyPagesBuild(
   repositoryRoot = fileURLToPath(new URL("..", import.meta.url)),
@@ -59,12 +61,34 @@ export function verifyPagesBuild(
   ) {
     throw new Error("Pages game has an invalid generated pyCircuit topology");
   }
+  const catalog = JSON.parse(
+    readFileSync(join(dist, "catalogs", "davincioo-h3.json"), "utf8"),
+  );
+  if (
+    catalog.authority !== "catalog-mapping-not-execution-topology" ||
+    catalog.source?.catalogSha256 !== EXPECTED_CATALOG_SHA256 ||
+    catalog.summary?.h1 !== 7 ||
+    catalog.summary?.h2 !== 31 ||
+    catalog.summary?.h3Candidates !== 240 ||
+    catalog.summary?.sourcePresent !== 6 ||
+    catalog.candidates?.length !== 240 ||
+    !catalog.candidates.every(
+      /** @param {{area?: {unit?: unknown, value?: unknown, status?: unknown}}} candidate */
+      (candidate) =>
+        candidate.area?.unit === "um2" &&
+        candidate.area.value === null &&
+        candidate.area.status === "unknown",
+    )
+  ) {
+    throw new Error("Pages game has an invalid DavinciOO H3 catalog mapping");
+  }
   return {
     assetBase: EXPECTED_ASSET_BASE,
     app: "game",
     assets: assets.length,
     topologyNodes: topology.nodes.length,
     topologyEdges: topology.edges.length,
+    catalogCandidates: catalog.candidates.length,
   };
 }
 

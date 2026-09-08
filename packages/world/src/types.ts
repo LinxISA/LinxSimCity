@@ -1,4 +1,4 @@
-import type { BrickSize } from "@linxsimcity/component-catalog";
+import type { BrickSize, PhysicalArea } from "@linxsimcity/component-catalog";
 
 export const WORLD_CHUNK_SIZE = 64;
 
@@ -29,13 +29,6 @@ export interface BrickInstance {
   readonly topologyRank: number;
   readonly topologyOrder: number;
   readonly laneId: string;
-}
-
-export interface PhysicalArea {
-  readonly value: number | null;
-  readonly unit: "um2";
-  readonly status: "measured" | "estimated" | "aggregate" | "unknown";
-  readonly source: string;
 }
 
 export interface TopologyEndpoint {

@@ -31,6 +31,80 @@ export interface BrickSize {
   readonly z: number;
 }
 
+export interface PhysicalArea {
+  readonly value: number | null;
+  readonly unit: "um2";
+  readonly status: "measured" | "estimated" | "aggregate" | "unknown";
+  readonly source: string;
+}
+
+export type DavinciCandidateRepresentation =
+  | "module"
+  | "contained-state"
+  | "interface"
+  | "alias"
+  | "assembly"
+  | "unresolved";
+
+export interface DavinciCandidatePort {
+  readonly name: string;
+  readonly type: string;
+  readonly meaning: string;
+  readonly evidenceStatus: "declared" | "proposed" | "unresolved";
+}
+
+export interface DavinciCandidateMapping {
+  readonly candidateId: string;
+  readonly h1: string;
+  readonly h2: string;
+  readonly h3: string;
+  readonly name: string;
+  readonly representation: DavinciCandidateRepresentation;
+  readonly dispositionRecommendation: string;
+  readonly rationale: string;
+  readonly sourceCandidateStatus: string;
+  readonly sourceCandidateDisposition: string;
+  readonly reportedExecutionStatus: string;
+  readonly proposedSource: string;
+  readonly sourcePresentAtRevision: boolean;
+  readonly testPathsAtRevision: readonly string[];
+  readonly observedEvidenceStatus:
+    | "source-and-test-paths-present"
+    | "source-present-no-test-path"
+    | "source-absent"
+    | "not-applicable";
+  readonly card: string;
+  readonly ownerCandidateId: string | null;
+  readonly ownerStatus: "self" | "unresolved";
+  readonly inputs: readonly DavinciCandidatePort[];
+  readonly outputs: readonly DavinciCandidatePort[];
+  readonly area: PhysicalArea;
+}
+
+export interface DavinciCatalogMapping {
+  readonly schema: "linxsimcity.davincioo-catalog";
+  readonly schemaVersion: "1";
+  readonly authority: "catalog-mapping-not-execution-topology";
+  readonly source: {
+    readonly repository: string;
+    readonly revision: string;
+    readonly catalogPath: string;
+    readonly catalogSha256: string;
+    readonly treeManifestSha256: string;
+  };
+  readonly summary: {
+    readonly h1: number;
+    readonly h2: number;
+    readonly h3Candidates: number;
+    readonly byH1: Readonly<Record<string, number>>;
+    readonly byRepresentation: Readonly<
+      Record<DavinciCandidateRepresentation, number>
+    >;
+    readonly sourcePresent: number;
+  };
+  readonly candidates: readonly DavinciCandidateMapping[];
+}
+
 export interface BrickPortDefinition {
   readonly id: string;
   readonly label: string;

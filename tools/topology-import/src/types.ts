@@ -37,3 +37,11 @@ export interface QueuePlanProvenance {
   readonly planSha256: string;
   readonly modelSha256: string;
 }
+
+export interface DavinciCatalogProvenance {
+  readonly repository: string;
+  readonly revision: string;
+  readonly catalogPath: string;
+  readonly catalogSha256: string;
+  readonly treeManifestSha256: string;
+}

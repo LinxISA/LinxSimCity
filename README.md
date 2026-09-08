@@ -29,6 +29,8 @@ packages remain isolated only while the new trace path is implemented.
   components
 - Canonical QueueGraph importer and a generated 39-node, 32-edge pyCircuit
   DavinciOO topology
+- Separate 240-entry DavinciOO H3 browser with 7/31 hierarchy, disposition,
+  committed source/test-path evidence, ownership state, and area status
 
 The trace button is intentionally disabled until the new trace contract and
 first real SuperScalarModel adapter are connected. The UI does not fabricate

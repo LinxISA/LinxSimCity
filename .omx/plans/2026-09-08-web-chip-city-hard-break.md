@@ -99,7 +99,7 @@
 - [x] 每个 topology node 强制记录 `µm²` 面积、状态与来源；QueueGraph 未提供的 PPA 数据保留为 unknown，容器保留为 aggregate。
 
 - [ ] 重建 `packages/topology`、`packages/trace-schema`；新增 `packages/component-catalog`，定义积木、装配图、布局、存档、run、事件和快照。
-- [ ] 编写 `tools/catalog-import`，从固定 pyCircuit/DavinciOO 来源生成带出处和 hash 的 240 项映射报告；当前实现/可观测状态从实际模块与测试核对，不能照搬初始快照状态。
+- [x] 编写 catalog import，从固定 pyCircuit commit 的 `catalog.json` 与 Git tree manifest 生成带出处和 hash 的 240 项映射报告；reported snapshot 状态与 committed source/test-path evidence 分开记录，不能把目录候选升级成执行拓扑。
 - [ ] 增加负向 fixture：重复 ID、悬空端口、类型/宽度/方向不符、重复 owner、错误配置 hash、无损整数溢出、非法事件顺序、旧格式、损坏或截断数据。
 - [ ] 提供至少一个新格式 synthetic bundle、一个 topology fixture 和一个 schema 校验入口；更新 `tools/linxtrace`、`sdk/cpp` 的最小 writer。
 

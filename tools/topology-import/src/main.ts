@@ -5,13 +5,17 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 import {
+  convertDavinciCatalog,
+  parseDavinciSourceCatalog,
+} from "./davincioo-catalog.js";
+import {
   convertAgenticQueuePlan,
   parseAgenticQueuePlan,
 } from "./queue-plan.js";
 
 function usage(): never {
   throw new Error(
-    "usage: linxtopology queue-plan <plan.json> --model <model.py> --repository <url> --revision <sha> --output <topology.json> [--worktree-dirty] [--relevant-inputs-dirty]",
+    "usage: linxtopology <queue-plan|davincioo-catalog> <input> [command options]",
   );
 }
 
@@ -26,10 +30,8 @@ function sha256(path: string): string {
   return createHash("sha256").update(readFileSync(path)).digest("hex");
 }
 
-function main(): void {
-  const args = process.argv.slice(2);
-  if (args[0] !== "queue-plan" || !args[1]) usage();
-  const planPath = resolve(args[1]);
+function importQueuePlan(args: readonly string[]): void {
+  const planPath = resolve(args[1]!);
   const modelPath = resolve(option(args, "--model"));
   const outputPath = resolve(option(args, "--output"));
   const plan = parseAgenticQueuePlan(
@@ -47,6 +49,43 @@ function main(): void {
   process.stdout.write(
     `${JSON.stringify({ output: outputPath, nodes: topology.nodes.length, edges: topology.edges.length, source: topology.source })}\n`,
   );
+}
+
+function importDavinciCatalog(args: readonly string[]): void {
+  const catalogPath = resolve(args[1]!);
+  const treePath = resolve(option(args, "--tree"));
+  const outputPath = resolve(option(args, "--output"));
+  const catalog = parseDavinciSourceCatalog(
+    JSON.parse(readFileSync(catalogPath, "utf8")) as unknown,
+  );
+  const treePaths = new Set(
+    readFileSync(treePath, "utf8").split(/\r?\n/).filter(Boolean),
+  );
+  const mapping = convertDavinciCatalog(catalog, treePaths, {
+    repository: option(args, "--repository"),
+    revision: option(args, "--revision"),
+    catalogPath: option(args, "--catalog-path"),
+    catalogSha256: sha256(catalogPath),
+    treeManifestSha256: sha256(treePath),
+  });
+  writeFileSync(outputPath, `${JSON.stringify(mapping, null, 2)}\n`);
+  process.stdout.write(
+    `${JSON.stringify({ output: outputPath, summary: mapping.summary, source: mapping.source })}\n`,
+  );
+}
+
+function main(): void {
+  const args = process.argv.slice(2);
+  if (!args[1]) usage();
+  if (args[0] === "queue-plan") {
+    importQueuePlan(args);
+    return;
+  }
+  if (args[0] === "davincioo-catalog") {
+    importDavinciCatalog(args);
+    return;
+  }
+  usage();
 }
 
 try {

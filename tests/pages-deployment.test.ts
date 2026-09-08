@@ -18,14 +18,20 @@ const sourceTopology = join(
   repositoryRoot,
   "apps/game/public/topologies/davincioo-queue-model.json",
 );
+const sourceCatalog = join(
+  repositoryRoot,
+  "apps/game/public/catalogs/davincioo-h3.json",
+);
 function createPagesFixture(indexHtml: string): string {
   const root = mkdtempSync(join(tmpdir(), "linxsimcity-pages-"));
   const dist = join(root, "apps/game/dist");
   mkdirSync(join(dist, "assets"), { recursive: true });
   mkdirSync(join(dist, "topologies"), { recursive: true });
+  mkdirSync(join(dist, "catalogs"), { recursive: true });
   writeFileSync(join(dist, "index.html"), indexHtml);
   writeFileSync(join(dist, "assets/index.js"), "export {};\n");
   cpSync(sourceTopology, join(dist, "topologies/davincioo-queue-model.json"));
+  cpSync(sourceCatalog, join(dist, "catalogs/davincioo-h3.json"));
   return root;
 }
 
@@ -52,6 +58,7 @@ test("accepts the base-prefixed chip city game without the retired trace", () =>
       assets: 1,
       topologyNodes: 39,
       topologyEdges: 32,
+      catalogCandidates: 240,
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -220,7 +220,7 @@ code {
 
 .topology-panel {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(0, 1fr) auto;
   border-right: 1px solid var(--line);
 }
 
@@ -273,6 +273,27 @@ code {
   gap: 6px;
   padding: 10px;
   border-bottom: 1px solid var(--line);
+}
+
+.browser-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.browser-tabs button {
+  border-color: transparent;
+  color: #778e98;
+  background: transparent;
+  font-size: 13px;
+}
+
+.browser-tabs button.active {
+  border-color: rgb(121 231 255 / 28%);
+  color: #d9f7fc;
+  background: rgb(42 139 164 / 16%);
 }
 
 .topology-search label {
@@ -347,6 +368,17 @@ code {
   font-family: "SFMono-Regular", Consolas, monospace;
 }
 
+.candidate-kind {
+  max-width: 74px;
+  overflow: hidden;
+  color: #8097a0;
+  font:
+    500 12px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  text-overflow: ellipsis;
+}
+
 .node-mark {
   width: 7px;
   height: 26px;
@@ -384,6 +416,30 @@ code {
 
 .kind-io {
   background: #5ee1a7;
+}
+
+.representation-module {
+  background: #4cb7d0;
+}
+
+.representation-contained-state {
+  background: #7d8d9b;
+}
+
+.representation-interface {
+  background: #b77bd8;
+}
+
+.representation-alias {
+  background: #9aa85e;
+}
+
+.representation-assembly {
+  background: #d89859;
+}
+
+.representation-unresolved {
+  background: #cf6f78;
 }
 
 .topology-summary,
@@ -737,7 +793,8 @@ code {
 }
 
 .connection-list button > span:last-child,
-.port-list > div > span:last-child {
+.port-list > div > span:last-child,
+.catalog-port-list > div > span:last-child {
   display: grid;
   gap: 2px;
   min-width: 0;
@@ -757,7 +814,8 @@ code {
 }
 
 .connection-list small,
-.port-list small {
+.port-list small,
+.catalog-port-list small {
   color: #728994;
   font-size: 12px;
 }
@@ -793,6 +851,62 @@ code {
   border: 1px solid rgb(129 188 211 / 11%);
   border-radius: 6px;
   background: rgb(10 23 31 / 52%);
+}
+
+.catalog-port-list {
+  display: grid;
+  gap: 5px;
+}
+
+.catalog-port-list > div {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 6px 8px;
+  border: 1px solid rgb(129 188 211 / 11%);
+  border-radius: 6px;
+  background: rgb(10 23 31 / 52%);
+}
+
+.catalog-port-list strong {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-rationale {
+  margin: 0;
+  padding: 10px;
+  border-left: 2px solid rgb(207 111 120 / 58%);
+  color: #aebfc5;
+  background: rgb(40 21 27 / 28%);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.source-paths {
+  display: grid;
+  gap: 6px;
+}
+
+.source-paths code {
+  overflow: hidden;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: #849ca5;
+  background: #071117;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catalog-provenance strong {
+  color: #d6b77f;
 }
 
 .port-dot {

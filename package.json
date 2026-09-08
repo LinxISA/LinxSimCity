@@ -18,6 +18,7 @@
     "showcase:stage-city": "node scripts/enrich-pipeview-stage-city.mjs",
     "dev": "npm run dev --workspace @linxsimcity/game",
     "topology:import": "node tools/topology-import/dist/main.js",
+    "catalog:generate": "bash scripts/generate-davincioo-catalog.sh",
     "test": "vitest run",
     "typecheck": "node scripts/run-workspaces.mjs typecheck",
     "lint": "eslint .",

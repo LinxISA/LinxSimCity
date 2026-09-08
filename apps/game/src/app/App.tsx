@@ -1,5 +1,13 @@
-import { CORE_BRICK_BY_ID, CORE_CATALOG } from "@linxsimcity/component-catalog";
-import type { BrickDefinition } from "@linxsimcity/component-catalog";
+import {
+  CORE_BRICK_BY_ID,
+  CORE_CATALOG,
+  validateDavinciCatalogMapping,
+} from "@linxsimcity/component-catalog";
+import type {
+  BrickDefinition,
+  DavinciCandidateMapping,
+  DavinciCatalogMapping,
+} from "@linxsimcity/component-catalog";
 import {
   generateWorldFromTopology,
   positionToTuple,
@@ -20,7 +28,11 @@ import {
   useState,
 } from "react";
 
-import { loadBundledTopology, parseArchitectureTopology } from "./topology.js";
+import {
+  loadBundledCatalog,
+  loadBundledTopology,
+  parseArchitectureTopology,
+} from "./topology.js";
 import "./styles.css";
 
 const WorldScene = lazy(async () => {
@@ -54,8 +66,13 @@ function topologyNodePath(
 
 export function App() {
   const [topology, setTopology] = useState<ArchitectureTopology>();
+  const [catalog, setCatalog] = useState<DavinciCatalogMapping>();
+  const [browserMode, setBrowserMode] = useState<"topology" | "catalog">(
+    "topology",
+  );
   const [loadError, setLoadError] = useState<string>();
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>();
   const [filter, setFilter] = useState("");
   const [notice, setNotice] = useState("正在加载 pyCircuit QueueGraph 拓扑…");
   const importInput = useRef<HTMLInputElement>(null);
@@ -77,6 +94,9 @@ export function App() {
   const selectedDefinition = selectedNode
     ? CORE_BRICK_BY_ID.get(selectedNode.definitionId)
     : undefined;
+  const selectedCandidate = catalog?.candidates.find(
+    (candidate) => candidate.candidateId === selectedCandidateId,
+  );
   const orderedNodes = useMemo(() => {
     if (!topology || !world) return [];
     const nodeById = new Map(topology.nodes.map((node) => [node.id, node]));
@@ -97,21 +117,44 @@ export function App() {
       .filter(Boolean)
       .some((value) => value!.toLowerCase().includes(query));
   });
+  const visibleCandidates = (catalog?.candidates ?? []).filter((candidate) => {
+    const query = filter.trim().toLowerCase();
+    if (!query) return true;
+    return [
+      candidate.candidateId,
+      candidate.h1,
+      candidate.h2,
+      candidate.h3,
+      candidate.name,
+      candidate.representation,
+    ].some((value) => value.toLowerCase().includes(query));
+  });
 
   const loadDefault = useCallback(async () => {
     try {
       setLoadError(undefined);
-      const next = await loadBundledTopology();
+      const [next, nextCatalog] = await Promise.all([
+        loadBundledTopology(),
+        loadBundledCatalog(),
+      ]);
       const nextDiagnostics = validateArchitectureTopology(next, CORE_CATALOG);
       if (nextDiagnostics.length > 0) {
         throw new Error(
           `内置拓扑校验失败：${nextDiagnostics[0]!.path} ${nextDiagnostics[0]!.message}`,
         );
       }
+      const catalogDiagnostics = validateDavinciCatalogMapping(nextCatalog);
+      if (catalogDiagnostics.length > 0) {
+        throw new Error(
+          `H3 目录校验失败：${catalogDiagnostics[0]!.path} ${catalogDiagnostics[0]!.message}`,
+        );
+      }
       setTopology(next);
+      setCatalog(nextCatalog);
       setSelectedNodeId(undefined);
+      setSelectedCandidateId(undefined);
       setNotice(
-        `已从 pyCircuit QueueGraph 生成 ${next.nodes.length} 个组件和 ${next.edges.length} 条连接。`,
+        `已加载 ${next.nodes.length} 个运行拓扑节点和 ${nextCatalog.candidates.length} 项 H3 目录。`,
       );
     } catch (error) {
       const message =
@@ -136,6 +179,8 @@ export function App() {
       }
       setTopology(next);
       setSelectedNodeId(undefined);
+      setSelectedCandidateId(undefined);
+      setBrowserMode("topology");
       setNotice(
         `已从 ${next.name} 生成 ${next.nodes.length} 个组件和 ${next.edges.length} 条连接。`,
       );
@@ -202,13 +247,55 @@ export function App() {
         <aside className="topology-panel" aria-label="拓扑组件">
           <div className="panel-heading">
             <div>
-              <span className="eyebrow">TOPOLOGY</span>
-              <h1>拓扑顺序</h1>
+              <span className="eyebrow">
+                {browserMode === "topology" ? "TOPOLOGY" : "H3 CATALOG"}
+              </span>
+              <h1>
+                {browserMode === "topology" ? "拓扑顺序" : "DavinciOO 目录"}
+              </h1>
             </div>
-            <span className="count">{orderedNodes.length}</span>
+            <span className="count">
+              {browserMode === "topology"
+                ? orderedNodes.length
+                : (catalog?.candidates.length ?? 0)}
+            </span>
+          </div>
+          <div
+            className="browser-tabs"
+            role="tablist"
+            aria-label="浏览数据来源"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={browserMode === "topology"}
+              className={browserMode === "topology" ? "active" : ""}
+              onClick={() => {
+                setBrowserMode("topology");
+                setFilter("");
+                setSelectedCandidateId(undefined);
+              }}
+            >
+              运行拓扑
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={browserMode === "catalog"}
+              className={browserMode === "catalog" ? "active" : ""}
+              onClick={() => {
+                setBrowserMode("catalog");
+                setFilter("");
+                setSelectedNodeId(undefined);
+              }}
+            >
+              H3 目录
+            </button>
           </div>
           <div className="topology-search">
-            <label htmlFor="topology-filter">搜索组件</label>
+            <label htmlFor="topology-filter">
+              {browserMode === "topology" ? "搜索运行节点" : "搜索 240 项候选"}
+            </label>
             <input
               id="topology-filter"
               type="search"
@@ -218,60 +305,111 @@ export function App() {
             />
           </div>
           <div className="topology-list">
-            {visibleNodes.map(({ node, instance }) => {
-              const definition = CORE_BRICK_BY_ID.get(node.definitionId);
-              const connections = topology
-                ? nodeConnections(topology, node.id)
-                : { incoming: [], outgoing: [] };
-              return (
-                <button
-                  type="button"
-                  key={node.id}
-                  className={
-                    selectedNodeId === node.id
-                      ? "topology-node active"
-                      : "topology-node"
-                  }
-                  onClick={() => setSelectedNodeId(node.id)}
-                >
-                  <span
-                    className={`node-mark kind-${definition?.kind ?? "unknown"}`}
-                  />
-                  <span>
-                    <strong>{node.label ?? node.id}</strong>
-                    <small>
-                      R{instance.topologyRank} · {instance.laneId}
-                    </small>
-                  </span>
-                  <span className="edge-count">
-                    {connections.incoming.length}↓ {connections.outgoing.length}
-                    ↑
-                  </span>
-                </button>
-              );
-            })}
+            {browserMode === "topology"
+              ? visibleNodes.map(({ node, instance }) => {
+                  const definition = CORE_BRICK_BY_ID.get(node.definitionId);
+                  const connections = topology
+                    ? nodeConnections(topology, node.id)
+                    : { incoming: [], outgoing: [] };
+                  return (
+                    <button
+                      type="button"
+                      key={node.id}
+                      className={
+                        selectedNodeId === node.id
+                          ? "topology-node active"
+                          : "topology-node"
+                      }
+                      onClick={() => {
+                        setSelectedNodeId(node.id);
+                        setSelectedCandidateId(undefined);
+                      }}
+                    >
+                      <span
+                        className={`node-mark kind-${definition?.kind ?? "unknown"}`}
+                      />
+                      <span>
+                        <strong>{node.label ?? node.id}</strong>
+                        <small>
+                          R{instance.topologyRank} · {instance.laneId}
+                        </small>
+                      </span>
+                      <span className="edge-count">
+                        {connections.incoming.length}↓{" "}
+                        {connections.outgoing.length}↑
+                      </span>
+                    </button>
+                  );
+                })
+              : visibleCandidates.map((candidate) => (
+                  <button
+                    type="button"
+                    key={candidate.candidateId}
+                    className={
+                      selectedCandidateId === candidate.candidateId
+                        ? "topology-node catalog-node active"
+                        : "topology-node catalog-node"
+                    }
+                    onClick={() => {
+                      setSelectedCandidateId(candidate.candidateId);
+                      setSelectedNodeId(undefined);
+                    }}
+                  >
+                    <span
+                      className={`node-mark representation-${candidate.representation}`}
+                    />
+                    <span>
+                      <strong>
+                        {candidate.h1}.{candidate.h2}.{candidate.h3}
+                      </strong>
+                      <small>{candidate.name}</small>
+                    </span>
+                    <span className="candidate-kind">
+                      {candidate.representation}
+                    </span>
+                  </button>
+                ))}
           </div>
           <div className="topology-summary">
-            <div>
-              <span>节点</span>
-              <strong>{topology?.nodes.length ?? 0}</strong>
-            </div>
-            <div>
-              <span>边</span>
-              <strong>{topology?.edges.length ?? 0}</strong>
-            </div>
-            <div>
-              <span>拓扑层</span>
-              <strong>
-                {orderedNodes.length > 0
-                  ? Math.max(
-                      ...orderedNodes.map(
-                        ({ instance }) => instance.topologyRank,
-                      ),
-                    ) + 1
-                  : 0}
-              </strong>
-            </div>
+            {browserMode === "topology" ? (
+              <>
+                <div>
+                  <span>节点</span>
+                  <strong>{topology?.nodes.length ?? 0}</strong>
+                </div>
+                <div>
+                  <span>边</span>
+                  <strong>{topology?.edges.length ?? 0}</strong>
+                </div>
+                <div>
+                  <span>拓扑层</span>
+                  <strong>
+                    {orderedNodes.length > 0
+                      ? Math.max(
+                          ...orderedNodes.map(
+                            ({ instance }) => instance.topologyRank,
+                          ),
+                        ) + 1
+                      : 0}
+                  </strong>
+                </div>
+              </>
+            ) : (
+              <>
+                <div>
+                  <span>H1</span>
+                  <strong>{catalog?.summary.h1 ?? 0}</strong>
+                </div>
+                <div>
+                  <span>H2</span>
+                  <strong>{catalog?.summary.h2 ?? 0}</strong>
+                </div>
+                <div>
+                  <span>H3</span>
+                  <strong>{catalog?.summary.h3Candidates ?? 0}</strong>
+                </div>
+              </>
+            )}
           </div>
         </aside>
 
@@ -286,8 +424,15 @@ export function App() {
                 world={world}
                 definitions={CORE_BRICK_BY_ID}
                 selectedInstanceId={selectedNodeId}
-                onSelect={setSelectedNodeId}
-                onBlank={() => setSelectedNodeId(undefined)}
+                onSelect={(nodeId) => {
+                  setSelectedNodeId(nodeId);
+                  setSelectedCandidateId(undefined);
+                  setBrowserMode("topology");
+                }}
+                onBlank={() => {
+                  setSelectedNodeId(undefined);
+                  setSelectedCandidateId(undefined);
+                }}
               />
             </Suspense>
           ) : loadError || diagnostics.length > 0 ? (
@@ -316,21 +461,30 @@ export function App() {
           <div className="panel-heading">
             <div>
               <span className="eyebrow">INSPECTOR</span>
-              <h2>{selectedNode?.label ?? "未选择节点"}</h2>
+              <h2>
+                {selectedCandidate?.name ?? selectedNode?.label ?? "未选择对象"}
+              </h2>
             </div>
           </div>
-          {selectedNode && selectedDefinition && world && topology ? (
+          {selectedCandidate && catalog ? (
+            <CatalogInspector candidate={selectedCandidate} catalog={catalog} />
+          ) : selectedNode && selectedDefinition && world && topology ? (
             <NodeInspector
               node={selectedNode}
               definition={selectedDefinition}
               topology={topology}
               world={world}
-              onSelect={setSelectedNodeId}
+              onSelect={(nodeId) => {
+                setSelectedNodeId(nodeId);
+                setSelectedCandidateId(undefined);
+              }}
             />
           ) : (
             <div className="empty-inspector">
               <div className="selection-reticle" aria-hidden="true" />
-              <p>选择城市中的组件，查看它在拓扑中的输入、输出和参数。</p>
+              <p>
+                选择运行拓扑节点查看连接，或切换 H3 目录检查候选身份与状态。
+              </p>
             </div>
           )}
           {diagnostics.length > 0 ? (
@@ -353,6 +507,127 @@ export function App() {
         </span>
       </footer>
     </main>
+  );
+}
+
+interface CatalogInspectorProps {
+  readonly candidate: DavinciCandidateMapping;
+  readonly catalog: DavinciCatalogMapping;
+}
+
+function CatalogInspector({ candidate, catalog }: CatalogInspectorProps) {
+  return (
+    <div className="inspector-content">
+      <div className="identity-block">
+        <span>H3 candidate ID</span>
+        <code>{candidate.candidateId}</code>
+      </div>
+      <div className="source-provenance catalog-provenance">
+        <span>pyCircuit · committed catalog</span>
+        <code>{catalog.source.revision.slice(0, 12)}</code>
+        <strong>目录映射，不是执行拓扑</strong>
+      </div>
+
+      <section>
+        <h3>层次路径</h3>
+        <div className="hierarchy-path">
+          {candidate.h1} › {candidate.h2} › {candidate.h3}
+        </div>
+      </section>
+
+      <section>
+        <h3>候选状态</h3>
+        <div className="parameter-list">
+          <div>
+            <span>表示</span>
+            <strong>{candidate.representation}</strong>
+          </div>
+          <div>
+            <span>推荐处置</span>
+            <strong>{candidate.dispositionRecommendation}</strong>
+          </div>
+          <div>
+            <span>快照执行状态</span>
+            <strong>{candidate.reportedExecutionStatus}</strong>
+          </div>
+          <div>
+            <span>源码存在</span>
+            <strong>{candidate.sourcePresentAtRevision ? "yes" : "no"}</strong>
+          </div>
+          <div>
+            <span>Git tree 证据</span>
+            <strong>{candidate.observedEvidenceStatus}</strong>
+          </div>
+          <div>
+            <span>测试路径</span>
+            <strong>{candidate.testPathsAtRevision.length}</strong>
+          </div>
+          <div>
+            <span>owner</span>
+            <strong>
+              {candidate.ownerCandidateId ?? candidate.ownerStatus}
+            </strong>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3>物理面积</h3>
+        <div className={`area-record area-${candidate.area.status}`}>
+          <span>{candidate.area.status}</span>
+          <strong>
+            {candidate.area.value === null
+              ? "Unknown"
+              : `${candidate.area.value.toLocaleString()} µm²`}
+          </strong>
+          <small>{candidate.area.source}</small>
+        </div>
+      </section>
+
+      <section>
+        <h3>设计判断</h3>
+        <p className="catalog-rationale">{candidate.rationale}</p>
+      </section>
+
+      <section>
+        <h3>接口证据</h3>
+        <div className="catalog-port-list">
+          {candidate.inputs.map((port) => (
+            <div key={`in:${port.name}`}>
+              <span className="direction incoming">IN</span>
+              <span>
+                <strong>{port.name}</strong>
+                <small>
+                  {port.type} · {port.evidenceStatus}
+                </small>
+              </span>
+            </div>
+          ))}
+          {candidate.outputs.map((port) => (
+            <div key={`out:${port.name}`}>
+              <span className="direction outgoing">OUT</span>
+              <span>
+                <strong>{port.name}</strong>
+                <small>
+                  {port.type} · {port.evidenceStatus}
+                </small>
+              </span>
+            </div>
+          ))}
+          {candidate.inputs.length + candidate.outputs.length === 0 ? (
+            <p className="muted">该项没有独立端口。</p>
+          ) : null}
+        </div>
+      </section>
+
+      <section>
+        <h3>来源路径</h3>
+        <div className="source-paths">
+          <code>{candidate.card}</code>
+          <code>{candidate.proposedSource}</code>
+        </div>
+      </section>
+    </div>
   );
 }
 
