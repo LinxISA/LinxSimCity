@@ -4,6 +4,7 @@ import type {
   BrickPortDefinition,
   ComponentCatalog,
   PortProtocol,
+  BrickVisualDefinition,
 } from "./types.js";
 
 const port = (
@@ -32,6 +33,7 @@ const definition = (
   size: BrickDefinition["size"],
   ports: readonly BrickPortDefinition[],
   parameters: BrickDefinition["parameters"],
+  visual?: BrickVisualDefinition,
 ): BrickDefinition => ({
   id,
   label,
@@ -40,6 +42,16 @@ const definition = (
   size,
   ports,
   parameters,
+  visual: visual ?? {
+    profile:
+      kind === "container"
+        ? "district"
+        : kind === "io"
+          ? "interface"
+          : kind === "crossbar" || kind === "arbiter"
+            ? "switch"
+            : "compute",
+  },
 });
 
 export const CORE_BRICKS: readonly BrickDefinition[] = [
@@ -71,6 +83,11 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
         step: 1,
       },
     },
+    {
+      profile: "queue-pipe",
+      dimensionParameters: ["capacity"],
+      maxVisibleEntries: 12,
+    },
   ),
   definition(
     "core.table",
@@ -91,6 +108,11 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
         maximum: 4096,
         step: 1,
       },
+    },
+    {
+      profile: "table-linear",
+      dimensionParameters: ["entries"],
+      maxVisibleEntries: 16,
     },
   ),
   definition(
@@ -122,6 +144,11 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
         step: 1,
       },
     },
+    {
+      profile: "memory-banks",
+      dimensionParameters: ["banks", "rows"],
+      maxVisibleEntries: 32,
+    },
   ),
   definition(
     "core.register-file",
@@ -142,6 +169,11 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
         maximum: 4096,
         step: 1,
       },
+    },
+    {
+      profile: "table-linear",
+      dimensionParameters: ["entries"],
+      maxVisibleEntries: 16,
     },
   ),
   definition(
@@ -372,6 +404,11 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
         step: 1,
       },
     },
+    {
+      profile: "table-matrix",
+      dimensionParameters: ["capacity", "resources"],
+      maxVisibleEntries: 32,
+    },
   ),
   definition(
     "ac.route",
@@ -483,6 +520,11 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
         step: 1,
       },
     },
+    {
+      profile: "rob-circular",
+      dimensionParameters: ["capacity"],
+      maxVisibleEntries: 32,
+    },
   ),
   definition(
     "ac.observe",
@@ -502,6 +544,10 @@ export const CORE_BRICKS: readonly BrickDefinition[] = [
       ),
     ],
     {},
+    {
+      profile: "table-linear",
+      maxVisibleEntries: 8,
+    },
   ),
   definition(
     "ac.sink",

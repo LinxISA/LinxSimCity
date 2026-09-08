@@ -445,7 +445,16 @@ export function App() {
           )}
           <div className="scene-mode">
             <span className="mode-light mode-topology" />
-            拓扑排序 · Scope 泳道 · 正交连线
+            高架 SimQueue · 方向管廊 · 状态材质预览
+          </div>
+          <div className="scene-state-legend" aria-label="Entry state legend">
+            <span>
+              <i className="entry-swatch entry-occupied" /> 有数据
+            </span>
+            <span>
+              <i className="entry-swatch entry-empty" /> 空 entry
+            </span>
+            <small>PREVIEW · 非仿真状态</small>
           </div>
           <div className="axis-readout" aria-label="World axes">
             <span className="axis-x">X</span>
@@ -503,7 +512,8 @@ export function App() {
       <footer className="status-bar">
         <span>拖拽旋转 · 滚轮缩放 · 点击组件检查连接 · 点击空白取消选择</span>
         <span>
-          <i className="status-dot" /> 拓扑只读 · Trace 尚未接入
+          <i className="status-dot" /> 拓扑只读 · Entry 为视觉预览 · Trace
+          暂停接入
         </span>
       </footer>
     </main>

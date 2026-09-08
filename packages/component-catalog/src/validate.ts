@@ -1,4 +1,4 @@
-import { BRICK_KINDS, PORT_PROTOCOLS } from "./types.js";
+import { BRICK_KINDS, BRICK_VISUAL_PROFILES, PORT_PROTOCOLS } from "./types.js";
 import type {
   BrickDefinition,
   CatalogDiagnostic,
@@ -88,6 +88,29 @@ export function validateDefinition(
         message: "has an invalid integer range",
       });
     }
+  }
+  if (!BRICK_VISUAL_PROFILES.includes(definition.visual.profile)) {
+    diagnostics.push({
+      path: `${path}.visual.profile`,
+      message: "is not a supported visual profile",
+    });
+  }
+  for (const parameterId of definition.visual.dimensionParameters ?? []) {
+    if (!definition.parameters[parameterId]) {
+      diagnostics.push({
+        path: `${path}.visual.dimensionParameters`,
+        message: `references missing parameter ${parameterId}`,
+      });
+    }
+  }
+  if (
+    definition.visual.maxVisibleEntries !== undefined &&
+    !positiveInteger(definition.visual.maxVisibleEntries)
+  ) {
+    diagnostics.push({
+      path: `${path}.visual.maxVisibleEntries`,
+      message: "must be a positive safe integer",
+    });
   }
   return diagnostics;
 }

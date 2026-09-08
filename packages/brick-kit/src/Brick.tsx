@@ -4,11 +4,20 @@ import type {
 } from "@linxsimcity/component-catalog";
 import type { BrickInstance } from "@linxsimcity/world";
 import { positionToTuple } from "@linxsimcity/world";
-import { Html } from "@react-three/drei";
+import { Html, RoundedBox } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { DoubleSide } from "three";
 
-import { districtColor } from "./geometry.js";
+import {
+  circularEntryLayout,
+  entryIsOccupied,
+  layeredEntryLayout,
+  linearEntryLayout,
+  logicalEntryCount,
+  matrixEntryLayout,
+} from "./entry-layout.js";
+import type { BrickActivity, EntryVisual } from "./entry-layout.js";
+import { districtColor, QUEUE_VISUAL_ELEVATION } from "./geometry.js";
 
 const KIND_COLORS: Record<BrickKind, string> = {
   queue: "#3ad6c6",
@@ -24,58 +33,207 @@ const KIND_COLORS: Record<BrickKind, string> = {
   io: "#5ee1a7",
 };
 
-function Interior({ definition }: { readonly definition: BrickDefinition }) {
+interface InteriorProps {
+  readonly instance: BrickInstance;
+  readonly definition: BrickDefinition;
+  readonly activity: BrickActivity;
+}
+
+function EntryCell({
+  entry,
+  occupied,
+  circular = false,
+}: {
+  readonly entry: EntryVisual;
+  readonly occupied: boolean;
+  readonly circular?: boolean;
+}) {
+  return (
+    <RoundedBox
+      position={entry.position}
+      rotation={[0, entry.rotationY ?? 0, 0]}
+      args={[entry.scale[0], entry.scale[1], entry.scale[2]]}
+      radius={Math.min(entry.scale[0], entry.scale[1], entry.scale[2]) * 0.16}
+      smoothness={3}
+      castShadow
+    >
+      <meshPhysicalMaterial
+        color={occupied ? (circular ? "#ffc86b" : "#84ffe0") : "#1a242b"}
+        emissive={occupied ? (circular ? "#f08b2e" : "#21d8b2") : "#030608"}
+        emissiveIntensity={occupied ? 1.1 : 0.04}
+        metalness={occupied ? 0.42 : 0.68}
+        roughness={occupied ? 0.2 : 0.48}
+        clearcoat={occupied ? 0.9 : 0.25}
+        clearcoatRoughness={0.18}
+      />
+    </RoundedBox>
+  );
+}
+
+function StorageEntries({ instance, definition, activity }: InteriorProps) {
+  const {
+    profile,
+    maxVisibleEntries = 16,
+    dimensionParameters = [],
+  } = definition.visual;
+  const logicalCount = logicalEntryCount(instance, definition);
+  const logicalDimensions = dimensionParameters.map(
+    (parameterId) => instance.parameters[parameterId] ?? 1,
+  );
+  const entries =
+    profile === "rob-circular"
+      ? circularEntryLayout(logicalCount, definition.size, maxVisibleEntries)
+      : profile === "table-matrix"
+        ? logicalDimensions.length > 2
+          ? layeredEntryLayout(
+              logicalDimensions,
+              definition.size,
+              maxVisibleEntries,
+            )
+          : matrixEntryLayout(
+              logicalDimensions[0] ?? 1,
+              logicalDimensions[1] ?? 1,
+              definition.size,
+              maxVisibleEntries,
+            )
+        : linearEntryLayout(logicalCount, definition.size, maxVisibleEntries);
+  return (
+    <group position={[0, definition.size.y * 0.05, 0]}>
+      {profile === "rob-circular" ? (
+        <>
+          <mesh
+            position={[0, definition.size.y * 0.43, 0]}
+            rotation={[Math.PI / 2, 0, 0]}
+          >
+            <torusGeometry
+              args={[
+                Math.min(definition.size.x, definition.size.z) * 0.38,
+                0.08,
+                8,
+                64,
+              ]}
+            />
+            <meshStandardMaterial
+              color="#6e4f35"
+              emissive="#d06e25"
+              emissiveIntensity={0.22}
+              metalness={0.76}
+              roughness={0.28}
+            />
+          </mesh>
+          <mesh position={[0, definition.size.y * 0.43, 0]}>
+            <cylinderGeometry args={[0.42, 0.52, 0.32, 24]} />
+            <meshPhysicalMaterial
+              color="#263541"
+              metalness={0.82}
+              roughness={0.24}
+              clearcoat={0.7}
+            />
+          </mesh>
+        </>
+      ) : (
+        <RoundedBox
+          position={[0, definition.size.y * 0.35, 0]}
+          args={[definition.size.x * 0.84, 0.16, definition.size.z * 0.72]}
+          radius={0.08}
+          smoothness={3}
+        >
+          <meshStandardMaterial
+            color="#101a23"
+            metalness={0.78}
+            roughness={0.32}
+          />
+        </RoundedBox>
+      )}
+      {entries.map((entry) => (
+        <EntryCell
+          key={entry.logicalIndex}
+          entry={entry}
+          circular={profile === "rob-circular"}
+          occupied={entryIsOccupied(entry.logicalIndex, logicalCount, activity)}
+        />
+      ))}
+      {profile === "rob-circular" ? (
+        <>
+          <mesh
+            position={[
+              entries[0]?.position[0] ?? 0,
+              definition.size.y * 0.7,
+              entries[0]?.position[2] ?? 0,
+            ]}
+          >
+            <coneGeometry args={[0.15, 0.42, 10]} />
+            <meshStandardMaterial
+              color="#7ee9ff"
+              emissive="#2dbedc"
+              emissiveIntensity={0.85}
+            />
+          </mesh>
+          <mesh
+            position={[
+              entries.at(-1)?.position[0] ?? 0,
+              definition.size.y * 0.7,
+              entries.at(-1)?.position[2] ?? 0,
+            ]}
+          >
+            <coneGeometry args={[0.15, 0.42, 10]} />
+            <meshStandardMaterial
+              color="#ffc86b"
+              emissive="#ee8a2b"
+              emissiveIntensity={0.85}
+            />
+          </mesh>
+        </>
+      ) : null}
+    </group>
+  );
+}
+
+function Interior({ instance, definition, activity }: InteriorProps) {
   const { x, y, z } = definition.size;
+  if (
+    definition.visual.profile === "table-linear" ||
+    definition.visual.profile === "table-matrix" ||
+    definition.visual.profile === "rob-circular"
+  ) {
+    return (
+      <StorageEntries
+        instance={instance}
+        definition={definition}
+        activity={activity}
+      />
+    );
+  }
   switch (definition.kind) {
     case "queue":
-      return (
-        <group position={[0, y * 0.14, 0]}>
-          {[-1.5, -0.5, 0.5, 1.5].map((slot) => (
-            <mesh key={slot} position={[slot * (x / 5), 0, 0]}>
-              <boxGeometry args={[x / 6, y * 0.28, z * 0.58]} />
-              <meshStandardMaterial
-                color="#7ff7e5"
-                metalness={0.38}
-                roughness={0.27}
-              />
-            </mesh>
-          ))}
-        </group>
-      );
     case "table":
-      return (
-        <group position={[0, y * 0.03, z * 0.11]}>
-          {[-1, 0, 1].map((row) =>
-            [-1, 0, 1].map((column) => (
-              <mesh
-                key={`${row}:${column}`}
-                position={[column * x * 0.23, row * y * 0.17, 0]}
-              >
-                <boxGeometry args={[x * 0.17, y * 0.11, z * 0.12]} />
-                <meshStandardMaterial
-                  color="#9bb9ff"
-                  emissive="#234891"
-                  emissiveIntensity={0.18}
-                />
-              </mesh>
-            )),
-          )}
-        </group>
-      );
+      return null;
     case "sram":
     case "register-file":
       return (
         <group position={[0, y * 0.18, 0]}>
-          {[-1.5, -0.5, 0.5, 1.5].map((bank) => (
-            <mesh key={bank} position={[bank * (x / 4.8), 0, 0]}>
-              <boxGeometry args={[x / 6, y * 0.55, z * 0.62]} />
-              <meshStandardMaterial
-                color="#68b4ff"
-                metalness={0.62}
-                roughness={0.24}
-              />
-            </mesh>
-          ))}
+          {[-1.5, -0.5, 0.5, 1.5].map((bank, index) => {
+            const occupied = index < activity.occupiedEntries % 5;
+            return (
+              <RoundedBox
+                key={bank}
+                position={[bank * (x / 4.8), 0, 0]}
+                args={[x / 6, y * 0.55, z * 0.62]}
+                radius={0.12}
+                smoothness={3}
+                castShadow
+              >
+                <meshPhysicalMaterial
+                  color={occupied ? "#7bc7ff" : "#1c2b38"}
+                  emissive={occupied ? "#176fb0" : "#02070b"}
+                  emissiveIntensity={occupied ? 0.62 : 0.04}
+                  metalness={0.62}
+                  roughness={0.24}
+                  clearcoat={0.66}
+                />
+              </RoundedBox>
+            );
+          })}
         </group>
       );
     case "alu":
@@ -90,25 +248,36 @@ function Interior({ definition }: { readonly definition: BrickDefinition }) {
               definition.kind === "alu" ? 6 : 12,
             ]}
           />
-          <meshStandardMaterial
+          <meshPhysicalMaterial
             color={KIND_COLORS[definition.kind]}
+            emissive={KIND_COLORS[definition.kind]}
+            emissiveIntensity={0.14}
             metalness={0.72}
             roughness={0.22}
+            clearcoat={0.72}
           />
         </mesh>
       );
     case "vector":
       return (
         <group position={[0, y * 0.14, 0]}>
-          {[-1.5, -0.5, 0.5, 1.5].map((lane) => (
-            <mesh key={lane} position={[0, 0, lane * (z / 5)]}>
-              <boxGeometry args={[x * 0.72, y * 0.42, z / 8]} />
-              <meshStandardMaterial
-                color="#ff9f5d"
+          {[-1.5, -0.5, 0.5, 1.5].map((lane, index) => (
+            <RoundedBox
+              key={lane}
+              position={[0, 0, lane * (z / 5)]}
+              args={[x * 0.72, y * 0.42, z / 8]}
+              radius={0.11}
+              smoothness={3}
+            >
+              <meshPhysicalMaterial
+                color={index < 3 ? "#ffad68" : "#382b24"}
+                emissive={index < 3 ? "#b64f25" : "#080504"}
+                emissiveIntensity={index < 3 ? 0.38 : 0.04}
                 metalness={0.6}
                 roughness={0.22}
+                clearcoat={0.7}
               />
-            </mesh>
+            </RoundedBox>
           ))}
         </group>
       );
@@ -117,19 +286,22 @@ function Interior({ definition }: { readonly definition: BrickDefinition }) {
         <group position={[0, y * 0.13, 0]}>
           {[-1, 0, 1].map((row) =>
             [-1, 0, 1].map((column) => (
-              <mesh
+              <RoundedBox
                 key={`${row}:${column}`}
                 position={[column * x * 0.2, 0, row * z * 0.2]}
+                args={[x * 0.14, y * 0.42, z * 0.14]}
+                radius={0.08}
+                smoothness={3}
               >
-                <boxGeometry args={[x * 0.14, y * 0.42, z * 0.14]} />
-                <meshStandardMaterial
+                <meshPhysicalMaterial
                   color="#ff8268"
-                  emissive="#802316"
-                  emissiveIntensity={0.28}
+                  emissive="#a43121"
+                  emissiveIntensity={0.42}
                   metalness={0.64}
                   roughness={0.19}
+                  clearcoat={0.75}
                 />
-              </mesh>
+              </RoundedBox>
             )),
           )}
         </group>
@@ -143,16 +315,18 @@ function Interior({ definition }: { readonly definition: BrickDefinition }) {
                 <boxGeometry args={[x * 0.72, y * 0.08, z * 0.1]} />
                 <meshStandardMaterial
                   color="#c496ff"
-                  emissive="#522580"
-                  emissiveIntensity={0.24}
+                  emissive="#6d32a5"
+                  emissiveIntensity={0.42}
+                  metalness={0.62}
                 />
               </mesh>
               <mesh position={[lane * x * 0.2, lane * y * 0.12, 0]}>
                 <boxGeometry args={[x * 0.1, y * 0.08, z * 0.72]} />
                 <meshStandardMaterial
                   color="#c496ff"
-                  emissive="#522580"
-                  emissiveIntensity={0.24}
+                  emissive="#6d32a5"
+                  emissiveIntensity={0.42}
+                  metalness={0.62}
                 />
               </mesh>
             </group>
@@ -173,12 +347,13 @@ function Interior({ definition }: { readonly definition: BrickDefinition }) {
         <group position={[0, y * 0.2, 0]}>
           <mesh rotation={[0, Math.PI / 2, 0]}>
             <torusGeometry args={[Math.min(y, z) * 0.28, 0.18, 12, 28]} />
-            <meshStandardMaterial
+            <meshPhysicalMaterial
               color="#78edb9"
-              emissive="#176a4b"
-              emissiveIntensity={0.42}
+              emissive="#27956e"
+              emissiveIntensity={0.52}
               metalness={0.62}
               roughness={0.24}
+              clearcoat={0.8}
             />
           </mesh>
         </group>
@@ -189,6 +364,7 @@ function Interior({ definition }: { readonly definition: BrickDefinition }) {
 export interface BrickProps {
   readonly instance: BrickInstance;
   readonly definition: BrickDefinition;
+  readonly activity: BrickActivity;
   readonly selected: boolean;
   readonly onSelect: (instanceId: string) => void;
 }
@@ -208,8 +384,13 @@ function HierarchyDistrict({
   };
   return (
     <group position={[position[0], position[1], position[2]]} onClick={pick}>
-      <mesh position={[0, 0.12, 0]} receiveShadow>
-        <boxGeometry args={[size.x, 0.24, size.z]} />
+      <RoundedBox
+        position={[0, 0.12, 0]}
+        args={[size.x, 0.24, size.z]}
+        radius={0.22}
+        smoothness={3}
+        receiveShadow
+      >
         <meshPhysicalMaterial
           color={color}
           emissive={color}
@@ -222,7 +403,7 @@ function HierarchyDistrict({
           }
           depthWrite={false}
         />
-      </mesh>
+      </RoundedBox>
       <mesh position={[0, 0.26, 0]}>
         <boxGeometry args={[size.x, 0.48, size.z]} />
         <meshBasicMaterial
@@ -244,9 +425,21 @@ function HierarchyDistrict({
   );
 }
 
-function QueuePipe({ instance, definition, selected, onSelect }: BrickProps) {
-  const position = positionToTuple(instance.transform.position);
+function QueuePipe({
+  instance,
+  definition,
+  activity,
+  selected,
+  onSelect,
+}: BrickProps) {
+  const base = positionToTuple(instance.transform.position);
   const radius = definition.size.z * 0.28;
+  const logicalCount = logicalEntryCount(instance, definition);
+  const entries = linearEntryLayout(
+    logicalCount,
+    definition.size,
+    definition.visual.maxVisibleEntries ?? 12,
+  );
   const rotation = [0, instance.transform.yawRadians, 0] as const;
   const pick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
@@ -254,70 +447,118 @@ function QueuePipe({ instance, definition, selected, onSelect }: BrickProps) {
   };
   return (
     <group
-      position={[position[0], position[1], position[2]]}
+      position={[base[0], base[1] + QUEUE_VISUAL_ELEVATION, base[2]]}
       rotation={rotation}
       onClick={pick}
     >
+      {[-0.36, 0.36].map((offset) => (
+        <group key={offset} position={[offset * definition.size.x, 0, 0]}>
+          <mesh position={[0, -QUEUE_VISUAL_ELEVATION / 2, 0]}>
+            <cylinderGeometry args={[0.1, 0.15, QUEUE_VISUAL_ELEVATION, 12]} />
+            <meshStandardMaterial
+              color="#22343e"
+              metalness={0.8}
+              roughness={0.34}
+            />
+          </mesh>
+          <RoundedBox
+            position={[0, -QUEUE_VISUAL_ELEVATION + 0.08, 0]}
+            args={[0.62, 0.16, 0.62]}
+            radius={0.08}
+            smoothness={2}
+          >
+            <meshStandardMaterial
+              color="#18262f"
+              metalness={0.78}
+              roughness={0.4}
+            />
+          </RoundedBox>
+        </group>
+      ))}
       <mesh
         position={[0, definition.size.y / 2, 0]}
         rotation={[0, 0, Math.PI / 2]}
         castShadow
       >
         <cylinderGeometry
-          args={[radius, radius, definition.size.x, 24, 1, true]}
+          args={[radius, radius, definition.size.x, 32, 1, true]}
         />
         <meshPhysicalMaterial
-          color="#2ba998"
-          emissive="#0c4e49"
-          emissiveIntensity={0.3}
-          metalness={0.48}
-          roughness={0.22}
-          transmission={0.18}
+          color="#247f78"
+          emissive="#0b3f3c"
+          emissiveIntensity={0.25}
+          metalness={0.54}
+          roughness={0.18}
+          transmission={0.28}
+          thickness={0.42}
+          clearcoat={0.85}
+          clearcoatRoughness={0.14}
           transparent
-          opacity={0.66}
+          opacity={0.56}
           side={DoubleSide}
+          depthWrite={false}
         />
       </mesh>
-      <mesh
-        position={[0, definition.size.y / 2, 0]}
-        rotation={[0, 0, Math.PI / 2]}
-      >
-        <cylinderGeometry
-          args={[radius * 0.42, radius * 0.42, definition.size.x * 0.92, 16]}
-        />
-        <meshStandardMaterial
-          color="#78f2df"
-          emissive="#23a895"
-          emissiveIntensity={0.5}
-          transparent
-          opacity={0.72}
-        />
-      </mesh>
+      {entries.map((entry) => {
+        const occupied = entryIsOccupied(
+          entry.logicalIndex,
+          logicalCount,
+          activity,
+        );
+        return (
+          <RoundedBox
+            key={entry.logicalIndex}
+            position={[entry.position[0], definition.size.y / 2, 0]}
+            args={[
+              Math.max(0.12, entry.scale[0] * 0.72),
+              radius * 0.52,
+              radius * 0.76,
+            ]}
+            radius={0.09}
+            smoothness={3}
+          >
+            <meshPhysicalMaterial
+              color={occupied ? "#a3ffec" : "#222b2f"}
+              emissive={occupied ? "#25e9bf" : "#020404"}
+              emissiveIntensity={occupied ? 1.35 : 0.025}
+              metalness={occupied ? 0.32 : 0.72}
+              roughness={occupied ? 0.16 : 0.5}
+              clearcoat={0.82}
+            />
+          </RoundedBox>
+        );
+      })}
       {[-0.32, -0.1, 0.12, 0.34].map((offset) => (
         <mesh
           key={offset}
           position={[offset * definition.size.x, definition.size.y / 2, 0]}
           rotation={[0, Math.PI / 2, 0]}
         >
-          <torusGeometry args={[radius * 1.03, 0.06, 8, 20]} />
+          <torusGeometry args={[radius * 1.03, 0.055, 8, 24]} />
           <meshStandardMaterial
-            color="#a8fff1"
-            emissive="#48dcca"
-            emissiveIntensity={0.6}
+            color="#62bfb3"
+            emissive="#1a6e66"
+            emissiveIntensity={0.34}
+            metalness={0.78}
+            roughness={0.2}
           />
         </mesh>
       ))}
-      {[-0.2, 0.15].map((offset) => (
+      {[-0.18, 0.18].map((offset) => (
         <mesh
           key={offset}
-          position={[offset * definition.size.x, definition.size.y / 2, 0]}
+          position={[
+            offset * definition.size.x,
+            definition.size.y / 2 + radius * 0.72,
+            0,
+          ]}
           rotation={[0, 0, -Math.PI / 2]}
         >
-          <coneGeometry args={[radius * 0.34, radius * 0.62, 12]} />
+          <coneGeometry args={[radius * 0.22, radius * 0.48, 12]} />
           <meshStandardMaterial
-            color="#d5fff8"
+            color="#d8fff7"
             emissive="#5be7d3"
-            emissiveIntensity={0.75}
+            emissiveIntensity={0.85}
           />
         </mesh>
       ))}
@@ -335,7 +576,7 @@ function QueuePipe({ instance, definition, selected, onSelect }: BrickProps) {
           <meshStandardMaterial
             color={port.direction === "input" ? "#69dcff" : "#ffcf68"}
             emissive={port.direction === "input" ? "#176b8a" : "#845d12"}
-            emissiveIntensity={0.7}
+            emissiveIntensity={0.78}
           />
         </mesh>
       ))}
@@ -355,12 +596,14 @@ function QueuePipe({ instance, definition, selected, onSelect }: BrickProps) {
           />
         </mesh>
       ) : null}
-      <Html position={[0, definition.size.y + 0.34, 0]} center>
-        <span className="queue-label">
-          {instance.label ?? instance.id} ·{" "}
-          {instance.parameters.capacity ?? "?"}
-        </span>
-      </Html>
+      {selected || logicalCount >= 16 ? (
+        <Html position={[0, definition.size.y + 0.4, 0]} center>
+          <span className="queue-label">
+            {instance.label ?? instance.id} · {activity.occupiedEntries}/
+            {logicalCount}
+          </span>
+        </Html>
+      ) : null}
     </group>
   );
 }
@@ -368,6 +611,7 @@ function QueuePipe({ instance, definition, selected, onSelect }: BrickProps) {
 export function Brick({
   instance,
   definition,
+  activity,
   selected,
   onSelect,
 }: BrickProps) {
@@ -376,6 +620,7 @@ export function Brick({
       <HierarchyDistrict
         instance={instance}
         definition={definition}
+        activity={activity}
         selected={selected}
         onSelect={onSelect}
       />
@@ -386,6 +631,7 @@ export function Brick({
       <QueuePipe
         instance={instance}
         definition={definition}
+        activity={activity}
         selected={selected}
         onSelect={onSelect}
       />
@@ -393,7 +639,14 @@ export function Brick({
   }
   const position = positionToTuple(instance.transform.position);
   const color = KIND_COLORS[definition.kind];
-  const emissive = selected ? "#bdeaff" : "#07141e";
+  const storageProfile = [
+    "table-linear",
+    "table-matrix",
+    "rob-circular",
+  ].includes(definition.visual.profile);
+  const chassisHeight = storageProfile
+    ? definition.size.y * 0.42
+    : definition.size.y;
   const rotation = [0, instance.transform.yawRadians, 0] as const;
   const pick = (event: ThreeEvent<MouseEvent>) => {
     event.stopPropagation();
@@ -405,33 +658,59 @@ export function Brick({
       rotation={rotation}
       onClick={pick}
     >
-      <mesh position={[0, 0.18, 0]} receiveShadow castShadow>
-        <boxGeometry
-          args={[definition.size.x + 0.36, 0.36, definition.size.z + 0.36]}
-        />
+      <RoundedBox
+        position={[0, 0.14, 0]}
+        args={[definition.size.x + 0.48, 0.28, definition.size.z + 0.48]}
+        radius={0.16}
+        smoothness={3}
+        receiveShadow
+        castShadow
+      >
         <meshStandardMaterial
-          color="#101c27"
-          metalness={0.82}
-          roughness={0.36}
+          color="#0e1821"
+          metalness={0.86}
+          roughness={0.34}
         />
-      </mesh>
-      <mesh position={[0, definition.size.y / 2, 0]} receiveShadow castShadow>
-        <boxGeometry
-          args={[definition.size.x, definition.size.y, definition.size.z]}
-        />
+      </RoundedBox>
+      <RoundedBox
+        position={[0, chassisHeight / 2, 0]}
+        args={[definition.size.x, chassisHeight, definition.size.z]}
+        radius={0.24}
+        smoothness={4}
+        receiveShadow
+        castShadow
+      >
         <meshPhysicalMaterial
           color={color}
-          emissive={emissive}
-          emissiveIntensity={selected ? 0.52 : 0.05}
-          metalness={0.58}
-          roughness={0.3}
-          clearcoat={0.65}
-          clearcoatRoughness={0.22}
+          emissive={color}
+          emissiveIntensity={selected ? 0.2 : 0.075}
+          metalness={0.62}
+          roughness={0.26}
+          clearcoat={0.82}
+          clearcoatRoughness={0.18}
           transparent
-          opacity={0.88}
+          opacity={storageProfile ? 0.9 : 0.78}
         />
-      </mesh>
-      <Interior definition={definition} />
+      </RoundedBox>
+      <RoundedBox
+        position={[0, chassisHeight * 0.86, 0]}
+        args={[definition.size.x * 0.82, 0.08, definition.size.z * 0.76]}
+        radius={0.04}
+        smoothness={2}
+      >
+        <meshStandardMaterial
+          color={color}
+          emissive={color}
+          emissiveIntensity={0.34}
+          metalness={0.72}
+          roughness={0.22}
+        />
+      </RoundedBox>
+      <Interior
+        instance={instance}
+        definition={definition}
+        activity={activity}
+      />
       {definition.ports.map((port) => (
         <mesh
           key={port.id}
@@ -451,16 +730,23 @@ export function Brick({
                   : "#d49cff"
             }
             emissive={port.direction === "input" ? "#176b8a" : "#845d12"}
-            emissiveIntensity={0.65}
+            emissiveIntensity={0.7}
           />
         </mesh>
       ))}
       {selected ? (
-        <mesh position={[0, definition.size.y / 2, 0]}>
+        <mesh
+          position={[
+            0,
+            storageProfile ? definition.size.y * 0.48 : definition.size.y / 2,
+            0,
+          ]}
+        >
           <boxGeometry
             args={[
               definition.size.x + 0.24,
-              definition.size.y + 0.24,
+              (storageProfile ? definition.size.y * 0.58 : definition.size.y) +
+                0.24,
               definition.size.z + 0.24,
             ]}
           />

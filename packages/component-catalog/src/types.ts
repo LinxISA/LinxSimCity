@@ -14,6 +14,26 @@ export const BRICK_KINDS = [
 
 export type BrickKind = (typeof BRICK_KINDS)[number];
 
+export const BRICK_VISUAL_PROFILES = [
+  "queue-pipe",
+  "table-linear",
+  "table-matrix",
+  "rob-circular",
+  "memory-banks",
+  "compute",
+  "switch",
+  "district",
+  "interface",
+] as const;
+
+export type BrickVisualProfile = (typeof BRICK_VISUAL_PROFILES)[number];
+
+export interface BrickVisualDefinition {
+  readonly profile: BrickVisualProfile;
+  readonly dimensionParameters?: readonly string[];
+  readonly maxVisibleEntries?: number;
+}
+
 export const PORT_PROTOCOLS = [
   "transaction",
   "tile",
@@ -140,6 +160,7 @@ export interface BrickDefinition {
   readonly size: BrickSize;
   readonly ports: readonly BrickPortDefinition[];
   readonly parameters: Readonly<Record<string, BrickParameterDefinition>>;
+  readonly visual: BrickVisualDefinition;
   readonly source?: BrickSource;
 }
 

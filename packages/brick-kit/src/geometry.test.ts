@@ -7,6 +7,8 @@ import {
   districtColor,
   orthogonalRoute,
   portWorldPosition,
+  QUEUE_ROUTE_DECK_Y,
+  QUEUE_VISUAL_ELEVATION,
   rotateAnchor,
 } from "./geometry.js";
 
@@ -60,7 +62,7 @@ test("port positions follow a rotated brick", () => {
     },
   };
   portWorldPosition(instance, definition, "out").forEach((value, index) =>
-    expect(value).toBeCloseTo([10, 1.1, 2.5][index]!),
+    expect(value).toBeCloseTo([10, QUEUE_VISUAL_ELEVATION + 1.1, 2.5][index]!),
   );
 });
 
@@ -73,4 +75,11 @@ test("connection routing stays orthogonal in X, Y, and Z", () => {
       current.filter((value, axis) => value !== previous[axis]),
     ).toHaveLength(1);
   }
+});
+
+test("queue routes share a deck above the module roofs", () => {
+  const points = orthogonalRoute([0, 2, 0], [10, 5, 8], 0, QUEUE_ROUTE_DECK_Y);
+  expect(
+    points.slice(1, -1).every((point) => point[1] > QUEUE_ROUTE_DECK_Y),
+  ).toBe(true);
 });
