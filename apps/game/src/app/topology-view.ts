@@ -199,13 +199,8 @@ export function deriveTopologyView(
   return { entries, visibleNodeIds, focusedEdgeIds, focusedNodeIds };
 }
 
-function edgeNeighbor(
-  edge: TopologyEdge,
-  nodeId: string,
-  directed: boolean,
-): string | undefined {
+function edgeNeighbor(edge: TopologyEdge, nodeId: string): string | undefined {
   if (edge.from.nodeId === nodeId) return edge.to.nodeId;
-  if (!directed && edge.to.nodeId === nodeId) return edge.from.nodeId;
   return undefined;
 }
 
@@ -213,7 +208,6 @@ function searchPath(
   topology: ArchitectureTopology,
   fromNodeId: string,
   toNodeId: string,
-  directed: boolean,
 ): TopologyPathFocus | undefined {
   const queue = [fromNodeId];
   const visited = new Set(queue);
@@ -225,7 +219,7 @@ function searchPath(
     const current = queue.shift()!;
     if (current === toNodeId) break;
     for (const edge of topology.edges) {
-      const next = edgeNeighbor(edge, current, directed);
+      const next = edgeNeighbor(edge, current);
       if (!next || visited.has(next)) continue;
       visited.add(next);
       previous.set(next, { nodeId: current, edgeId: edge.id });
@@ -252,10 +246,7 @@ export function topologyPathBetween(
   toNodeId: string,
 ): TopologyPathFocus | undefined {
   if (fromNodeId === toNodeId) return { edgeIds: [], nodeIds: [fromNodeId] };
-  return (
-    searchPath(topology, fromNodeId, toNodeId, true) ??
-    searchPath(topology, fromNodeId, toNodeId, false)
-  );
+  return searchPath(topology, fromNodeId, toNodeId);
 }
 
 export function topologyPathForTraceAssociation(
@@ -264,18 +255,7 @@ export function topologyPathForTraceAssociation(
   storageNodeId: string,
 ): TopologyPathFocus | undefined {
   const path = topologyPathBetween(topology, entityNodeId, storageNodeId);
-  if (path?.edgeIds.length) return path;
-  const incidentEdges = topology.edges.filter(
-    (edge) =>
-      edge.from.nodeId === entityNodeId || edge.to.nodeId === entityNodeId,
-  );
-  if (incidentEdges.length === 0) return path;
-  return {
-    edgeIds: incidentEdges.map((edge) => edge.id),
-    nodeIds: [
-      ...new Set(
-        incidentEdges.flatMap((edge) => [edge.from.nodeId, edge.to.nodeId]),
-      ),
-    ],
-  };
+  return path?.edgeIds.length || entityNodeId === storageNodeId
+    ? path
+    : undefined;
 }

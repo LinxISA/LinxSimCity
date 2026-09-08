@@ -7,6 +7,8 @@ import {
   entryIsOccupied,
   layeredEntryLayout,
   linearEntryLayout,
+  logicalEntryCoordinates,
+  logicalEntryVisual,
   logicalEntryCount,
   matrixEntryLayout,
 } from "./entry-layout.js";
@@ -70,5 +72,23 @@ describe("entry layouts", () => {
     expect(
       [5, 6, 7, 0, 1].map((index) => entryIsOccupied(index, 8, activity)),
     ).toEqual([false, true, true, true, false]);
+  });
+
+  test("maps a flattened SRAM index to its true bank and row position", () => {
+    const logicalIndex = 4 * 4096 + 1949;
+    expect(logicalEntryCoordinates(logicalIndex, [8, 4096])).toEqual([4, 1949]);
+    const entry = logicalEntryVisual(
+      "matrix",
+      logicalIndex,
+      [8, 4096],
+      size,
+      32,
+    );
+    expect(entry.position[0]).toBeCloseTo(
+      ((4 + 0.5) / 8 - 0.5) * size.x * 0.72,
+    );
+    expect(entry.position[2]).toBeCloseTo(
+      ((1949 + 0.5) / 4096 - 0.5) * size.z * 0.62,
+    );
   });
 });

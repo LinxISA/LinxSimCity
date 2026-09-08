@@ -22,6 +22,7 @@ interface SceneContentProps {
   readonly definitions: ReadonlyMap<string, BrickDefinition>;
   readonly selectedInstanceId: string | undefined;
   readonly onSelect: (instanceId: string) => void;
+  readonly onSelectEntry: (instanceId: string, logicalIndex: number) => void;
   readonly onBlank: () => void;
   readonly activityByInstanceId?:
     ReadonlyMap<string, BrickActivity> | undefined;
@@ -266,6 +267,7 @@ function SceneContent(props: SceneContentProps) {
                 activity={instanceActivity}
                 selected={props.selectedInstanceId === instance.id}
                 onSelect={props.onSelect}
+                onSelectEntry={props.onSelectEntry}
               />
             );
           })}

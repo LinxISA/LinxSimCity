@@ -1,7 +1,12 @@
 import { describe, expect, test } from "vitest";
 
 import type { BrickActivity, EntryVisual } from "./entry-layout.js";
-import { entryIsOccupied, linearEntryLayout } from "./entry-layout.js";
+import {
+  entryIsOccupied,
+  linearEntryLayout,
+  logicalEntryVisual,
+  matrixEntryLayout,
+} from "./entry-layout.js";
 import {
   entryDetailBudget,
   groupEntryInstances,
@@ -47,7 +52,13 @@ describe("entry instancing", () => {
 
   test("keeps trace-active logical indices in the sampled view", () => {
     const sampled = linearEntryLayout(256, size, 8);
-    const prioritized = includePriorityEntries(sampled, 256, [17, 93, 211]);
+    const prioritized = includePriorityEntries(
+      sampled,
+      256,
+      [17, 93, 211],
+      (logicalIndex) =>
+        logicalEntryVisual("linear", logicalIndex, [256], size, 8),
+    );
     expect(prioritized).toHaveLength(8);
     expect(prioritized.map((entry) => entry.logicalIndex)).toEqual(
       expect.arrayContaining([17, 93, 211]),
@@ -75,5 +86,45 @@ describe("entry instancing", () => {
     expect(logicalIndexForInstance(occupied, 1)).toBe(6);
     expect(logicalIndexForInstance(empty, 4)).toBe(5);
     expect(logicalIndexForInstance(empty, 99)).toBeUndefined();
+  });
+
+  test("keeps B4/R1949 at its physical position and pickable across LOD regrouping", () => {
+    const dimensions = [8, 4096] as const;
+    const target = 4 * dimensions[1] + 1949;
+    const activity: BrickActivity = {
+      source: "trace",
+      occupiedEntries: 1,
+      headIndex: 0,
+      activeEntryIndices: [target],
+    };
+    const expected = logicalEntryVisual("matrix", target, dimensions, size, 32);
+
+    for (const budget of [32, 8]) {
+      const sampled = matrixEntryLayout(
+        dimensions[0],
+        dimensions[1],
+        size,
+        budget,
+      );
+      const entries = includePriorityEntries(
+        sampled,
+        dimensions[0] * dimensions[1],
+        [target],
+        (logicalIndex) =>
+          logicalEntryVisual("matrix", logicalIndex, dimensions, size, budget),
+      );
+      const [occupied] = groupEntryInstances(
+        entries,
+        dimensions[0] * dimensions[1],
+        activity,
+        entryIsOccupied,
+      );
+      const instanceIndex = occupied.logicalIndexByInstance.indexOf(target);
+
+      expect(logicalIndexForInstance(occupied, instanceIndex)).toBe(target);
+      expect(occupied.entries[instanceIndex]!.position).toEqual(
+        expected.position,
+      );
+    }
   });
 });

@@ -136,13 +136,8 @@ describe("topology view derivation", () => {
       "queue",
       "root",
     );
-    expect(associationPath?.edgeIds).toEqual([
-      "edge.source-queue",
-      "edge.queue-sink",
-    ]);
-    expect(associationPath?.edgeIds.every((id) => sourceIds.has(id))).toBe(
-      true,
-    );
+    expect(associationPath).toBeUndefined();
+    expect(topologyPathBetween(topology, "sink", "source")).toBeUndefined();
   });
 
   test("restores only valid persisted interaction state", () => {

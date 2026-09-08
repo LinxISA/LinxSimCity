@@ -48,6 +48,7 @@ export function includePriorityEntries(
   entries: readonly EntryVisual[],
   logicalCount: number,
   priorityIndices: readonly number[] | undefined,
+  visualForLogicalIndex: (logicalIndex: number) => EntryVisual,
 ): readonly EntryVisual[] {
   if (!priorityIndices || priorityIndices.length === 0) return entries;
 
@@ -70,7 +71,7 @@ export function includePriorityEntries(
     );
     if (replaceAt < 0) break;
     represented.delete(result[replaceAt]!.logicalIndex);
-    result[replaceAt] = { ...result[replaceAt]!, logicalIndex };
+    result[replaceAt] = visualForLogicalIndex(logicalIndex);
     represented.add(logicalIndex);
   }
   return result;

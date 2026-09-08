@@ -200,6 +200,10 @@ export function App() {
   );
   const [loadError, setLoadError] = useState<string>();
   const [selectedNodeId, setSelectedNodeId] = useState<string>();
+  const [selectedEntry, setSelectedEntry] = useState<{
+    readonly instanceId: string;
+    readonly logicalIndex: number;
+  }>();
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>();
   const [expandedCatalogH1, setExpandedCatalogH1] = useState<Set<string>>(
     () => new Set(),
@@ -273,6 +277,7 @@ export function App() {
       );
       if (residencies.length > 0) {
         const tileIds = [...new Set(residencies.map((item) => item.tileId))];
+        const rows = Math.max(1, instance.parameters.rows ?? 1);
         activity.set(instance.id, {
           source: "trace",
           occupiedEntries: residencies.length,
@@ -281,10 +286,12 @@ export function App() {
             ...new Set(
               residencies.flatMap((item) =>
                 item.bank === undefined
-                  ? item.slot === undefined
-                    ? []
-                    : [item.slot]
-                  : [item.bank],
+                  ? item.row === undefined
+                    ? item.slot === undefined
+                      ? []
+                      : [item.slot]
+                    : [item.row]
+                  : [item.bank * rows + (item.row ?? item.slot ?? 0)],
               ),
             ),
           ],
@@ -1085,11 +1092,19 @@ export function App() {
                 selectedInstanceId={selectedNodeId}
                 onSelect={(nodeId) => {
                   setSelectedNodeId(nodeId);
+                  setSelectedEntry(undefined);
+                  setSelectedCandidateId(undefined);
+                  setBrowserMode("topology");
+                }}
+                onSelectEntry={(instanceId, logicalIndex) => {
+                  setSelectedNodeId(instanceId);
+                  setSelectedEntry({ instanceId, logicalIndex });
                   setSelectedCandidateId(undefined);
                   setBrowserMode("topology");
                 }}
                 onBlank={() => {
                   setSelectedNodeId(undefined);
+                  setSelectedEntry(undefined);
                   setSelectedCandidateId(undefined);
                 }}
               />
@@ -1211,6 +1226,11 @@ export function App() {
               topology={topology}
               world={world}
               snapshot={traceSnapshot}
+              selectedEntryLogicalIndex={
+                selectedEntry?.instanceId === selectedNode.id
+                  ? selectedEntry.logicalIndex
+                  : undefined
+              }
               onSelect={(nodeId) => {
                 setSelectedNodeId(nodeId);
                 setSelectedCandidateId(undefined);
@@ -1410,6 +1430,7 @@ interface NodeInspectorProps {
   readonly topology: ArchitectureTopology;
   readonly world: ReturnType<typeof generateWorldFromTopology>;
   readonly snapshot?: SimTraceSnapshot | undefined;
+  readonly selectedEntryLogicalIndex?: number | undefined;
   readonly onSelect: (nodeId: string) => void;
   readonly onFocusEdge: (edgeId: string) => void;
   readonly onFocusAssociation: (
@@ -1424,6 +1445,7 @@ function NodeInspector({
   topology,
   world,
   snapshot,
+  selectedEntryLogicalIndex,
   onSelect,
   onFocusEdge,
   onFocusAssociation,
@@ -1456,12 +1478,45 @@ function NodeInspector({
         residency.tileId === item.tileId && residency.version === item.version,
     ),
   );
+  const selectedMemoryLocation =
+    selectedEntryLogicalIndex !== undefined &&
+    definition.visual.profile === "memory-banks"
+      ? {
+          bank: Math.floor(
+            selectedEntryLogicalIndex /
+              Math.max(1, instance.parameters.rows ?? 1),
+          ),
+          row:
+            selectedEntryLogicalIndex %
+            Math.max(1, instance.parameters.rows ?? 1),
+        }
+      : undefined;
   return (
     <div className="inspector-content">
       <div className="identity-block">
         <span>稳定拓扑 ID</span>
         <code>{node.id}</code>
       </div>
+      {selectedEntryLogicalIndex !== undefined ? (
+        <section>
+          <h3>选中 Entry</h3>
+          <div className="parameter-list">
+            <div>
+              <span>logical index</span>
+              <strong>{selectedEntryLogicalIndex}</strong>
+            </div>
+            {definition.visual.profile === "memory-banks" ? (
+              <div>
+                <span>physical location</span>
+                <strong>
+                  B{selectedMemoryLocation?.bank ?? "?"}/R
+                  {selectedMemoryLocation?.row ?? "?"}
+                </strong>
+              </div>
+            ) : null}
+          </div>
+        </section>
+      ) : null}
       {topology.source ? (
         <div className="source-provenance">
           <span>pyCircuit · QueueGraph {topology.source.planVersion}</span>

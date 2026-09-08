@@ -28,14 +28,16 @@ import {
   entryIsOccupied,
   layeredEntryLayout,
   linearEntryLayout,
+  logicalEntryVisual,
   logicalEntryCount,
   matrixEntryLayout,
 } from "./entry-layout.js";
-import type { BrickActivity } from "./entry-layout.js";
+import type { BrickActivity, EntryLayoutProfile } from "./entry-layout.js";
 import {
   entryDetailBudget,
   groupEntryInstances,
   includePriorityEntries,
+  logicalIndexForInstance,
 } from "./entry-instancing.js";
 import type { EntryInstanceGroup } from "./entry-instancing.js";
 import { districtColor } from "./geometry.js";
@@ -59,14 +61,17 @@ interface InteriorProps {
   readonly instance: BrickInstance;
   readonly definition: BrickDefinition;
   readonly activity: BrickActivity;
+  readonly onSelectEntry: (logicalIndex: number) => void;
 }
 
 function InstancedEntryCells({
   group,
   circular = false,
+  onSelect,
 }: {
   readonly group: EntryInstanceGroup;
   readonly circular?: boolean;
+  readonly onSelect: (logicalIndex: number) => void;
 }) {
   const mesh = useRef<InstancedMesh>(null);
   const geometry = useMemo(() => new RoundedBoxGeometry(1, 1, 1, 3, 0.14), []);
@@ -111,6 +116,13 @@ function InstancedEntryCells({
     [geometry, material],
   );
 
+  const pick = (event: ThreeEvent<MouseEvent>) => {
+    const logicalIndex = logicalIndexForInstance(group, event.instanceId);
+    if (logicalIndex === undefined) return;
+    event.stopPropagation();
+    onSelect(logicalIndex);
+  };
+
   return (
     <instancedMesh
       ref={mesh}
@@ -118,11 +130,17 @@ function InstancedEntryCells({
       count={group.entries.length}
       castShadow
       userData={{ logicalIndexByInstance: group.logicalIndexByInstance }}
+      onClick={pick}
     />
   );
 }
 
-function StorageEntries({ instance, definition, activity }: InteriorProps) {
+function StorageEntries({
+  instance,
+  definition,
+  activity,
+  onSelectEntry,
+}: InteriorProps) {
   const {
     profile,
     maxVisibleEntries = 16,
@@ -158,6 +176,18 @@ function StorageEntries({ instance, definition, activity }: InteriorProps) {
     detailRef.current = next;
     setDetail(next);
   });
+  const entryLayoutProfile: EntryLayoutProfile =
+    profile === "rob-circular"
+      ? "circular"
+      : profile === "table-matrix" || profile === "memory-banks"
+        ? logicalDimensions.length > 2
+          ? "layered"
+          : "matrix"
+        : "linear";
+  const entryDimensions =
+    entryLayoutProfile === "linear" || entryLayoutProfile === "circular"
+      ? [logicalCount]
+      : logicalDimensions;
   const laidOutEntries = useMemo(
     () =>
       profile === "rob-circular"
@@ -198,8 +228,24 @@ function StorageEntries({ instance, definition, activity }: InteriorProps) {
         laidOutEntries,
         logicalCount,
         activity.activeEntryIndices,
+        (logicalIndex) =>
+          logicalEntryVisual(
+            entryLayoutProfile,
+            logicalIndex,
+            entryDimensions,
+            definition.size,
+            detail.visibleEntries,
+          ),
       ),
-    [activity.activeEntryIndices, laidOutEntries, logicalCount],
+    [
+      activity.activeEntryIndices,
+      definition.size,
+      detail.visibleEntries,
+      entryDimensions,
+      entryLayoutProfile,
+      laidOutEntries,
+      logicalCount,
+    ],
   );
   const groups = useMemo(
     () => groupEntryInstances(entries, logicalCount, activity, entryIsOccupied),
@@ -258,6 +304,7 @@ function StorageEntries({ instance, definition, activity }: InteriorProps) {
           key={group.state}
           group={group}
           circular={profile === "rob-circular"}
+          onSelect={onSelectEntry}
         />
       ))}
       {profile === "rob-circular" ? (
@@ -296,7 +343,12 @@ function StorageEntries({ instance, definition, activity }: InteriorProps) {
   );
 }
 
-function Interior({ instance, definition, activity }: InteriorProps) {
+function Interior({
+  instance,
+  definition,
+  activity,
+  onSelectEntry,
+}: InteriorProps) {
   const { x, y, z } = definition.size;
   if (
     definition.visual.profile === "table-linear" ||
@@ -309,6 +361,7 @@ function Interior({ instance, definition, activity }: InteriorProps) {
         instance={instance}
         definition={definition}
         activity={activity}
+        onSelectEntry={onSelectEntry}
       />
     );
   }
@@ -450,6 +503,7 @@ export interface BrickProps {
   readonly activity: BrickActivity;
   readonly selected: boolean;
   readonly onSelect: (instanceId: string) => void;
+  readonly onSelectEntry: (instanceId: string, logicalIndex: number) => void;
 }
 
 function HierarchyDistrict({
@@ -514,6 +568,7 @@ export function Brick({
   activity,
   selected,
   onSelect,
+  onSelectEntry,
 }: BrickProps) {
   if (definition.kind === "container") {
     return (
@@ -523,6 +578,7 @@ export function Brick({
         activity={activity}
         selected={selected}
         onSelect={onSelect}
+        onSelectEntry={onSelectEntry}
       />
     );
   }
@@ -603,6 +659,10 @@ export function Brick({
         instance={instance}
         definition={definition}
         activity={activity}
+        onSelectEntry={(logicalIndex) => {
+          onSelect(instance.id);
+          onSelectEntry(instance.id, logicalIndex);
+        }}
       />
       {activity.labels && activity.labels.length > 0 ? (
         <Html position={[0, definition.size.y + 0.6, 0]} center>
