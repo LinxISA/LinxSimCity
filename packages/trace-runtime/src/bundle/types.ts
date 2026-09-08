@@ -1,20 +1,15 @@
 import type {
-  CheckpointState,
-  ChunkIndexEntry,
-  EventEnvelope,
-  StringsTable,
-  TraceIndex,
-  TraceManifest,
+  SimTraceCheckpoint,
+  SimTraceCheckpointIndexEntry,
+  SimTraceChunkIndexEntry,
+  SimTraceEvent,
+  SimTraceIndex,
+  SimTraceManifest,
 } from "@linxsimcity/trace-schema";
-import type { TopologyDescriptor } from "@linxsimcity/topology";
+import type { ArchitectureTopology } from "@linxsimcity/world";
 
 export interface NodeDirectorySource {
   readonly kind: "node-directory";
-  readonly path: string;
-}
-
-export interface NodeFileSource {
-  readonly kind: "node-file";
   readonly path: string;
 }
 
@@ -24,20 +19,20 @@ export interface HttpDirectorySource {
   readonly fetch?: typeof fetch | undefined;
 }
 
-export type TraceBundleSource =
-  | File
-  | FileSystemDirectoryHandle
-  | NodeDirectorySource
-  | NodeFileSource
-  | HttpDirectorySource;
+export type TraceBundleSource = NodeDirectorySource | HttpDirectorySource;
 
 export interface TraceBundleReaderInterface {
-  readManifest(): Promise<TraceManifest>;
-  readTopology(): Promise<TopologyDescriptor>;
-  readIndex(): Promise<TraceIndex>;
-  readStrings(): Promise<StringsTable>;
-  readChunk(chunk: ChunkIndexEntry): Promise<readonly EventEnvelope[]>;
-  readCheckpoint(path: string): Promise<CheckpointState>;
+  readManifest(signal?: AbortSignal): Promise<SimTraceManifest>;
+  readTopology(signal?: AbortSignal): Promise<ArchitectureTopology>;
+  readIndex(signal?: AbortSignal): Promise<SimTraceIndex>;
+  readChunk(
+    chunk: SimTraceChunkIndexEntry,
+    signal?: AbortSignal,
+  ): Promise<readonly SimTraceEvent[]>;
+  readCheckpoint(
+    checkpoint: SimTraceCheckpointIndexEntry,
+    signal?: AbortSignal,
+  ): Promise<SimTraceCheckpoint>;
   close(): Promise<void>;
 }
 
@@ -47,7 +42,9 @@ export class TraceBundleError extends Error {
       | "invalid_bundle"
       | "invalid_entry_path"
       | "missing_entry"
-      | "resource_limit",
+      | "resource_limit"
+      | "integrity_mismatch"
+      | "unsupported_source",
     message: string,
   ) {
     super(message);

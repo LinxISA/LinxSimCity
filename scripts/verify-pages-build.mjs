@@ -34,6 +34,26 @@ export function verifyPagesBuild(
       "Pages game must not ship the retired viewer default trace",
     );
   }
+  const runRoot = join(dist, "runs", "minimal.bundle");
+  const runManifest = JSON.parse(
+    readFileSync(join(runRoot, "manifest.json"), "utf8"),
+  );
+  const runIndex = JSON.parse(
+    readFileSync(join(runRoot, "index.json"), "utf8"),
+  );
+  if (
+    runManifest.schema !== "linxsimcity.trace" ||
+    runManifest.schemaVersion !== "1" ||
+    runManifest.topologyFingerprint !== "fnv1a64:815740de3e4b867f" ||
+    runManifest.eventCount !== "12" ||
+    runIndex.schema !== "linxsimcity.trace-index" ||
+    runIndex.chunks?.length !== 1 ||
+    runIndex.checkpoints?.length !== 1 ||
+    !existsSync(join(runRoot, runIndex.chunks[0].path)) ||
+    !existsSync(join(runRoot, runIndex.checkpoints[0].path))
+  ) {
+    throw new Error("Pages game has an invalid current synthetic trace bundle");
+  }
   const topology = JSON.parse(
     readFileSync(
       join(dist, "topologies", "davincioo-queue-model.json"),
@@ -89,6 +109,7 @@ export function verifyPagesBuild(
     topologyNodes: topology.nodes.length,
     topologyEdges: topology.edges.length,
     catalogCandidates: catalog.candidates.length,
+    traceEvents: Number(runManifest.eventCount),
   };
 }
 

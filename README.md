@@ -35,9 +35,11 @@ packages remain isolated only while the new trace path is implemented.
   committed source/test-path evidence, ownership state, and area status
 
 The current trace schema, chunk/index/checkpoint bundle, TypeScript validator,
-and C++ writer are implemented. The game trace button remains disabled until
-the current Worker reducer and first real SuperScalarModel adapter are
-connected. The UI does not fabricate runtime results.
+C++ writer, deterministic Worker reducer, and game playback controls are
+implemented. The game can load a clearly labeled synthetic current bundle for
+Queue/Tile inspection. A real run remains unavailable until the first current
+SuperScalarModel adapter is connected; the UI does not fabricate runtime
+results.
 
 ## Run locally
 

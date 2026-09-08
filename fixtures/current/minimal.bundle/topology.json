@@ -18,11 +18,27 @@
       }
     },
     {
+      "id": "source.ingress",
+      "definitionId": "ac.source",
+      "label": "Ingress Source",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa-area"
+      }
+    },
+    {
       "id": "queue.ingress",
       "definitionId": "core.queue",
       "label": "Ingress Queue",
       "parentId": "scope.root",
-      "parameters": { "capacity": 4, "latency": 1 },
+      "parameters": {
+        "capacity": 4,
+        "latency": 1
+      },
       "area": {
         "value": null,
         "unit": "um2",
@@ -35,7 +51,10 @@
       "definitionId": "core.sram",
       "label": "Tile SRAM",
       "parentId": "scope.root",
-      "parameters": { "banks": 4, "rows": 64 },
+      "parameters": {
+        "banks": 4,
+        "rows": 64
+      },
       "area": {
         "value": null,
         "unit": "um2",
@@ -48,7 +67,9 @@
       "definitionId": "core.vector",
       "label": "Vector Compute",
       "parentId": "scope.root",
-      "parameters": { "lanes": 8 },
+      "parameters": {
+        "lanes": 8
+      },
       "area": {
         "value": null,
         "unit": "um2",
@@ -59,9 +80,26 @@
   ],
   "edges": [
     {
+      "id": "edge.source-queue",
+      "from": {
+        "nodeId": "source.ingress",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.ingress",
+        "portId": "in"
+      }
+    },
+    {
       "id": "edge.queue-compute",
-      "from": { "nodeId": "queue.ingress", "portId": "out" },
-      "to": { "nodeId": "compute.vector", "portId": "issue" }
+      "from": {
+        "nodeId": "queue.ingress",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "compute.vector",
+        "portId": "issue"
+      }
     }
   ]
 }

@@ -1,23 +1,14 @@
-import { open, readFile, stat, type FileHandle } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 
-import { Reader, ZipReader } from "@zip.js/zip.js";
-
-import {
-  assertSafeEntryPath,
-  ZipEntryStore,
-  type EntryStore,
-} from "./entry-store.js";
-import {
-  TraceBundleError,
-  type NodeDirectorySource,
-  type NodeFileSource,
-} from "./types.js";
+import { assertSafeEntryPath, type EntryStore } from "./entry-store.js";
+import { TraceBundleError, type NodeDirectorySource } from "./types.js";
 
 const MAX_COMPRESSED_ENTRY_BYTES = 256 * 1024 * 1024;
 
 class NodeDirectoryStore implements EntryStore {
   private readonly root: string;
+  private closed = false;
 
   constructor(path: string) {
     this.root = resolve(path);
@@ -36,7 +27,10 @@ class NodeDirectoryStore implements EntryStore {
     return absolute;
   }
 
-  async read(path: string): Promise<Uint8Array> {
+  async read(path: string, signal?: AbortSignal): Promise<Uint8Array> {
+    if (this.closed)
+      throw new TraceBundleError("invalid_bundle", "trace store is closed");
+    signal?.throwIfAborted();
     const absolute = this.entryPath(path);
     try {
       const metadata = await stat(absolute);
@@ -47,9 +41,11 @@ class NodeDirectoryStore implements EntryStore {
           `${path} exceeds the ${MAX_COMPRESSED_ENTRY_BYTES}-byte entry limit`,
         );
       }
-      return readFile(absolute);
+      const bytes = await readFile(absolute, signal ? { signal } : undefined);
+      signal?.throwIfAborted();
+      return bytes;
     } catch (error) {
-      if (error instanceof TraceBundleError) throw error;
+      if (error instanceof TraceBundleError || signal?.aborted) throw error;
       throw new TraceBundleError(
         "missing_entry",
         `trace bundle entry is missing: ${path}`,
@@ -57,44 +53,11 @@ class NodeDirectoryStore implements EntryStore {
     }
   }
 
-  async close(): Promise<void> {}
-}
-
-class NodeRandomAccessReader extends Reader<string> {
-  private handle: FileHandle | undefined;
-
-  constructor(private readonly path: string) {
-    super(path);
-  }
-
-  override async init(): Promise<void> {
-    await super.init?.();
-    this.handle = await open(this.path, "r");
-    this.size = (await this.handle.stat()).size;
-  }
-
-  override async readUint8Array(
-    offset: number,
-    length: number,
-  ): Promise<Uint8Array> {
-    if (!this.handle) throw new Error("ZIP reader is not initialized");
-    const bytes = new Uint8Array(length);
-    const { bytesRead } = await this.handle.read(bytes, 0, length, offset);
-    return bytes.subarray(0, bytesRead);
-  }
-
   async close(): Promise<void> {
-    await this.handle?.close();
-    this.handle = undefined;
+    this.closed = true;
   }
 }
 
-export async function openNodeEntryStore(
-  source: NodeDirectorySource | NodeFileSource,
-): Promise<EntryStore> {
-  if (source.kind === "node-directory")
-    return new NodeDirectoryStore(source.path);
-  const fileReader = new NodeRandomAccessReader(source.path);
-  const reader = new ZipReader(fileReader);
-  return ZipEntryStore.create(reader, () => fileReader.close());
+export function openNodeEntryStore(source: NodeDirectorySource): EntryStore {
+  return new NodeDirectoryStore(source.path);
 }

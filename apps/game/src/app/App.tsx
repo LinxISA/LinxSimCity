@@ -8,6 +8,13 @@ import type {
   DavinciCandidateMapping,
   DavinciCatalogMapping,
 } from "@linxsimcity/component-catalog";
+import type { BrickActivity } from "@linxsimcity/brick-kit";
+import {
+  SeekSupersededError,
+  TraceWorkerClient,
+  type LoadedTraceInfo,
+  type SimTraceSnapshot,
+} from "@linxsimcity/trace-runtime";
 import {
   generateWorldFromTopology,
   positionToTuple,
@@ -75,7 +82,15 @@ export function App() {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>();
   const [filter, setFilter] = useState("");
   const [notice, setNotice] = useState("正在加载 pyCircuit QueueGraph 拓扑…");
+  const [traceInfo, setTraceInfo] = useState<LoadedTraceInfo>();
+  const [traceSnapshot, setTraceSnapshot] = useState<SimTraceSnapshot>();
+  const [traceCycle, setTraceCycle] = useState("0");
+  const [cycleDraft, setCycleDraft] = useState("0");
+  const [tracePlaying, setTracePlaying] = useState(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const importInput = useRef<HTMLInputElement>(null);
+  const traceClient = useRef<TraceWorkerClient | undefined>(undefined);
+  const traceRequestId = useRef(0);
   const diagnostics = useMemo(
     () =>
       topology ? validateArchitectureTopology(topology, CORE_CATALOG) : [],
@@ -88,6 +103,64 @@ export function App() {
         : undefined,
     [diagnostics.length, topology],
   );
+  const traceActivity = useMemo(() => {
+    if (!world || !traceSnapshot) return undefined;
+    const activity = new Map<string, BrickActivity>(
+      world.instances.map((instance) => [
+        instance.id,
+        { source: "trace", occupiedEntries: 0, headIndex: 0 },
+      ]),
+    );
+    for (const queue of traceSnapshot.queues) {
+      const slots = queue.tokens.flatMap((token) =>
+        token.slot === null ? [] : [token.slot],
+      );
+      activity.set(queue.queueId, {
+        source: "trace",
+        occupiedEntries: queue.occupancy,
+        headIndex: slots.length > 0 ? Math.min(...slots) : 0,
+        activeEntryIndices: slots,
+      });
+    }
+    for (const instance of world.instances) {
+      const residencies = traceSnapshot.tileResidencies.filter(
+        (item) => item.storageNodeId === instance.id,
+      );
+      if (residencies.length > 0) {
+        activity.set(instance.id, {
+          source: "trace",
+          occupiedEntries: residencies.length,
+          headIndex: 0,
+          activeEntryIndices: [
+            ...new Set(
+              residencies.flatMap((item) =>
+                item.bank === undefined
+                  ? item.slot === undefined
+                    ? []
+                    : [item.slot]
+                  : [item.bank],
+              ),
+            ),
+          ],
+          labels: residencies.map(
+            (item) =>
+              `${item.tileId}@${item.bank === undefined ? "slot" : `B${item.bank}`}`,
+          ),
+        });
+      }
+    }
+    for (const computation of traceSnapshot.computations) {
+      if (computation.status === "active") {
+        activity.set(computation.entityId, {
+          source: "trace",
+          occupiedEntries: 1,
+          headIndex: 0,
+          labels: [computation.operation],
+        });
+      }
+    }
+    return activity;
+  }, [traceSnapshot, world]);
   const selectedNode = topology?.nodes.find(
     (node) => node.id === selectedNodeId,
   );
@@ -130,8 +203,28 @@ export function App() {
     ].some((value) => value.toLowerCase().includes(query));
   });
 
+  const closeTrace = useCallback(() => {
+    const client = traceClient.current;
+    traceClient.current = undefined;
+    traceRequestId.current += 1;
+    setTraceInfo(undefined);
+    setTraceSnapshot(undefined);
+    setTracePlaying(false);
+    setTraceCycle("0");
+    setCycleDraft("0");
+    void client?.close();
+  }, []);
+
+  useEffect(
+    () => () => {
+      void traceClient.current?.close();
+    },
+    [],
+  );
+
   const loadDefault = useCallback(async () => {
     try {
+      closeTrace();
       setLoadError(undefined);
       const [next, nextCatalog] = await Promise.all([
         loadBundledTopology(),
@@ -162,7 +255,7 @@ export function App() {
       setLoadError(message);
       setNotice(message);
     }
-  }, []);
+  }, [closeTrace]);
 
   useEffect(() => {
     void loadDefault();
@@ -170,6 +263,7 @@ export function App() {
 
   const importTopology = async (file: File) => {
     try {
+      closeTrace();
       const next = parseArchitectureTopology(await file.text());
       const nextDiagnostics = validateArchitectureTopology(next, CORE_CATALOG);
       if (nextDiagnostics.length > 0) {
@@ -190,6 +284,110 @@ export function App() {
       if (importInput.current) importInput.current.value = "";
     }
   };
+
+  const seekTrace = useCallback(
+    async (cycle: string) => {
+      const client = traceClient.current;
+      if (!client || !traceInfo) return;
+      if (!/^(0|[1-9][0-9]{0,19})$/u.test(cycle)) {
+        setNotice("Cycle 必须是无损十进制 u64 字符串。");
+        return;
+      }
+      if (
+        BigInt(cycle) < BigInt(traceInfo.manifest.window.firstCycle) ||
+        BigInt(cycle) > BigInt(traceInfo.manifest.window.lastCycle)
+      ) {
+        setNotice(
+          `Cycle ${cycle} 超出 ${traceInfo.manifest.window.firstCycle}..${traceInfo.manifest.window.lastCycle}。`,
+        );
+        return;
+      }
+      const requestId = ++traceRequestId.current;
+      try {
+        const snapshot = await client.seek("core", cycle, requestId);
+        if (requestId !== traceRequestId.current) return;
+        setTraceSnapshot(snapshot);
+        setTraceCycle(cycle);
+        setCycleDraft(cycle);
+      } catch (error) {
+        if (error instanceof SeekSupersededError) return;
+        setTracePlaying(false);
+        setNotice(error instanceof Error ? error.message : "Trace seek 失败。");
+      }
+    },
+    [traceInfo],
+  );
+
+  const loadRecordedTrace = useCallback(async () => {
+    closeTrace();
+    setNotice("正在 Worker 中加载 current synthetic bundle…");
+    try {
+      const client = TraceWorkerClient.spawn();
+      traceClient.current = client;
+      const baseUrl = new URL(
+        `${import.meta.env.BASE_URL}runs/minimal.bundle`,
+        window.location.href,
+      ).href;
+      const info = await client.load({ kind: "http-directory", baseUrl });
+      const nextDiagnostics = validateArchitectureTopology(
+        info.topology,
+        CORE_CATALOG,
+      );
+      if (nextDiagnostics.length > 0) {
+        throw new Error(
+          `Trace topology 校验失败：${nextDiagnostics[0]!.path} ${nextDiagnostics[0]!.message}`,
+        );
+      }
+      setTopology(info.topology);
+      setTraceInfo(info);
+      setSelectedNodeId(undefined);
+      setSelectedCandidateId(undefined);
+      setBrowserMode("topology");
+      const firstCycle = info.manifest.window.firstCycle;
+      const requestId = ++traceRequestId.current;
+      const snapshot = await client.seek("core", firstCycle, requestId);
+      setTraceSnapshot(snapshot);
+      setTraceCycle(firstCycle);
+      setCycleDraft(firstCycle);
+      setNotice(
+        `已加载 ${info.manifest.runId}：${info.manifest.eventCount} events，Worker checkpoint 回放就绪。`,
+      );
+    } catch (error) {
+      closeTrace();
+      setNotice(
+        error instanceof Error ? error.message : "无法加载 Trace bundle。",
+      );
+    }
+  }, [closeTrace]);
+
+  const stepTrace = useCallback(
+    (delta: -1 | 1) => {
+      if (!traceInfo) return;
+      const first = BigInt(traceInfo.manifest.window.firstCycle);
+      const last = BigInt(traceInfo.manifest.window.lastCycle);
+      const next = BigInt(traceCycle) + BigInt(delta);
+      const clamped = next < first ? first : next > last ? last : next;
+      void seekTrace(String(clamped));
+    },
+    [seekTrace, traceCycle, traceInfo],
+  );
+
+  useEffect(() => {
+    if (!tracePlaying || !traceInfo) return;
+    const timer = window.setTimeout(
+      () => {
+        const last = BigInt(traceInfo.manifest.window.lastCycle);
+        const current = BigInt(traceCycle);
+        if (current >= last) {
+          setTracePlaying(false);
+          return;
+        }
+        void seekTrace(String(current + 1n));
+      },
+      Math.max(80, 650 / playbackSpeed),
+    );
+    return () => window.clearTimeout(timer);
+  }, [playbackSpeed, seekTrace, traceCycle, traceInfo, tracePlaying]);
 
   return (
     <main className="game-shell">
@@ -235,10 +433,10 @@ export function App() {
           <button
             type="button"
             className="run-button"
-            disabled
-            title="真实 trace 接入后可沿拓扑播放 SimQueue 与 Tile 数据流"
+            onClick={() => void loadRecordedTrace()}
+            title="加载 current synthetic bundle，由 Worker 回放 Queue 与 Tile 状态"
           >
-            Trace 未连接
+            {traceInfo ? "重新载入 Trace" : "载入合成回放"}
           </button>
         </div>
       </header>
@@ -426,6 +624,7 @@ export function App() {
                 className="scene-canvas"
                 world={world}
                 definitions={CORE_BRICK_BY_ID}
+                activityByInstanceId={traceActivity}
                 selectedInstanceId={selectedNodeId}
                 onSelect={(nodeId) => {
                   setSelectedNodeId(nodeId);
@@ -457,13 +656,63 @@ export function App() {
             <span>
               <i className="entry-swatch entry-empty" /> 空闲管道
             </span>
-            <small>PREVIEW · 非仿真状态</small>
+            <small>
+              {traceInfo ? "TRACE · SYNTHETIC BUNDLE" : "PREVIEW · 非仿真状态"}
+            </small>
           </div>
           <div className="axis-readout" aria-label="World axes">
             <span className="axis-x">X</span>
             <span className="axis-y">Y</span>
             <span className="axis-z">Z</span>
           </div>
+          {traceInfo ? (
+            <div
+              className="trace-playback"
+              aria-label="Trace playback controls"
+            >
+              <button type="button" onClick={() => stepTrace(-1)}>
+                −1
+              </button>
+              <button
+                type="button"
+                className="play-toggle"
+                onClick={() => setTracePlaying((playing) => !playing)}
+              >
+                {tracePlaying ? "暂停" : "播放"}
+              </button>
+              <button type="button" onClick={() => stepTrace(1)}>
+                +1
+              </button>
+              <label>
+                Cycle
+                <input
+                  value={cycleDraft}
+                  inputMode="numeric"
+                  onChange={(event) => setCycleDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") void seekTrace(cycleDraft);
+                  }}
+                  onBlur={() => void seekTrace(cycleDraft)}
+                />
+              </label>
+              <span>/ {traceInfo.manifest.window.lastCycle}</span>
+              <label>
+                Speed
+                <select
+                  value={playbackSpeed}
+                  onChange={(event) =>
+                    setPlaybackSpeed(Number(event.target.value))
+                  }
+                >
+                  {[0.5, 1, 2, 4].map((speed) => (
+                    <option key={speed} value={speed}>
+                      {speed}×
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+          ) : null}
           <div className="scene-notice" aria-live="polite">
             {notice}
           </div>
@@ -486,6 +735,7 @@ export function App() {
               definition={selectedDefinition}
               topology={topology}
               world={world}
+              snapshot={traceSnapshot}
               onSelect={(nodeId) => {
                 setSelectedNodeId(nodeId);
                 setSelectedCandidateId(undefined);
@@ -515,7 +765,10 @@ export function App() {
       <footer className="status-bar">
         <span>拖拽旋转 · 滚轮缩放 · 点击组件检查连接 · 点击空白取消选择</span>
         <span>
-          <i className="status-dot" /> 管道光点为数据流预览 · Trace 暂停接入
+          <i className="status-dot" />{" "}
+          {traceInfo
+            ? `Current synthetic trace · core cycle ${traceCycle}`
+            : "管道光点为数据流预览 · Trace 未载入"}
         </span>
       </footer>
     </main>
@@ -648,6 +901,7 @@ interface NodeInspectorProps {
   readonly definition: BrickDefinition;
   readonly topology: ArchitectureTopology;
   readonly world: ReturnType<typeof generateWorldFromTopology>;
+  readonly snapshot?: SimTraceSnapshot | undefined;
   readonly onSelect: (nodeId: string) => void;
 }
 
@@ -656,11 +910,37 @@ function NodeInspector({
   definition,
   topology,
   world,
+  snapshot,
   onSelect,
 }: NodeInspectorProps) {
   const instance = world.instances.find((item) => item.id === node.id)!;
   const position = positionToTuple(instance.transform.position);
   const connections = nodeConnections(topology, node.id);
+  const queueState = snapshot?.queues.find((item) => item.queueId === node.id);
+  const residencies = snapshot?.tileResidencies.filter(
+    (item) => item.storageNodeId === node.id,
+  );
+  const associatedTiles = snapshot?.associations.filter(
+    (item) =>
+      item.entityId === node.id ||
+      (residencies ?? []).some(
+        (residency) =>
+          residency.tileId === item.tileId &&
+          residency.version === item.version,
+      ),
+  );
+  const relatedResidencies = snapshot?.tileResidencies.filter((residency) =>
+    (associatedTiles ?? []).some(
+      (item) =>
+        item.tileId === residency.tileId && item.version === residency.version,
+    ),
+  );
+  const storageAssociations = snapshot?.associations.filter((item) =>
+    (residencies ?? []).some(
+      (residency) =>
+        residency.tileId === item.tileId && residency.version === item.version,
+    ),
+  );
   return (
     <div className="inspector-content">
       <div className="identity-block">
@@ -734,6 +1014,103 @@ function NodeInspector({
           ))}
         </div>
       </section>
+
+      {snapshot ? (
+        <section>
+          <h3>回放状态</h3>
+          <div className="parameter-list">
+            <div>
+              <span>core cycle</span>
+              <strong>
+                {snapshot.positions.find((item) => item.timeDomain === "core")
+                  ?.cycle ?? "unknown"}
+              </strong>
+            </div>
+            {queueState ? (
+              <>
+                <div>
+                  <span>Queue occupancy</span>
+                  <strong>
+                    {queueState.occupancy}/{queueState.capacity}
+                  </strong>
+                </div>
+                <div>
+                  <span>Backpressure</span>
+                  <strong>
+                    {queueState.backpressure.active
+                      ? queueState.backpressure.reason
+                      : "none"}
+                  </strong>
+                </div>
+                {queueState.tokens.map((token) => (
+                  <div key={token.tokenId}>
+                    <span>{token.tokenId}</span>
+                    <strong>
+                      {token.state} · slot {token.slot ?? "pending"}
+                    </strong>
+                  </div>
+                ))}
+              </>
+            ) : null}
+            {(residencies ?? []).map((item) => (
+              <div key={item.residencyId}>
+                <span>{item.tileId}</span>
+                <strong>
+                  v{item.version} · B{item.bank ?? "?"}/R{item.row ?? "?"}/S
+                  {item.slot ?? "?"}
+                </strong>
+              </div>
+            ))}
+          </div>
+          {(relatedResidencies ?? []).length > 0 ? (
+            <div className="connection-list trace-association-list">
+              {relatedResidencies?.map((item) => (
+                <button
+                  type="button"
+                  key={item.residencyId}
+                  onClick={() => onSelect(item.storageNodeId)}
+                >
+                  <span className="direction outgoing">TILE</span>
+                  <span>
+                    <strong>{item.tileId}</strong>
+                    <small>
+                      {
+                        associatedTiles?.find(
+                          (association) =>
+                            association.tileId === item.tileId &&
+                            association.version === item.version,
+                        )?.tokenId
+                      }{" "}
+                      → {item.storageNodeId} · v{item.version} · B
+                      {item.bank ?? "?"}/R
+                      {item.row ?? "?"}/S{item.slot ?? "?"}
+                    </small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {(storageAssociations ?? []).length > 0 ? (
+            <div className="connection-list trace-association-list">
+              {storageAssociations?.map((item) => (
+                <button
+                  type="button"
+                  key={`${item.entityId}:${item.tokenId}:${item.tileId}`}
+                  onClick={() => onSelect(item.entityId)}
+                >
+                  <span className="direction incoming">TOKEN</span>
+                  <span>
+                    <strong>{item.tokenId}</strong>
+                    <small>
+                      {item.entityId} → {item.tileId} v{item.version}
+                    </small>
+                  </span>
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </section>
+      ) : null}
 
       <section>
         <h3>参数</h3>

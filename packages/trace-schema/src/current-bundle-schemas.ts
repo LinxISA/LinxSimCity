@@ -105,6 +105,16 @@ const tileResidency = z
     byteLength: positiveInteger,
     fragmentIndex: nonNegativeInteger,
     fragmentCount: positiveInteger,
+    lastAccess: z
+      .strictObject({
+        type: z.enum(["read", "write"]),
+        cycle: decimalU64,
+        phase: z.enum(["work", "xfer", "commit", "async"]),
+        tokenId: nonEmpty.optional(),
+        byteOffset: nonNegativeInteger,
+        byteLength: positiveInteger,
+      })
+      .optional(),
   })
   .refine((value) => value.fragmentIndex < value.fragmentCount, {
     path: ["fragmentIndex"],
@@ -135,6 +145,7 @@ export const SimTraceCheckpointStateSchema = z.strictObject({
   tileResidencies: z.array(tileResidency),
   associations: z.array(
     z.strictObject({
+      entityId: nonEmpty,
       tokenId: nonEmpty,
       tileId: nonEmpty,
       version: decimalU64,

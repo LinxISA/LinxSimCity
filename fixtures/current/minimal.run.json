@@ -3,7 +3,7 @@
     "schema": "linxsimcity.trace",
     "schemaVersion": "1",
     "runId": "synthetic.queue-tile-compute",
-    "topologyFingerprint": "fnv1a64:cc7483e2ea7b3c41",
+    "topologyFingerprint": "fnv1a64:815740de3e4b867f",
     "simulator": {
       "name": "linxsimcity-synthetic",
       "revision": "fixture",
@@ -17,7 +17,10 @@
       {
         "id": "core",
         "unit": "cycle",
-        "tickRatio": { "numerator": 1, "denominator": 1 }
+        "tickRatio": {
+          "numerator": 1,
+          "denominator": 1
+        }
       }
     ],
     "window": {
@@ -33,7 +36,10 @@
       "instruction-link",
       "compute-lifecycle"
     ],
-    "loss": { "droppedEvents": "0", "truncated": false }
+    "loss": {
+      "droppedEvents": "0",
+      "truncated": false
+    }
   },
   "events": [
     {
@@ -43,7 +49,9 @@
       "sequence": 0,
       "type": "run.reset",
       "entityId": "scope.root",
-      "payload": { "reason": "fixture-start" }
+      "payload": {
+        "reason": "fixture-start"
+      }
     },
     {
       "timeDomain": "core",
@@ -54,7 +62,7 @@
       "entityId": "queue.ingress",
       "payload": {
         "tokenId": "inst.0",
-        "producerNodeId": "scope.root"
+        "producerNodeId": "source.ingress"
       }
     },
     {

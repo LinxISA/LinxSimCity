@@ -62,8 +62,19 @@ export interface SimTraceCheckpointState {
     readonly byteLength: number;
     readonly fragmentIndex: number;
     readonly fragmentCount: number;
+    readonly lastAccess?:
+      | {
+          readonly type: "read" | "write";
+          readonly cycle: DecimalU64;
+          readonly phase: SimTracePhase;
+          readonly tokenId?: string | undefined;
+          readonly byteOffset: number;
+          readonly byteLength: number;
+        }
+      | undefined;
   }[];
   readonly associations: readonly {
+    readonly entityId: string;
     readonly tokenId: string;
     readonly tileId: string;
     readonly version: DecimalU64;

@@ -13,17 +13,13 @@ export const declarationWorkspaces = Object.freeze([
   "@linxsimcity/topology-import",
   "@linxsimcity/trace-schema",
   "@linxsimcity/simtrace",
-  "@linxsimcity/topology",
   "@linxsimcity/trace-runtime",
-  "@linxsimcity/scene-core",
   "@linxsimcity/brick-kit",
-  "@linxsimcity/scene-modules",
 ]);
 
 const allWorkspaces = Object.freeze([
   ...declarationWorkspaces,
   "@linxsimcity/game",
-  "@linxsimcity/linxtrace",
 ]);
 
 /**

@@ -143,7 +143,7 @@ function checkpointStateDiagnostics(
   );
   const associationIds = checkpoint.state.associations.map(
     (item) =>
-      `${item.tokenId}\u0000${item.tileId}\u0000${item.version}\u0000${item.relation}`,
+      `${item.entityId}\u0000${item.tokenId}\u0000${item.tileId}\u0000${item.version}\u0000${item.relation}`,
   );
   for (const [field, ids] of [
     ["queueTokens", queueTokenIds],
@@ -199,6 +199,7 @@ function checkpointStateDiagnostics(
     ...checkpoint.state.queueTokens.flatMap((item) => [item.queueId]),
     ...checkpoint.state.queueOccupancy.flatMap((item) => [item.queueId]),
     ...checkpoint.state.tileResidencies.flatMap((item) => [item.storageNodeId]),
+    ...checkpoint.state.associations.flatMap((item) => [item.entityId]),
     ...checkpoint.state.computations.flatMap((item) => [item.entityId]),
   ];
   for (const nodeId of referencedNodes) {

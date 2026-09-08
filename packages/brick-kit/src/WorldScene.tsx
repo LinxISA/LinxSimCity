@@ -8,6 +8,7 @@ import { ACESFilmicToneMapping, Vector3 } from "three";
 
 import { Brick } from "./Brick.js";
 import { previewActivity } from "./entry-layout.js";
+import type { BrickActivity } from "./entry-layout.js";
 import {
   orthogonalRoute,
   portWorldPosition,
@@ -21,6 +22,8 @@ interface SceneContentProps {
   readonly selectedInstanceId: string | undefined;
   readonly onSelect: (instanceId: string) => void;
   readonly onBlank: () => void;
+  readonly activityByInstanceId?:
+    ReadonlyMap<string, BrickActivity> | undefined;
 }
 
 function SelectionFocus({
@@ -82,11 +85,17 @@ function SceneContent(props: SceneContentProps) {
         props.world.instances.flatMap((instance) => {
           const definition = props.definitions.get(instance.definitionId);
           return definition
-            ? [[instance.id, previewActivity(instance, definition)] as const]
+            ? [
+                [
+                  instance.id,
+                  props.activityByInstanceId?.get(instance.id) ??
+                    previewActivity(instance, definition),
+                ] as const,
+              ]
             : [];
         }),
       ),
-    [props.definitions, props.world.instances],
+    [props.activityByInstanceId, props.definitions, props.world.instances],
   );
   const routes = useMemo(() => {
     const queueRoutes = props.world.queueCorridors.flatMap((corridor) => {

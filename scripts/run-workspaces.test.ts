@@ -13,13 +13,9 @@ describe("workspace execution plan", () => {
       ["build", "@linxsimcity/topology-import"],
       ["build", "@linxsimcity/trace-schema"],
       ["build", "@linxsimcity/simtrace"],
-      ["build", "@linxsimcity/topology"],
       ["build", "@linxsimcity/trace-runtime"],
-      ["build", "@linxsimcity/scene-core"],
       ["build", "@linxsimcity/brick-kit"],
-      ["build", "@linxsimcity/scene-modules"],
       ["build", "@linxsimcity/game"],
-      ["build", "@linxsimcity/linxtrace"],
     ]);
   });
 
@@ -36,13 +32,9 @@ describe("workspace execution plan", () => {
       ["typecheck", "@linxsimcity/topology-import"],
       ["typecheck", "@linxsimcity/trace-schema"],
       ["typecheck", "@linxsimcity/simtrace"],
-      ["typecheck", "@linxsimcity/topology"],
       ["typecheck", "@linxsimcity/trace-runtime"],
-      ["typecheck", "@linxsimcity/scene-core"],
       ["typecheck", "@linxsimcity/brick-kit"],
-      ["typecheck", "@linxsimcity/scene-modules"],
       ["typecheck", "@linxsimcity/game"],
-      ["typecheck", "@linxsimcity/linxtrace"],
     ]);
   });
 

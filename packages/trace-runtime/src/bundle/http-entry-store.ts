@@ -59,7 +59,7 @@ export class HttpEntryStore implements EntryStore {
     return new HttpEntryStore(source);
   }
 
-  async read(path: string): Promise<Uint8Array> {
+  async read(path: string, signal?: AbortSignal): Promise<Uint8Array> {
     if (this.closed) {
       throw new TraceBundleError(
         "invalid_bundle",
@@ -79,6 +79,9 @@ export class HttpEntryStore implements EntryStore {
     }
 
     const controller = new AbortController();
+    const abort = () => controller.abort(signal?.reason);
+    if (signal?.aborted) abort();
+    else signal?.addEventListener("abort", abort, { once: true });
     this.activeRequests.add(controller);
     try {
       const response = await this.fetchEntry(url.href, {
@@ -131,6 +134,7 @@ export class HttpEntryStore implements EntryStore {
       return total === result.byteLength ? result : result.subarray(0, total);
     } catch (error) {
       if (error instanceof TraceBundleError) throw error;
+      if (signal?.aborted) throw signal.reason;
       if (this.closed || controller.signal.aborted) {
         throw new TraceBundleError(
           "invalid_bundle",
@@ -142,6 +146,7 @@ export class HttpEntryStore implements EntryStore {
         `failed to fetch trace bundle entry ${path}: ${error instanceof Error ? error.message : String(error)}`,
       );
     } finally {
+      signal?.removeEventListener("abort", abort);
       this.activeRequests.delete(controller);
     }
   }

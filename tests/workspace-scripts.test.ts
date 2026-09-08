@@ -82,7 +82,9 @@ describe("root workspace scripts", () => {
       expect(result.stdout).toContain(
         `@linxsimcity/trace-schema@0.1.0 ${script}`,
       );
-      expect(result.stdout).toContain(`@linxsimcity/topology@0.1.0 ${script}`);
+      expect(result.stdout).toContain(
+        `@linxsimcity/trace-runtime@0.1.0 ${script}`,
+      );
       expect(
         result.stdout.match(
           new RegExp(`@linxsimcity/trace-schema@0\\.1\\.0 ${script}`, "g"),
@@ -90,7 +92,7 @@ describe("root workspace scripts", () => {
       ).toHaveLength(1);
       expect(
         result.stdout.match(
-          new RegExp(`@linxsimcity/topology@0\\.1\\.0 ${script}`, "g"),
+          new RegExp(`@linxsimcity/trace-runtime@0\\.1\\.0 ${script}`, "g"),
         ),
       ).toHaveLength(1);
     },
@@ -112,7 +114,7 @@ describe("root workspace scripts", () => {
       });
       expect(build.status, `${build.stdout}\n${build.stderr}`).toBe(0);
 
-      rmSync(join(cleanRepository, "packages", "topology", "dist"), {
+      rmSync(join(cleanRepository, "packages", "world", "dist"), {
         recursive: true,
         force: true,
       });

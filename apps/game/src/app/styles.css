@@ -580,6 +580,68 @@ code {
   pointer-events: none;
 }
 
+.trace-playback {
+  position: absolute;
+  bottom: 64px;
+  left: 50%;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 42px;
+  padding: 6px 8px;
+  transform: translateX(-50%);
+  border: 1px solid rgb(102 219 241 / 28%);
+  border-radius: 9px;
+  color: #91aab4;
+  background: rgb(4 12 17 / 88%);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 28%);
+  backdrop-filter: blur(14px);
+}
+
+.trace-playback button,
+.trace-playback input,
+.trace-playback select {
+  min-height: 29px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  color: #d9f7fc;
+  background: #071218;
+  font:
+    11px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+}
+
+.trace-playback button {
+  min-width: 34px;
+  padding: 0 8px;
+}
+
+.trace-playback .play-toggle {
+  min-width: 52px;
+  border-color: rgb(99 231 204 / 42%);
+  color: #9effe8;
+}
+
+.trace-playback label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 4px;
+  font-size: 10px;
+  letter-spacing: 0.05em;
+}
+
+.trace-playback input {
+  width: 72px;
+  padding: 0 7px;
+}
+
+.trace-playback select {
+  padding: 0 5px;
+}
+
 .scene-state-legend span {
   display: flex;
   align-items: center;

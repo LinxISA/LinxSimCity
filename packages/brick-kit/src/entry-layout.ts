@@ -15,6 +15,8 @@ export interface BrickActivity {
   readonly source: "preview" | "trace";
   readonly occupiedEntries: number;
   readonly headIndex: number;
+  readonly activeEntryIndices?: readonly number[];
+  readonly labels?: readonly string[];
 }
 
 function safeCount(value: number | undefined, fallback: number): number {
@@ -189,6 +191,9 @@ export function entryIsOccupied(
   logicalCount: number,
   activity: BrickActivity,
 ): boolean {
+  if (activity.activeEntryIndices) {
+    return activity.activeEntryIndices.includes(logicalIndex);
+  }
   const distance =
     (logicalIndex - activity.headIndex + logicalCount) % logicalCount;
   return distance < activity.occupiedEntries;

@@ -48,7 +48,7 @@ function parsedRun(): MutableRun {
 }
 
 const validationOptions: ValidateSimTraceOptions = {
-  topologyFingerprint: "fnv1a64:cc7483e2ea7b3c41",
+  topologyFingerprint: "fnv1a64:815740de3e4b867f",
   topologyNodeIds,
 };
 

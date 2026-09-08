@@ -15,5 +15,14 @@
     "vitest.workspace.ts",
     "packages/**/*.test.ts",
     "tests/**/*.test.ts"
+  ],
+  "exclude": [
+    "apps/viewer/**",
+    "packages/scene-core/**",
+    "packages/scene-modules/**",
+    "packages/topology/**",
+    "packages/trace-runtime/src/causal/**",
+    "tools/linxtrace/**",
+    "tests/showcase/**"
   ]
 }

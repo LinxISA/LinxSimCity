@@ -133,10 +133,10 @@
 
 ### M4 — 确定性回放与 Tile 追踪（依赖 M1；可与 M2/M3 并行）
 
-- [ ] 重建 `packages/trace-runtime` 的事件归约、checkpoint、按需读取与 Worker 协议，添加 Tile 驻留/分配代次/关联索引。
-- [ ] 支持播放、暂停、单周期步进、变速、跳转、范围检查和最新 seek 优先；长 trace 不在主线程整体解析。
-- [ ] 实现队列槽位、事务路径、数据驻留与指令/Tile 双向聚焦；运行状态与插值动画隔离。
-- [ ] 独立 oracle 覆盖同周期多事件、反压、flush、reset、跨 bank Tile、部分写、数据副本、地址复用、分配后释放、窗口中途开始和截断。
+- [x] Hard-break 重建 `packages/trace-runtime` 的 current bundle 按需读取、事件归约、checkpoint restore/seek 和 Worker 协议；所有 u64 保持字符串，Queue、Tile residency/allocation epoch、association 和 compute 状态进入纯 JSON snapshot。
+- [x] 游戏接入 Worker 回放，支持播放、暂停、单周期步进、0.5×–4×、无损 cycle 跳转、范围诊断和 latest-request-wins；100 个快速 seek 只有最后请求发布结果。
+- [x] Queue occupancy/slot 驱动管道数据块，Tile residency 驱动具体 storage bank/slot 与标签；检查器支持 token/Queue → Tile/storage 及 storage → token/Queue 导航，渲染帧只插值 snapshot 派生状态。
+- [x] 独立 oracle 覆盖同周期 phase/sequence、反压、flush、reset、跨 bank、多副本、部分写、地址复用、move/release、窗口边界和 truncation/loss 契约；固定 seed 的 100 次随机 checkpoint seek 与顺序回放 state hash 一致。
 
 **完成条件：** 对固定 seed 的至少 100 个随机周期，顺序回放与 checkpoint seek 的规范化状态 hash 一致；快速连续 seek 只显示最后结果；改变相机、布局、帧率和播放速度不改变给定周期的状态。
 

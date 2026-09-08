@@ -219,7 +219,9 @@ function Interior({ instance, definition, activity }: InteriorProps) {
       return (
         <group position={[0, y * 0.18, 0]}>
           {[-1.5, -0.5, 0.5, 1.5].map((bank, index) => {
-            const occupied = index < activity.occupiedEntries % 5;
+            const occupied = activity.activeEntryIndices
+              ? activity.activeEntryIndices.includes(index)
+              : index < activity.occupiedEntries % 5;
             return (
               <RoundedBox
                 key={bank}
@@ -265,11 +267,26 @@ function Interior({ instance, definition, activity }: InteriorProps) {
         </mesh>
       );
     case "vector":
-      return <VectorMacArray size={definition.size} />;
+      return (
+        <VectorMacArray
+          size={definition.size}
+          active={activity.occupiedEntries > 0}
+        />
+      );
     case "cube":
-      return <SystolicArray size={definition.size} />;
+      return (
+        <SystolicArray
+          size={definition.size}
+          active={activity.occupiedEntries > 0}
+        />
+      );
     case "tma":
-      return <TmaMemoryEngine size={definition.size} />;
+      return (
+        <TmaMemoryEngine
+          size={definition.size}
+          active={activity.occupiedEntries > 0}
+        />
+      );
     case "crossbar":
       return (
         <group position={[0, y * 0.16, 0]}>
@@ -485,6 +502,11 @@ export function Brick({
         definition={definition}
         activity={activity}
       />
+      {activity.labels && activity.labels.length > 0 ? (
+        <Html position={[0, definition.size.y + 0.6, 0]} center>
+          <span className="engine-label">{activity.labels.join(" · ")}</span>
+        </Html>
+      ) : null}
       {definition.ports.map((port) => (
         <mesh
           key={port.id}

@@ -6,9 +6,9 @@ workload, time-domain set, observation capability set, event window, and loss
 record.
 
 The contract covers manifest and event semantics plus chunked gzip storage,
-hash-bound indexes, and recoverable checkpoints. Worker replay and game UI
-integration are implemented in M4. The old fixed-viewer bundle reader is
-isolated from `apps/game` and is not a compatibility path for this contract.
+hash-bound indexes, recoverable checkpoints, deterministic Worker replay, and
+game playback controls. The old fixed-viewer bundle reader is isolated from
+the active build and is not a compatibility path for this contract.
 
 ## Lossless values and ordering
 
@@ -128,3 +128,22 @@ cmake --build build/sdk --parallel
 ./build/sdk/write_synthetic build/cpp-current.trace-dir
 npm run trace:verify -- build/cpp-current.trace-dir
 ```
+
+## Deterministic runtime
+
+`packages/trace-runtime` reads Node or HTTP directory bundles on demand. It
+keeps DecimalU64 values as strings and uses `BigInt` only for comparison. The
+Worker reducer reconstructs Queue tokens/slots/occupancy/backpressure, Tile
+residencies and allocation epochs, token/Tile associations, compute lifecycle,
+flush, reset, and cancellation state.
+
+Checkpoint seek restores the nearest preceding state and replays only required
+chunks. A fixed-seed oracle compares 100 random seek targets with ordered replay
+using a normalized FNV-1a64 state hash. Worker requests carry monotonically
+increasing IDs; a new seek aborts its predecessor, and only the latest request
+may publish a snapshot.
+
+The game exposes play/pause, single-cycle step, speed, range-checked string
+cycle input, Queue occupancy, Tile bank/row/slot, and token↔Tile navigation.
+The bundled run is labeled synthetic. Render animation consumes snapshots and
+does not advance the simulation state.

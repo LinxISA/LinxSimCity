@@ -209,6 +209,39 @@
                     "type": "integer",
                     "exclusiveMinimum": 0,
                     "maximum": 9007199254740991
+                  },
+                  "lastAccess": {
+                    "type": "object",
+                    "properties": {
+                      "type": { "type": "string", "enum": ["read", "write"] },
+                      "cycle": {
+                        "type": "string",
+                        "pattern": "^(0|[1-9][0-9]{0,19})$"
+                      },
+                      "phase": {
+                        "type": "string",
+                        "enum": ["work", "xfer", "commit", "async"]
+                      },
+                      "tokenId": { "type": "string", "minLength": 1 },
+                      "byteOffset": {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 9007199254740991
+                      },
+                      "byteLength": {
+                        "type": "integer",
+                        "exclusiveMinimum": 0,
+                        "maximum": 9007199254740991
+                      }
+                    },
+                    "required": [
+                      "type",
+                      "cycle",
+                      "phase",
+                      "byteOffset",
+                      "byteLength"
+                    ],
+                    "additionalProperties": false
                   }
                 },
                 "required": [
@@ -230,6 +263,7 @@
               "items": {
                 "type": "object",
                 "properties": {
+                  "entityId": { "type": "string", "minLength": 1 },
                   "tokenId": { "type": "string", "minLength": 1 },
                   "tileId": { "type": "string", "minLength": 1 },
                   "version": {
@@ -241,7 +275,13 @@
                     "enum": ["produces", "consumes", "transfers"]
                   }
                 },
-                "required": ["tokenId", "tileId", "version", "relation"],
+                "required": [
+                  "entityId",
+                  "tokenId",
+                  "tileId",
+                  "version",
+                  "relation"
+                ],
                 "additionalProperties": false
               }
             },

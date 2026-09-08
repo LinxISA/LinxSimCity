@@ -8,7 +8,13 @@ function pulse(intensity: number): number {
   return 0.18 + Math.pow(Math.max(0, intensity), 6) * 2.6;
 }
 
-export function SystolicArray({ size }: { readonly size: BrickSize }) {
+export function SystolicArray({
+  size,
+  active,
+}: {
+  readonly size: BrickSize;
+  readonly active: boolean;
+}) {
   const materials = useRef<(MeshStandardMaterial | null)[]>([]);
   const dimension = 4;
   const cells = Array.from({ length: dimension * dimension }, (_, index) => ({
@@ -21,9 +27,9 @@ export function SystolicArray({ size }: { readonly size: BrickSize }) {
       if (!material) return;
       const row = Math.floor(index / dimension);
       const column = index % dimension;
-      material.emissiveIntensity = pulse(
-        Math.sin(time - row * 0.72 - column * 0.58),
-      );
+      material.emissiveIntensity = active
+        ? pulse(Math.sin(time - row * 0.72 - column * 0.58))
+        : 0.08;
     });
   });
   const stepX = (size.x * 0.62) / (dimension - 1);
@@ -91,14 +97,22 @@ export function SystolicArray({ size }: { readonly size: BrickSize }) {
   );
 }
 
-export function VectorMacArray({ size }: { readonly size: BrickSize }) {
+export function VectorMacArray({
+  size,
+  active,
+}: {
+  readonly size: BrickSize;
+  readonly active: boolean;
+}) {
   const materials = useRef<(MeshStandardMaterial | null)[]>([]);
   const lanes = 8;
   useFrame(({ clock }) => {
     const time = clock.getElapsedTime() * 2.6;
     materials.current.forEach((material, index) => {
       if (!material) return;
-      material.emissiveIntensity = pulse(Math.sin(time - index * 0.54));
+      material.emissiveIntensity = active
+        ? pulse(Math.sin(time - index * 0.54))
+        : 0.08;
     });
   });
   const step = (size.x * 0.76) / (lanes - 1);
@@ -150,7 +164,13 @@ export function VectorMacArray({ size }: { readonly size: BrickSize }) {
   );
 }
 
-export function TmaMemoryEngine({ size }: { readonly size: BrickSize }) {
+export function TmaMemoryEngine({
+  size,
+  active,
+}: {
+  readonly size: BrickSize;
+  readonly active: boolean;
+}) {
   const packets = useRef<(Group | null)[]>([]);
   const lanes = 4;
   const left = -size.x * 0.25;
@@ -160,9 +180,10 @@ export function TmaMemoryEngine({ size }: { readonly size: BrickSize }) {
     const time = clock.getElapsedTime() * 0.72;
     packets.current.forEach((packet, index) => {
       if (!packet) return;
-      const phase = (time + index / lanes) % 2;
+      const phase = active ? (time + index / lanes) % 2 : 0;
       const progress = phase <= 1 ? phase : 2 - phase;
       packet.position.x = left + (right - left) * progress;
+      packet.visible = active;
     });
   });
   return (

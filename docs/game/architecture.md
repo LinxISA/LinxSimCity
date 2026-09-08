@@ -110,11 +110,15 @@ planned for later milestones without making placement authoritative.
 
 ## Run boundary
 
-A future run manifest binds simulator revision, workload, configuration,
+The current run manifest binds simulator revision, workload, configuration,
 topology fingerprint, observation capabilities, event window, and truncation
 status. A run whose topology fingerprint differs from the open world is stale
-and cannot supply current performance results.
+and cannot supply current performance results. The active runtime reads gzip
+chunks and checkpoints in a Worker and keeps cycle/address/identity values as
+lossless decimal strings.
 
-The browser may always inspect a valid topology. Execution requires an adapter
-that supports its components and parameters. Static hosting loads recorded runs;
-it does not pretend to run a local simulator.
+The browser may always inspect a valid topology. The current synthetic bundle
+demonstrates deterministic playback and is explicitly labeled synthetic.
+Execution requires an adapter that supports the topology components and
+parameters. Static hosting loads recorded runs; it does not pretend to run a
+local simulator.
