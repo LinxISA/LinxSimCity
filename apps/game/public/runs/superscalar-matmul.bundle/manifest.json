@@ -2,10 +2,10 @@
   "schema": "linxsimcity.trace",
   "schemaVersion": "1",
   "runId": "superscalar-matmul-m5",
-  "topologyFingerprint": "fnv1a64:11492380829ce00b",
+  "topologyFingerprint": "fnv1a64:ea6a74eb2b796df5",
   "simulator": {
     "name": "SuperScalarModel",
-    "revision": "b975e75b1fc3c9453b55bc0f036ae757a8b0a981",
+    "revision": "2406db2944317b8d64dc05b621f37fc9a13f8c81",
     "configSha256": "30a646f8697fe06d4435c5adec3e526e20440a58f7e627a71ad9dda8cac3bfac"
   },
   "workload": {
@@ -25,7 +25,7 @@
     "startsFromReset": true,
     "complete": true
   },
-  "eventCount": "313318",
+  "eventCount": "320486",
   "capabilities": [
     "queue-lifecycle",
     "tile-residency",

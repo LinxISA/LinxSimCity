@@ -35,7 +35,7 @@
       "definitionId": "core.queue",
       "label": "Tile Load Queue",
       "parentId": "scope.root",
-      "parameters": { "capacity": 32, "latency": 1 },
+      "parameters": { "capacity": 4096, "latency": 1 },
       "area": {
         "value": null,
         "unit": "um2",

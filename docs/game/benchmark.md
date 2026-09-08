@@ -19,7 +19,7 @@ trace, random-seek seed, and raw results.
 ## Pinned first real workload
 
 - Model checkout: `/Users/zhoubot/Documents/.worktrees/SuperScalarModel-linxsimcity-trace`
-- Model revision: `b975e75b1fc3c9453b55bc0f036ae757a8b0a981`
+- Model revision: `2406db2944317b8d64dc05b621f37fc9a13f8c81`
 - Workload: SuperNPUBench FP32 matmul, `M=N=K=256`, tile `32×32×32`
 - ELF: `/Users/zhoubot/Documents/supernpubench-smoke-20260807/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_M256_N256_K256_tM32_tN32_tK32.elf`
 - ELF SHA-256: `4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928`
@@ -35,7 +35,7 @@ This read-only preflight is executable now:
 ```sh
 MODEL=/Users/zhoubot/Documents/.worktrees/SuperScalarModel-linxsimcity-trace
 ELF=/Users/zhoubot/Documents/supernpubench-smoke-20260807/kernel/matmul/elf/kernel_matmul/matmul_MASK_MASK_FP32_M256_N256_K256_tM32_tN32_tK32.elf
-test "$(git -C "$MODEL" rev-parse HEAD)" = b975e75b1fc3c9453b55bc0f036ae757a8b0a981
+test "$(git -C "$MODEL" rev-parse HEAD)" = 2406db2944317b8d64dc05b621f37fc9a13f8c81
 test "$(shasum -a 256 "$ELF" | awk '{print $1}')" = 4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928
 test -x "$MODEL/bin/gfsim"
 ```
@@ -51,21 +51,21 @@ ELF=/Users/zhoubot/Documents/supernpubench-smoke-20260807/kernel/matmul/elf/kern
 ### Verified current run evidence
 
 On 2026-09-09, trace-enabled `gfsim` at the pinned revision ran the pinned ELF
-and exited with status 0. The run closed at cycle 49,822 and emitted 313,318
+and exited with status 0. The run closed at cycle 49,822 and emitted 320,486
 current events in 13 gzip chunks with zero dropped events and no truncation.
 The current TypeScript validator reported zero diagnostics.
 
-| Current event          |  Count |
-| ---------------------- | -----: |
-| Queue attempts/accept  |  1,024 |
-| Queue visible/read     |  1,024 |
-| Queue backpressure     | 10,725 |
-| Tile allocate          | 49,152 |
-| Tile read              | 60,576 |
-| Tile write             | 49,152 |
-| Tile release           | 45,760 |
-| Token/Tile association | 92,832 |
-| Compute start/complete |    512 |
+| Current event          |   Count |
+| ---------------------- | ------: |
+| Queue attempts/accept  |   1,024 |
+| Queue visible/read     |   1,024 |
+| Queue backpressure     |  10,725 |
+| Tile allocate          |  49,152 |
+| Tile read              |  60,576 |
+| Tile write             |  49,152 |
+| Tile release           |  45,760 |
+| Token/Tile association | 100,000 |
+| Compute start/complete |     512 |
 
 The runtime-off control also exited 0 with the same 49,822 total cycles,
 40,303 Cube cycles, and 10,497 TMA cycles. After removing trace configuration
@@ -85,7 +85,7 @@ cell.cube_max_bank_per_cycle=1
 
 Its configuration digest is
 `9943e6351b7894662ab34468412fb64cd459da32ba25be1e6dd44f22f6b9a68f`.
-It exited 0 after 68,785 cycles and emitted 296,107 current events with zero
+It exited 0 after 68,785 cycles and emitted 303,275 current events with zero
 validator diagnostics. The model PMU recorded 362,905 bank-conflict cycles,
 815,151 non-winner waits, and 765,062 bank port-yields. The game run selector
 switches between the normal and conflict bundles without changing the topology

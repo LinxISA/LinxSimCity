@@ -2,7 +2,7 @@
   "schema": "linxsimcity.trace-index",
   "schemaVersion": "1",
   "runId": "superscalar-matmul-m5",
-  "topologyFingerprint": "fnv1a64:11492380829ce00b",
+  "topologyFingerprint": "fnv1a64:ea6a74eb2b796df5",
   "chunks": [
     {
       "id": "chunk-000000",
@@ -10,9 +10,9 @@
       "timeDomain": "core",
       "firstCycle": "0",
       "lastCycle": "4095",
-      "eventCount": "21792",
-      "sha256": "785476e426fec9ecb924b6900aa42bec77c316a1535dacf8933a39b0553ef08e",
-      "compressedBytes": 336973,
+      "eventCount": "22320",
+      "sha256": "00d711e7c29a32d0a281459a5d77f2a247bdfec48563f4486f7c70e5f0f0c17f",
+      "compressedBytes": 338891,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -21,9 +21,9 @@
       "timeDomain": "core",
       "firstCycle": "4096",
       "lastCycle": "8191",
-      "eventCount": "26287",
-      "sha256": "9e9528045d7d91f41a8577a58ce1d6c9614ee9f645bd6478806e2507d71bc890",
-      "compressedBytes": 423356,
+      "eventCount": "26883",
+      "sha256": "9b7300bdd1c8d4b022c8eb63326aff0c7519d00bba75da2927b65df941927169",
+      "compressedBytes": 423232,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -32,9 +32,9 @@
       "timeDomain": "core",
       "firstCycle": "8192",
       "lastCycle": "12287",
-      "eventCount": "26344",
-      "sha256": "c97db0fc119410c43fd7de456956bbb650c6fa683afcd435b4d54aff8f8b4822",
-      "compressedBytes": 425058,
+      "eventCount": "26932",
+      "sha256": "8b155aabbd922ff9d2534c2f04228d55b2af6d1ccca4cd03fa117a754063e92c",
+      "compressedBytes": 424902,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -43,9 +43,9 @@
       "timeDomain": "core",
       "firstCycle": "12288",
       "lastCycle": "16383",
-      "eventCount": "26181",
-      "sha256": "6c35aebae4f40f7eba6c7dd4e170593aca34bbe888863ee08b6924158d751a6d",
-      "compressedBytes": 423465,
+      "eventCount": "26789",
+      "sha256": "3af8868bc486a1bbca0fb490410484e7ce0fb2e70a4a41308684b68f554ea3b0",
+      "compressedBytes": 423547,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -54,9 +54,9 @@
       "timeDomain": "core",
       "firstCycle": "16384",
       "lastCycle": "20479",
-      "eventCount": "26563",
-      "sha256": "6e6cf08b9e0e2a158069ef84cf9daf101bda260aca6984bfff5f274c3963f00c",
-      "compressedBytes": 428647,
+      "eventCount": "27159",
+      "sha256": "b869757a5b7a7d8286847737a0570e152c3b41c6fb72b6e2beb84bb6eede2269",
+      "compressedBytes": 428301,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -65,9 +65,9 @@
       "timeDomain": "core",
       "firstCycle": "20480",
       "lastCycle": "24575",
-      "eventCount": "26344",
-      "sha256": "6f6bd93da25d834a05b8b91c78fffed4729fa8923726c41d2b94cd89a2a53286",
-      "compressedBytes": 425589,
+      "eventCount": "26932",
+      "sha256": "60c4fb0bbec3e08fa01e687f921cc0d900e722601813a7083a71a50657c78b19",
+      "compressedBytes": 425691,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -76,9 +76,9 @@
       "timeDomain": "core",
       "firstCycle": "24576",
       "lastCycle": "28671",
-      "eventCount": "26181",
-      "sha256": "4e3031c589d45062dc1f1899c36cc97adaf85380dede78caf164e45ce99c6f2a",
-      "compressedBytes": 422954,
+      "eventCount": "26789",
+      "sha256": "f299efc9760034315ca52a91a4e6af4e5b6dd3d82993b3b86bec12c2b8a02a18",
+      "compressedBytes": 423277,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -87,9 +87,9 @@
       "timeDomain": "core",
       "firstCycle": "28672",
       "lastCycle": "32767",
-      "eventCount": "26563",
-      "sha256": "8fca44735a0cfe061678b18198c553ec8c27a35e784062a82c0fc3de5fbbecdf",
-      "compressedBytes": 428829,
+      "eventCount": "27159",
+      "sha256": "a391befa2a42ddff5e199a9e6d6d5bdaa291630bb1d9241a7490886212418e82",
+      "compressedBytes": 428815,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -98,9 +98,9 @@
       "timeDomain": "core",
       "firstCycle": "32768",
       "lastCycle": "36863",
-      "eventCount": "26344",
-      "sha256": "11de6b7121a1a3a34fcc0e17f89204219b73b72ca750ae8f5f78ff47740d1713",
-      "compressedBytes": 424474,
+      "eventCount": "26932",
+      "sha256": "d7633100cd360eae83d23242d31fb48efc94238f048af77e30fcf48c0c65863a",
+      "compressedBytes": 424597,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -109,9 +109,9 @@
       "timeDomain": "core",
       "firstCycle": "36864",
       "lastCycle": "40959",
-      "eventCount": "26181",
-      "sha256": "35652463342060897be2413c2abb05813bdbe07e5947ee8f03f31e84519d4ac9",
-      "compressedBytes": 422801,
+      "eventCount": "26789",
+      "sha256": "6bc8680a2632e4d87c43467b2b338003ff5799aec2f82fc02cb3a18374a143db",
+      "compressedBytes": 422942,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -120,9 +120,9 @@
       "timeDomain": "core",
       "firstCycle": "40960",
       "lastCycle": "45055",
-      "eventCount": "26563",
-      "sha256": "b4c59910bc82d2300b75ade750313a7f0676f3b60a85f4706e32c6b6ddf6b30f",
-      "compressedBytes": 428986,
+      "eventCount": "27159",
+      "sha256": "7069c5e07e645d0ce7c393b84523abbd6788c2c710cb69f2555bd6087dfc571a",
+      "compressedBytes": 429019,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -131,9 +131,9 @@
       "timeDomain": "core",
       "firstCycle": "45056",
       "lastCycle": "49151",
-      "eventCount": "25640",
-      "sha256": "7b3ebb24f376389fad29de4188fe1adb071855404dbb6c602f12f9f6eaf76254",
-      "compressedBytes": 415961,
+      "eventCount": "26228",
+      "sha256": "8f1ef44a084c8b4c200f64d0fe496f37abfd75790078addfe8a2fb2272620090",
+      "compressedBytes": 415916,
       "checkpointId": "checkpoint-000000"
     },
     {
@@ -142,9 +142,9 @@
       "timeDomain": "core",
       "firstCycle": "49152",
       "lastCycle": "49751",
-      "eventCount": "2335",
-      "sha256": "33313e01fc79b22267d0753d3397a26d239efd73a4a6672b1130917ecd1a8b0f",
-      "compressedBytes": 36260,
+      "eventCount": "2415",
+      "sha256": "056abb7144ba5fab52bc07633e3b49810acff92f431ce1ba41a1c447473e1d76",
+      "compressedBytes": 36739,
       "checkpointId": "checkpoint-000000"
     }
   ],
@@ -155,8 +155,8 @@
       "timeDomain": "core",
       "cycle": "0",
       "eventOrdinal": "0",
-      "sha256": "ada9c4e9abcdb575d1295dcaba5b23e0e4210b942b4e65ddee3e99df597ce72e",
-      "compressedBytes": 226
+      "sha256": "54df352f5507204bf412007c4e69a3a214669ad5a69898c35c2b163dba45c2c8",
+      "compressedBytes": 224
     }
   ]
 }

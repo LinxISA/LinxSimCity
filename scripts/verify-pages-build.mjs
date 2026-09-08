@@ -45,11 +45,11 @@ export function verifyPagesBuild(
     runManifest.schema !== "linxsimcity.trace" ||
     runManifest.schemaVersion !== "1" ||
     runManifest.runId !== "superscalar-matmul-m5" ||
-    runManifest.topologyFingerprint !== "fnv1a64:11492380829ce00b" ||
+    runManifest.topologyFingerprint !== "fnv1a64:ea6a74eb2b796df5" ||
     runManifest.simulator?.name !== "SuperScalarModel" ||
     runManifest.simulator?.revision !==
-      "b975e75b1fc3c9453b55bc0f036ae757a8b0a981" ||
-    runManifest.eventCount !== "313318" ||
+      "2406db2944317b8d64dc05b621f37fc9a13f8c81" ||
+    runManifest.eventCount !== "320486" ||
     runManifest.window?.lastCycle !== "49822" ||
     runManifest.loss?.droppedEvents !== "0" ||
     runManifest.loss?.truncated !== false ||
@@ -73,10 +73,10 @@ export function verifyPagesBuild(
   if (
     conflictManifest.runId !== "superscalar-matmul-bank-conflict-m5" ||
     conflictManifest.simulator?.revision !==
-      "b975e75b1fc3c9453b55bc0f036ae757a8b0a981" ||
+      "2406db2944317b8d64dc05b621f37fc9a13f8c81" ||
     conflictManifest.simulator?.configSha256 !==
       "9943e6351b7894662ab34468412fb64cd459da32ba25be1e6dd44f22f6b9a68f" ||
-    conflictManifest.eventCount !== "296107" ||
+    conflictManifest.eventCount !== "303275" ||
     conflictManifest.window?.lastCycle !== "68785" ||
     conflictIndex.chunks?.length !== 17 ||
     conflictIndex.checkpoints?.length !== 1 ||

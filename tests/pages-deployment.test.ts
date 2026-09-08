@@ -76,8 +76,8 @@ test("accepts the base-prefixed chip city game without the retired trace", () =>
       topologyNodes: 39,
       topologyEdges: 32,
       catalogCandidates: 240,
-      traceEvents: 313318,
-      conflictTraceEvents: 296107,
+      traceEvents: 320486,
+      conflictTraceEvents: 303275,
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

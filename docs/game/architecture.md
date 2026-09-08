@@ -119,7 +119,7 @@ lossless decimal strings.
 
 The browser may always inspect a valid topology. The default recorded run comes
 from SuperScalarModel revision
-`b975e75b1fc3c9453b55bc0f036ae757a8b0a981` and is labeled with its simulator,
+`2406db2944317b8d64dc05b621f37fc9a13f8c81` and is labeled with its simulator,
 workload, configuration, and topology binding. Synthetic bundles remain test
 fixtures. A paired recording keeps the workload and topology fixed while
 enabling CellReg arbitration and reducing Cube bank bandwidth, so users can

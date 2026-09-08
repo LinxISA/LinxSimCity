@@ -2,10 +2,10 @@
   "schema": "linxsimcity.trace",
   "schemaVersion": "1",
   "runId": "superscalar-matmul-bank-conflict-m5",
-  "topologyFingerprint": "fnv1a64:11492380829ce00b",
+  "topologyFingerprint": "fnv1a64:ea6a74eb2b796df5",
   "simulator": {
     "name": "SuperScalarModel",
-    "revision": "b975e75b1fc3c9453b55bc0f036ae757a8b0a981",
+    "revision": "2406db2944317b8d64dc05b621f37fc9a13f8c81",
     "configSha256": "9943e6351b7894662ab34468412fb64cd459da32ba25be1e6dd44f22f6b9a68f"
   },
   "workload": {
@@ -25,7 +25,7 @@
     "startsFromReset": true,
     "complete": true
   },
-  "eventCount": "296107",
+  "eventCount": "303275",
   "capabilities": [
     "queue-lifecycle",
     "tile-residency",
