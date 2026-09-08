@@ -259,6 +259,18 @@ void TestCheckpointScheduleIsIndependentFromChunks() {
   fs::remove_all(output);
 }
 
+void TestWindowCanCloseAtTheObservedFinalCycle() {
+  const auto output = TempDirectory("window-close");
+  BundleWriter writer(Options(output));
+  writer.Emit(QueueEvent(7));
+  writer.SetWindowLastCycle(7);
+  writer.Close();
+  const auto manifest = Parse(ReadFile(output / "manifest.json"));
+  Require(manifest["window"]["lastCycle"] == "7",
+          "writer did not close the window at the observed final cycle");
+  fs::remove_all(output);
+}
+
 } // namespace
 
 int main() {
@@ -267,6 +279,7 @@ int main() {
     TestValidationDoesNotMutateOrder();
     TestRequiredMetadataAndCheckpointShape();
     TestCheckpointScheduleIsIndependentFromChunks();
+    TestWindowCanCloseAtTheObservedFinalCycle();
   } catch (const std::exception &error) {
     std::cerr << error.what() << '\n';
     return 1;

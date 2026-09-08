@@ -76,6 +76,7 @@ public:
   // The state JSON must contain exactly the five current reducer state fields.
   void SetCheckpointStateJson(std::string timeDomain, std::uint64_t cycle,
                               std::string stateJson);
+  void SetWindowLastCycle(std::uint64_t cycle);
   void Close() override;
 
 private:

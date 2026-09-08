@@ -425,6 +425,21 @@ void BundleWriter::SetCheckpointStateJson(std::string timeDomain,
   }
 }
 
+void BundleWriter::SetWindowLastCycle(std::uint64_t cycle) {
+  if (!impl_ || impl_->closed) {
+    throw std::logic_error("cannot update the trace window after Close");
+  }
+  if (cycle < impl_->options.window.firstCycle) {
+    throw std::invalid_argument("trace window last cycle precedes first cycle");
+  }
+  for (const auto &entry : impl_->lastOrder) {
+    if (entry.second.cycle > cycle) {
+      throw std::invalid_argument("trace window excludes an emitted event");
+    }
+  }
+  impl_->options.window.lastCycle = cycle;
+}
+
 void BundleWriter::Close() {
   if (!impl_ || impl_->closed) {
     return;
