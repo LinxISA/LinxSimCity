@@ -1,0 +1,35 @@
+{
+  "name": "@linxsimcity/brick-kit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "npm run build --workspace @linxsimcity/component-catalog && npm run build --workspace @linxsimcity/world",
+    "build": "tsc --project tsconfig.json",
+    "pretypecheck": "npm run build --workspace @linxsimcity/component-catalog && npm run build --workspace @linxsimcity/world",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@linxsimcity/component-catalog": "0.1.0",
+    "@linxsimcity/world": "0.1.0",
+    "@react-three/drei": "10.7.8",
+    "@react-three/fiber": "9.7.0",
+    "react": "19.2.8",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/three": "0.185.4"
+  }
+}

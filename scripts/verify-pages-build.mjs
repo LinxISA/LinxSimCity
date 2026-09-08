@@ -1,77 +1,37 @@
-import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import process from "node:process";
 import { fileURLToPath, pathToFileURL, URL } from "node:url";
 
 const EXPECTED_ASSET_BASE = "/LinxSimCity/assets/";
-const EXPECTED_MANIFEST_SHA256 =
-  "f84ae484d8004a86156da6ee8f7697a917f1a15fc7876ac15eb4435f78ab3dbe";
-const EXPECTED_TOPOLOGY_SHA256 =
-  "71eaab6780714ef47bee5262af493bafa7325b068545517b48cfa20b658a5636";
-const TRACE_DIRECTORY = "supernpubench-fa-250-blocks";
-
-/** @param {Uint8Array} bytes */
-function sha256(bytes) {
-  return createHash("sha256").update(bytes).digest("hex");
-}
+const EXPECTED_TITLE = "LinxSimCity · 芯片城市实验台";
 
 export function verifyPagesBuild(
   repositoryRoot = fileURLToPath(new URL("..", import.meta.url)),
 ) {
-  const dist = join(repositoryRoot, "apps/viewer/dist");
+  const dist = join(repositoryRoot, "apps/game/dist");
   const indexHtml = readFileSync(join(dist, "index.html"), "utf8");
   if (!indexHtml.includes(EXPECTED_ASSET_BASE)) {
     throw new Error(
       `Pages index must reference assets below ${EXPECTED_ASSET_BASE}`,
     );
   }
-
-  const traceRoot = join(dist, "traces", TRACE_DIRECTORY);
-  const manifestBytes = readFileSync(join(traceRoot, "manifest.json"));
-  const topologyBytes = readFileSync(join(traceRoot, "topology.json"));
-  const manifestSha256 = sha256(manifestBytes);
-  const topologySha256 = sha256(topologyBytes);
-  if (manifestSha256 !== EXPECTED_MANIFEST_SHA256) {
+  if (!indexHtml.includes(EXPECTED_TITLE)) {
+    throw new Error("Pages index must identify the chip city game");
+  }
+  const assets = readdirSync(join(dist, "assets"));
+  if (!assets.some((name) => name.endsWith(".js"))) {
+    throw new Error("Pages game build has no JavaScript entry asset");
+  }
+  if (existsSync(join(dist, "traces", "supernpubench-fa-250-blocks"))) {
     throw new Error(
-      `Pages FA manifest hash ${manifestSha256} does not match ${EXPECTED_MANIFEST_SHA256}`,
+      "Pages game must not ship the retired viewer default trace",
     );
   }
-  if (topologySha256 !== EXPECTED_TOPOLOGY_SHA256) {
-    throw new Error(
-      `Pages FA topology hash ${topologySha256} does not match ${EXPECTED_TOPOLOGY_SHA256}`,
-    );
-  }
-
-  const manifest = JSON.parse(manifestBytes.toString("utf8"));
-  const index = JSON.parse(readFileSync(join(traceRoot, "index.json"), "utf8"));
-  /** @type {{path: string, checkpointPath: string, eventCount: number}[]} */
-  const chunks = index.chunks;
-  const indexedEvents = chunks.reduce(
-    (/** @type {number} */ sum, chunk) => sum + chunk.eventCount,
-    0,
-  );
-  if (
-    manifest.eventCount !== 199_585 ||
-    manifest.chunkCount !== 3 ||
-    indexedEvents !== manifest.eventCount
-  ) {
-    throw new Error("Pages FA logical bundle has inconsistent event metadata");
-  }
-  for (const chunk of chunks) {
-    for (const path of [chunk.path, chunk.checkpointPath]) {
-      if (!existsSync(join(traceRoot, path))) {
-        throw new Error(`Pages FA logical bundle is missing ${path}`);
-      }
-    }
-  }
-
   return {
     assetBase: EXPECTED_ASSET_BASE,
-    eventCount: manifest.eventCount,
-    traceDirectory: `/LinxSimCity/traces/${TRACE_DIRECTORY}/`,
-    manifestSha256,
-    topologySha256,
+    app: "game",
+    assets: assets.length,
   };
 }
 

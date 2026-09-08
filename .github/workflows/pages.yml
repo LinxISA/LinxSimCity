@@ -1,4 +1,4 @@
-name: Deploy Viewer to GitHub Pages
+name: Deploy LinxSimCity game to GitHub Pages
 
 on:
   push:
@@ -29,7 +29,7 @@ jobs:
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: apps/viewer/dist
+          path: apps/game/dist
 
   deploy:
     environment:

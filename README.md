@@ -1,65 +1,56 @@
 # LinxSimCity
 
-LinxSimCity is a WebGL trace visualizer for Linx processor and matrix-compute models. It provides a versioned trace contract, a dependency-light C++ writer, validation/packing tools, and an interactive 3D browser viewer.
+LinxSimCity is a browser-based 3D chip construction and simulation game. Build
+a processor city from typed Queue, Table, SRAM, execution, arbitration, and
+interconnect bricks; validate the assembly; then use simulator traces to follow
+transactions and Tile residency.
 
-![LinxSimCity running the official SuperNPUBench matmul trace](docs/assets/showcase/linxsimcity-matmul-cycle-1880.jpg)
+The repository is undergoing an intentional hard break from the previous fixed
+trace viewer. The current product path is `apps/game`; the old viewer and trace
+trace packages remain isolated only while the new trace path is implemented.
 
-## Live demo
+## Current playable slice
 
-Open **[LinxSimCity on GitHub Pages](https://linxisa.github.io/LinxSimCity/)**. The Viewer loads the verified 250-block SuperNPUBench FlashAttention trace and starts at cycle 49 at 1×. Use **Open local trace** to replace it with another `.linxtrace` bundle.
+- Ten parameterized hardware brick definitions with typed ports
+- Stable blueprint identities and hardware fingerprints
+- Chunked XYZ coordinates and quarter-turn rotations
+- Place, select, rotate, connect, delete, undo, redo, import, export, and local
+  autosave
+- Blueprint validation for definitions, parameters, endpoints, port direction,
+  protocol, width, and single-producer inputs
+- React Three Fiber workbench with an infinite grid and parameterized 3D bricks
 
-## Current foundation
+The simulation button is intentionally disabled until the new trace contract and the first
+real SuperScalarModel adapter are connected. The UI does not fabricate runtime
+results.
 
-- Trace schema `1.0.0` with strict event ordering and stable topology IDs
-- Directory and ZIP-based `.linxtrace` bundles
-- C++17 `LinxSimCity::trace_sdk`
-- `linxtrace validate`, `index`, `pack`, and `inspect`
-- Deterministic scalar, Cache, ROB, CELL, Crossbar, CUBE, StgBufB, and TLSU fixture
-- Rectangular WebGL city with a Gem5SimCity-style scalar CPU district, a ring ROB, flat 128-byte Tile Register cells, straight pipes, four long CUBE PEs, and trace-driven highlights
+## Run locally
 
-The [trace format guide](docs/trace-format/README.md) defines the public contract. [Event categories](docs/trace-format/events.md) and [topology identity](docs/trace-format/topology.md) provide the producer reference.
-
-## Quick start
+Use Node.js 22 or newer.
 
 ```sh
 npm install
-npm run build
-
-cmake -S sdk/cpp -B build/sdk -DBUILD_TESTING=ON
-cmake --build build/sdk --parallel
-./build/sdk/write_synthetic /tmp/linxsimcity-demo.trace-dir
-
-node tools/linxtrace/dist/main.js validate /tmp/linxsimcity-demo.trace-dir
-node tools/linxtrace/dist/main.js pack \
-  /tmp/linxsimcity-demo.trace-dir \
-  /tmp/linxsimcity-demo.linxtrace
-
-npm run dev --workspace @linxsimcity/viewer
+npm run dev
 ```
 
-Open the local viewer URL to play the bundled FA-250 trace, or use **Open local trace** to select the generated `.linxtrace` file. Trace parsing, validation, indexing, checkpoint seek, and reduction run off the rendering thread.
-
-## Official workload showcase
-
-The repository includes a deterministic generator for two official SuperNPUBench workloads: a complete 256×256 FP32 matmul and a bounded 250-block FlashAttention trace. It runs the trace-enabled SuperScalarModel, validates the logical directories, packs browser-ready ZIP bundles, validates the ZIPs again, and records source/ELF/archive provenance.
-
-See [the showcase guide](docs/showcase.md) for build prerequisites, the exact command, measured event coverage, and the documented SuperScalarModel limitation behind the FA boundary.
-
-## Development
-
-Use Node.js 22 or newer, then install dependencies and run the repository checks:
+Run the repository checks with:
 
 ```sh
-npm install
 npm run check
+npm run build
+npm run pages:verify
 ```
 
-The npm workspace includes packages under `apps/*`, `packages/*`, and `tools/*`.
-
-Run the C++ gates separately:
+The C++ trace SDK remains separately verifiable during the trace transition:
 
 ```sh
 cmake -S sdk/cpp -B build/sdk -DBUILD_TESTING=ON
 cmake --build build/sdk --parallel
 ctest --test-dir build/sdk --output-on-failure
 ```
+
+Read [the game design](DESIGN.md),
+[architecture](docs/game/architecture.md), and
+[hard-break ledger](docs/game/hard-break.md) before extending the new path.
+Implementation is tracked in
+[issue #1](https://github.com/LinxISA/LinxSimCity/issues/1).

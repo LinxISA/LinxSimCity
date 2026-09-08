@@ -8,16 +8,20 @@ import { dirname, join, resolve } from "node:path";
 const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const declarationWorkspaces = Object.freeze([
+  "@linxsimcity/component-catalog",
+  "@linxsimcity/world",
+  "@linxsimcity/editor",
   "@linxsimcity/trace-schema",
   "@linxsimcity/topology",
   "@linxsimcity/trace-runtime",
   "@linxsimcity/scene-core",
+  "@linxsimcity/brick-kit",
   "@linxsimcity/scene-modules",
 ]);
 
 const allWorkspaces = Object.freeze([
   ...declarationWorkspaces,
-  "@linxsimcity/viewer",
+  "@linxsimcity/game",
   "@linxsimcity/linxtrace",
 ]);
 

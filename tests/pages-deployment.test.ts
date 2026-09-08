@@ -1,5 +1,4 @@
 import {
-  cpSync,
   readFileSync,
   mkdirSync,
   mkdtempSync,
@@ -14,21 +13,12 @@ import { expect, test } from "vitest";
 import { verifyPagesBuild } from "../scripts/verify-pages-build.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
-const sourceTraceDirectory = join(
-  repositoryRoot,
-  "apps/viewer/public/traces/supernpubench-fa-250-blocks",
-);
-
 function createPagesFixture(indexHtml: string): string {
   const root = mkdtempSync(join(tmpdir(), "linxsimcity-pages-"));
-  const dist = join(root, "apps/viewer/dist");
-  mkdirSync(join(dist, "traces"), { recursive: true });
+  const dist = join(root, "apps/game/dist");
+  mkdirSync(join(dist, "assets"), { recursive: true });
   writeFileSync(join(dist, "index.html"), indexHtml);
-  cpSync(
-    sourceTraceDirectory,
-    join(dist, "traces/supernpubench-fa-250-blocks"),
-    { recursive: true },
-  );
+  writeFileSync(join(dist, "assets/index.js"), "export {};\n");
   return root;
 }
 
@@ -43,20 +33,34 @@ test("rejects a Pages artifact whose assets escape the repository base", () => {
   }
 });
 
-test("accepts the base-prefixed Viewer with the verified FA logical bundle", () => {
+test("accepts the base-prefixed chip city game without the retired trace", () => {
   const root = createPagesFixture(
-    '<script type="module" src="/LinxSimCity/assets/index.js"></script>',
+    "<title>LinxSimCity · 芯片城市实验台</title>" +
+      '<script type="module" src="/LinxSimCity/assets/index.js"></script>',
   );
   try {
     expect(verifyPagesBuild(root)).toEqual({
       assetBase: "/LinxSimCity/assets/",
-      eventCount: 199_585,
-      traceDirectory: "/LinxSimCity/traces/supernpubench-fa-250-blocks/",
-      manifestSha256:
-        "f84ae484d8004a86156da6ee8f7697a917f1a15fc7876ac15eb4435f78ab3dbe",
-      topologySha256:
-        "71eaab6780714ef47bee5262af493bafa7325b068545517b48cfa20b658a5636",
+      app: "game",
+      assets: 1,
     });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects a game artifact that still ships the retired default trace", () => {
+  const root = createPagesFixture(
+    "<title>LinxSimCity · 芯片城市实验台</title>" +
+      '<script type="module" src="/LinxSimCity/assets/index.js"></script>',
+  );
+  mkdirSync(join(root, "apps/game/dist/traces/supernpubench-fa-250-blocks"), {
+    recursive: true,
+  });
+  try {
+    expect(() => verifyPagesBuild(root)).toThrow(
+      /retired viewer default trace/i,
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
