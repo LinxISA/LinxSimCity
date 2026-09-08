@@ -41,6 +41,9 @@ export function verifyPagesBuild(
   const runIndex = JSON.parse(
     readFileSync(join(runRoot, "index.json"), "utf8"),
   );
+  const runMetrics = JSON.parse(
+    readFileSync(join(runRoot, "metrics.json"), "utf8"),
+  );
   if (
     runManifest.schema !== "linxsimcity.trace" ||
     runManifest.schemaVersion !== "1" ||
@@ -49,6 +52,8 @@ export function verifyPagesBuild(
     runManifest.simulator?.name !== "SuperScalarModel" ||
     runManifest.simulator?.revision !==
       "2406db2944317b8d64dc05b621f37fc9a13f8c81" ||
+    runManifest.simulator?.configSha256 !==
+      "e96945115368e03a4762709543d7f36e4b5e5fc2d3d361415cd517221261c097" ||
     runManifest.eventCount !== "320486" ||
     runManifest.window?.lastCycle !== "49822" ||
     runManifest.loss?.droppedEvents !== "0" ||
@@ -57,7 +62,12 @@ export function verifyPagesBuild(
     runIndex.chunks?.length !== 13 ||
     runIndex.checkpoints?.length !== 1 ||
     !existsSync(join(runRoot, runIndex.chunks[0].path)) ||
-    !existsSync(join(runRoot, runIndex.checkpoints[0].path))
+    !existsSync(join(runRoot, runIndex.checkpoints[0].path)) ||
+    runMetrics.runId !== runManifest.runId ||
+    runMetrics.configSha256 !== runManifest.simulator.configSha256 ||
+    runMetrics.topologyFingerprint !== runManifest.topologyFingerprint ||
+    runMetrics.values?.cycles !== "49822" ||
+    runMetrics.values?.tileTransferCount !== "109728"
   ) {
     throw new Error(
       "Pages game has an invalid pinned SuperScalarModel trace bundle",
@@ -70,21 +80,60 @@ export function verifyPagesBuild(
   const conflictIndex = JSON.parse(
     readFileSync(join(conflictRoot, "index.json"), "utf8"),
   );
+  const conflictMetrics = JSON.parse(
+    readFileSync(join(conflictRoot, "metrics.json"), "utf8"),
+  );
   if (
     conflictManifest.runId !== "superscalar-matmul-bank-conflict-m5" ||
     conflictManifest.simulator?.revision !==
       "2406db2944317b8d64dc05b621f37fc9a13f8c81" ||
     conflictManifest.simulator?.configSha256 !==
-      "9943e6351b7894662ab34468412fb64cd459da32ba25be1e6dd44f22f6b9a68f" ||
+      "be0972569e9182613f0cb0c5942c32befb86b8232e6b46334101d48ceefddb48" ||
     conflictManifest.eventCount !== "303275" ||
     conflictManifest.window?.lastCycle !== "68785" ||
     conflictIndex.chunks?.length !== 17 ||
     conflictIndex.checkpoints?.length !== 1 ||
     !existsSync(join(conflictRoot, conflictIndex.chunks[0].path)) ||
-    !existsSync(join(conflictRoot, conflictIndex.checkpoints[0].path))
+    !existsSync(join(conflictRoot, conflictIndex.checkpoints[0].path)) ||
+    conflictMetrics.runId !== conflictManifest.runId ||
+    conflictMetrics.configSha256 !== conflictManifest.simulator.configSha256 ||
+    conflictMetrics.topologyFingerprint !==
+      conflictManifest.topologyFingerprint ||
+    conflictMetrics.values?.bankConflictCycles !== "362905" ||
+    conflictMetrics.values?.waitCycles !== "815151"
   ) {
     throw new Error(
       "Pages game has an invalid pinned bank-conflict trace bundle",
+    );
+  }
+  const improvedRoot = join(dist, "runs", "superscalar-matmul-improved.bundle");
+  const improvedManifest = JSON.parse(
+    readFileSync(join(improvedRoot, "manifest.json"), "utf8"),
+  );
+  const improvedIndex = JSON.parse(
+    readFileSync(join(improvedRoot, "index.json"), "utf8"),
+  );
+  const improvedMetrics = JSON.parse(
+    readFileSync(join(improvedRoot, "metrics.json"), "utf8"),
+  );
+  if (
+    improvedManifest.runId !== "superscalar-matmul-bank-improved-m7" ||
+    improvedManifest.simulator?.revision !==
+      "2406db2944317b8d64dc05b621f37fc9a13f8c81" ||
+    improvedManifest.simulator?.configSha256 !==
+      "986b3874db01dda15b1279d7a4e983d62889a5a367efdbc853a3eeabe1c4917d" ||
+    improvedManifest.topologyFingerprint !== "fnv1a64:ea6a74eb2b796df5" ||
+    improvedManifest.eventCount !== "306909" ||
+    improvedManifest.window?.lastCycle !== "68098" ||
+    improvedIndex.chunks?.length !== 17 ||
+    improvedIndex.checkpoints?.length !== 1 ||
+    improvedMetrics.runId !== improvedManifest.runId ||
+    improvedMetrics.configSha256 !== improvedManifest.simulator.configSha256 ||
+    improvedMetrics.values?.bankConflictCycles !== "111617" ||
+    improvedMetrics.values?.cycles !== "68098"
+  ) {
+    throw new Error(
+      "Pages game has an invalid pinned improved bank-conflict trace bundle",
     );
   }
   const topology = JSON.parse(
@@ -144,6 +193,7 @@ export function verifyPagesBuild(
     catalogCandidates: catalog.candidates.length,
     traceEvents: Number(runManifest.eventCount),
     conflictTraceEvents: Number(conflictManifest.eventCount),
+    improvedTraceEvents: Number(improvedManifest.eventCount),
   };
 }
 

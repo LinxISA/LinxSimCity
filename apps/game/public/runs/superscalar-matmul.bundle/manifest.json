@@ -6,7 +6,7 @@
   "simulator": {
     "name": "SuperScalarModel",
     "revision": "2406db2944317b8d64dc05b621f37fc9a13f8c81",
-    "configSha256": "30a646f8697fe06d4435c5adec3e526e20440a58f7e627a71ad9dda8cac3bfac"
+    "configSha256": "e96945115368e03a4762709543d7f36e4b5e5fc2d3d361415cd517221261c097"
   },
   "workload": {
     "name": "supernpubench-matmul-fp32-m256-n256-k256",

@@ -1,0 +1,14 @@
+{
+  "schema": "linxsimcity.run-metrics",
+  "schemaVersion": "1",
+  "source": "validated-trace-and-simulator-pmu",
+  "runId": "superscalar-matmul-m5",
+  "configSha256": "e96945115368e03a4762709543d7f36e4b5e5fc2d3d361415cd517221261c097",
+  "topologyFingerprint": "fnv1a64:ea6a74eb2b796df5",
+  "workloadSha256": "4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928",
+  "values": {
+    "cycles": "49822",
+    "queueBackpressureCycles": "10725",
+    "tileTransferCount": "109728"
+  }
+}

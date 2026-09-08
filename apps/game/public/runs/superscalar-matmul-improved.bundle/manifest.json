@@ -1,12 +1,12 @@
 {
   "schema": "linxsimcity.trace",
   "schemaVersion": "1",
-  "runId": "superscalar-matmul-bank-conflict-m5",
+  "runId": "superscalar-matmul-bank-improved-m7",
   "topologyFingerprint": "fnv1a64:ea6a74eb2b796df5",
   "simulator": {
     "name": "SuperScalarModel",
     "revision": "2406db2944317b8d64dc05b621f37fc9a13f8c81",
-    "configSha256": "be0972569e9182613f0cb0c5942c32befb86b8232e6b46334101d48ceefddb48"
+    "configSha256": "986b3874db01dda15b1279d7a4e983d62889a5a367efdbc853a3eeabe1c4917d"
   },
   "workload": {
     "name": "supernpubench-matmul-fp32-m256-n256-k256",
@@ -21,11 +21,11 @@
   ],
   "window": {
     "firstCycle": "0",
-    "lastCycle": "68785",
+    "lastCycle": "68098",
     "startsFromReset": true,
     "complete": true
   },
-  "eventCount": "303275",
+  "eventCount": "306909",
   "capabilities": [
     "queue-lifecycle",
     "tile-residency",

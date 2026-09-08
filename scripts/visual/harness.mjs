@@ -520,6 +520,18 @@ export async function captureVisualEvidence({
       ),
     );
 
+    await evaluate(
+      cdp,
+      sessionId,
+      `document.querySelector('.challenge-launcher')?.click()`,
+    );
+    await waitFor(
+      cdp,
+      sessionId,
+      `document.querySelector('.challenge-console')`,
+      "the expanded challenge console",
+    );
+
     await clickMatching(cdp, sessionId, '[role="tab"]', "H3 目录");
     await waitFor(
       cdp,
@@ -531,6 +543,12 @@ export async function captureVisualEvidence({
       cdp,
       sessionId,
       `document.querySelector('.catalog-h1')?.click()`,
+    );
+    await clickMatching(
+      cdp,
+      sessionId,
+      '[role="tab"]',
+      "Locate Queue backpressure",
     );
     await waitFor(
       cdp,

@@ -1,0 +1,16 @@
+{
+  "schema": "linxsimcity.run-metrics",
+  "schemaVersion": "1",
+  "source": "validated-trace-and-simulator-pmu",
+  "runId": "superscalar-matmul-bank-conflict-m5",
+  "configSha256": "be0972569e9182613f0cb0c5942c32befb86b8232e6b46334101d48ceefddb48",
+  "topologyFingerprint": "fnv1a64:ea6a74eb2b796df5",
+  "workloadSha256": "4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928",
+  "values": {
+    "cycles": "68785",
+    "queueBackpressureCycles": "16426",
+    "bankConflictCycles": "362905",
+    "waitCycles": "815151",
+    "tileTransferCount": "98320"
+  }
+}

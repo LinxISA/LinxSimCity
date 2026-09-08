@@ -1064,6 +1064,353 @@ code {
   pointer-events: none;
 }
 
+.challenge-console {
+  position: absolute;
+  top: 54px;
+  right: 14px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  width: min(370px, calc(100% - 28px));
+  max-height: calc(100% - 126px);
+  overflow: hidden;
+  border: 1px solid rgb(129 188 211 / 24%);
+  border-radius: 10px;
+  color: #b8c9cf;
+  background: rgb(4 12 17 / 91%);
+  box-shadow: 0 16px 42px rgb(0 0 0 / 34%);
+  backdrop-filter: blur(16px);
+}
+
+.challenge-launcher {
+  position: absolute;
+  z-index: 12;
+  top: 58px;
+  right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 34px;
+  border-color: rgb(83 225 207 / 28%);
+  background: rgb(4 19 25 / 88%);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 28%);
+}
+
+.challenge-launcher span {
+  color: var(--cyan);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+}
+
+.challenge-launcher strong {
+  color: #d9f7fc;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.challenge-close {
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.challenge-console > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.challenge-console > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.challenge-console > header strong {
+  color: #e1f2f5;
+  font-size: 14px;
+}
+
+.runner-state {
+  min-height: 27px;
+  padding: 0 7px;
+  color: #8299a2;
+  font:
+    9px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+  letter-spacing: 0.05em;
+}
+
+.runner-state.runner-connected {
+  border-color: rgb(111 229 189 / 32%);
+  color: #7de9c7;
+}
+
+.challenge-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 3px;
+  padding: 5px;
+  border-bottom: 1px solid var(--line);
+}
+
+.challenge-tabs button {
+  display: grid;
+  min-width: 0;
+  min-height: 63px;
+  padding: 6px;
+  border-color: transparent;
+  text-align: left;
+}
+
+.challenge-tabs button.active {
+  border-color: rgb(121 231 255 / 30%);
+  background: rgb(42 139 164 / 15%);
+}
+
+.challenge-tabs span,
+.challenge-tabs i {
+  color: #65808b;
+  font:
+    8px/1.2 "SFMono-Regular",
+    Consolas,
+    monospace;
+  font-style: normal;
+  text-transform: uppercase;
+}
+
+.challenge-tabs strong {
+  overflow: hidden;
+  color: #cce2e7;
+  font-size: 10px;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.challenge-body {
+  display: grid;
+  gap: 9px;
+  padding: 10px;
+  overflow: auto;
+}
+
+.challenge-body section {
+  display: grid;
+  gap: 5px;
+}
+
+.challenge-body h3,
+.challenge-body p,
+.challenge-body ol,
+.challenge-body dl {
+  margin: 0;
+}
+
+.challenge-body h3 {
+  color: #78939d;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.challenge-objective,
+.challenge-body section p,
+.challenge-body li {
+  color: #a8bbc2;
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.challenge-body ol {
+  display: grid;
+  gap: 3px;
+  padding-left: 20px;
+}
+
+.evidence-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+
+.evidence-tags code {
+  padding: 3px 5px;
+  border: 1px solid rgb(129 188 211 / 14%);
+  border-radius: 4px;
+  color: #76a5b3;
+  background: rgb(13 29 38 / 72%);
+  font-size: 8px;
+}
+
+.bank-control {
+  display: grid;
+  grid-template-columns: auto 1fr 20px;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid rgb(255 173 98 / 20%);
+  border-radius: 6px;
+  color: #c7a886;
+  font-size: 11px;
+}
+
+.bank-control input {
+  min-width: 0;
+  accent-color: #ffad62;
+}
+
+.challenge-actions {
+  display: flex;
+  gap: 5px;
+}
+
+.challenge-actions button {
+  flex: 1;
+  border-color: rgb(121 231 255 / 28%);
+  color: #c9f6ff;
+  background: rgb(42 139 164 / 17%);
+  font-size: 11px;
+}
+
+.challenge-actions .cancel-run {
+  flex: 0 0 68px;
+  border-color: rgb(255 117 95 / 32%);
+  color: #ff9e8f;
+  background: rgb(117 42 31 / 22%);
+}
+
+.configuration-proof,
+.job-status,
+.loaded-run-binding,
+.evaluation-result {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px 8px;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgb(8 20 27 / 68%);
+  font-size: 10px;
+}
+
+.configuration-proof > span,
+.job-status > span,
+.loaded-run-binding > span,
+.evaluation-result > span {
+  color: #6f8993;
+  font:
+    8px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+}
+
+.configuration-proof code,
+.job-status code,
+.loaded-run-binding code {
+  justify-self: end;
+  color: #8facb6;
+  font-size: 9px;
+}
+
+.configuration-proof small,
+.job-status small,
+.loaded-run-binding small,
+.evaluation-result small {
+  grid-column: 1 / -1;
+  color: #7f969f;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.loaded-run-binding.stale {
+  border-color: rgb(255 117 95 / 40%);
+  background: rgb(117 42 31 / 17%);
+}
+
+.loaded-run-binding.stale small,
+.runner-diagnostic,
+.evaluation-stale-run,
+.evaluation-incomplete {
+  color: #ff9e8f;
+}
+
+.evaluation-complete {
+  color: #78e6c2;
+}
+
+.evaluation-insufficient-evidence,
+.evaluation-incomparable-run,
+.evaluation-unsupported-run {
+  color: #d0a66e;
+}
+
+.runner-diagnostic {
+  padding: 7px 8px;
+  border: 1px solid rgb(255 117 95 / 24%);
+  border-radius: 6px;
+  background: rgb(117 42 31 / 15%);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.metrics-comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+
+.challenge-metrics-card {
+  min-width: 0;
+  padding: 7px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: rgb(8 20 27 / 68%);
+}
+
+.challenge-metrics-card > strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #75909a;
+  font:
+    8px/1 "SFMono-Regular",
+    Consolas,
+    monospace;
+}
+
+.challenge-metrics-card dl > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 5px;
+  padding: 2px 0;
+}
+
+.challenge-metrics-card dt,
+.challenge-metrics-card dd,
+.insufficient-metrics {
+  color: #8fa5ad;
+  font:
+    9px/1.25 "SFMono-Regular",
+    Consolas,
+    monospace;
+}
+
+.challenge-metrics-card dd {
+  margin: 0;
+  color: #d2edf2;
+}
+
+.insufficient-metrics {
+  color: #d0a66e;
+}
+
 .inspector-content {
   flex: 1;
   padding: 15px;
@@ -1517,6 +1864,11 @@ code {
 
   .scene-notice {
     text-align: left;
+  }
+
+  .challenge-console {
+    right: 7px;
+    width: calc(100% - 14px);
   }
 
   .status-bar span:first-child {

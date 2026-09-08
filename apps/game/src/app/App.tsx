@@ -13,6 +13,25 @@ import type {
 } from "@linxsimcity/component-catalog";
 import type { BrickActivity } from "@linxsimcity/brick-kit";
 import {
+  CHALLENGES,
+  evaluateChallenge,
+  evaluateImprovementChallenge,
+  type ChallengeEvaluation,
+  type ChallengeDefinition,
+  type ChallengeId,
+  type ChallengeRunEvidence,
+  type ExportedRunConfiguration,
+  type ObservableMetricId,
+  type RunConfiguration,
+} from "@linxsimcity/scenarios";
+import {
+  DEFAULT_RUNNER_BASE_URL,
+  RunnerClient,
+  deriveLoadedRunFreshness,
+  type RunnerCatalog,
+  type RunnerJob,
+} from "./runner-client.js";
+import {
   SeekSupersededError,
   TraceWorkerClient,
   type LoadedTraceInfo,
@@ -72,6 +91,13 @@ const RECORDED_RUNS = [
     path: "runs/superscalar-matmul-conflict.bundle",
     initialCycle: "305",
   },
+  {
+    id: "bank-improved",
+    label: "Improved ×2",
+    shortLabel: "IMPROVED ×2",
+    path: "runs/superscalar-matmul-improved.bundle",
+    initialCycle: "305",
+  },
 ] as const;
 
 const TOPOLOGY_VIEW_STORAGE_KEY = "linxsimcity.topology-view";
@@ -85,7 +111,25 @@ const DEPTH_SLICES: readonly {
   { id: "leaf", label: "Leaf" },
 ];
 
+const CHALLENGE_LIST = Object.values(CHALLENGES);
+const METRIC_LABELS: Readonly<Record<ObservableMetricId, string>> = {
+  cycles: "Cycles",
+  queueBackpressureCycles: "Queue backpressure",
+  bankConflictCycles: "Bank conflicts",
+  waitCycles: "Wait cycles",
+  tileTransferCount: "Tile transfers",
+};
+
 type RecordedRunId = (typeof RECORDED_RUNS)[number]["id"];
+
+type RunnerConnection = "connecting" | "connected" | "offline";
+
+interface LoadedChallengeRun {
+  readonly source: "recorded" | "runner";
+  readonly label: string;
+  readonly evidence: ChallengeRunEvidence;
+  readonly configSha256: string;
+}
 
 export interface CatalogH2Branch {
   readonly id: string;
@@ -192,6 +236,97 @@ function topologyNodePath(
   return path.join(" › ");
 }
 
+function selectedChallengeConfiguration(
+  challengeId: ChallengeId,
+  cubeMaxBankPerCycle: number,
+): RunConfiguration {
+  const initial = CHALLENGES[challengeId].initialConfiguration;
+  return challengeId === "reduce-bank-conflicts"
+    ? {
+        ...initial,
+        parameters: {
+          ...initial.parameters,
+          cellPerfectMode: false,
+          cubeMaxBankPerCycle,
+        },
+      }
+    : initial;
+}
+
+function recordedRunConfiguration(runId: RecordedRunId): RunConfiguration {
+  if (runId === "normal") {
+    return CHALLENGES["explain-topology"].initialConfiguration;
+  }
+  if (runId === "bank-conflict") {
+    return CHALLENGES["find-queue-bottleneck"].initialConfiguration;
+  }
+  return selectedChallengeConfiguration("reduce-bank-conflicts", 2);
+}
+
+function configurationIntent(configuration: RunConfiguration): string {
+  return JSON.stringify({
+    backendId: configuration.backendId,
+    workloadId: configuration.workloadId,
+    scenarioId: configuration.scenarioId,
+    parameters: Object.fromEntries(
+      Object.entries(configuration.parameters).sort(([left], [right]) =>
+        left.localeCompare(right),
+      ),
+    ),
+  });
+}
+
+function insufficientEvaluation(
+  challengeId: ChallengeId,
+  diagnostic: string,
+): ChallengeEvaluation {
+  return {
+    challengeId,
+    status: "insufficient-evidence",
+    diagnostics: [diagnostic],
+    observed: {},
+  };
+}
+
+async function loadRecordedMetrics(
+  bundleBaseUrl: string,
+): Promise<ChallengeRunEvidence["metrics"]> {
+  const response = await fetch(
+    `${bundleBaseUrl.replace(/\/?$/u, "/")}metrics.json`,
+    { cache: "no-store" },
+  );
+  if (response.status === 404) return undefined;
+  if (!response.ok) {
+    throw new Error(`录制回放 metrics.json 返回 HTTP ${response.status}。`);
+  }
+  return (await response.json()) as ChallengeRunEvidence["metrics"];
+}
+
+async function loadRecordedEvidence(
+  run: (typeof RECORDED_RUNS)[number],
+): Promise<ChallengeRunEvidence> {
+  const baseUrl = new URL(
+    `${import.meta.env.BASE_URL}${run.path}`,
+    window.location.href,
+  ).href;
+  const manifestResponse = await fetch(
+    `${baseUrl.replace(/\/?$/u, "/")}manifest.json`,
+    { cache: "no-store" },
+  );
+  if (!manifestResponse.ok) {
+    throw new Error(`录制回放 manifest 返回 HTTP ${manifestResponse.status}。`);
+  }
+  const [manifest, metrics] = await Promise.all([
+    manifestResponse.json() as Promise<ChallengeRunEvidence["manifest"]>,
+    loadRecordedMetrics(baseUrl),
+  ]);
+  return {
+    configuration: recordedRunConfiguration(run.id),
+    manifest,
+    ...(metrics ? { metrics } : {}),
+  };
+}
+
 export function App() {
   const [topology, setTopology] = useState<ArchitectureTopology>();
   const [catalog, setCatalog] = useState<DavinciCatalogMapping>();
@@ -229,10 +364,29 @@ export function App() {
           : window.localStorage.getItem(TOPOLOGY_VIEW_STORAGE_KEY),
       ),
     );
+  const [runnerConnection, setRunnerConnection] =
+    useState<RunnerConnection>("connecting");
+  const [runnerCatalog, setRunnerCatalog] = useState<RunnerCatalog>();
+  const [runnerDiagnostic, setRunnerDiagnostic] = useState<string>();
+  const [selectedChallengeId, setSelectedChallengeId] =
+    useState<ChallengeId>("explain-topology");
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [cubeMaxBankPerCycle, setCubeMaxBankPerCycle] = useState(2);
+  const [exportedConfiguration, setExportedConfiguration] =
+    useState<ExportedRunConfiguration>();
+  const [runnerJob, setRunnerJob] = useState<RunnerJob>();
+  const [loadedChallengeRun, setLoadedChallengeRun] =
+    useState<LoadedChallengeRun>();
+  const [baselineEvidence, setBaselineEvidence] =
+    useState<ChallengeRunEvidence>();
+  const [improvedEvidence, setImprovedEvidence] =
+    useState<ChallengeRunEvidence>();
   const importInput = useRef<HTMLInputElement>(null);
   const catalogCandidateElements = useRef(new Map<string, HTMLButtonElement>());
   const traceClient = useRef<TraceWorkerClient | undefined>(undefined);
   const traceRequestId = useRef(0);
+  const runnerClient = useRef(new RunnerClient());
+  const loadedRunnerJobId = useRef<string | undefined>(undefined);
   const diagnostics = useMemo(
     () =>
       topology ? validateArchitectureTopology(topology, CORE_CATALOG) : [],
@@ -365,6 +519,60 @@ export function App() {
   );
   const catalogSearchActive = filter.trim().length > 0;
   const recordedRun = RECORDED_RUNS.find((run) => run.id === recordedRunId)!;
+  const selectedChallenge = CHALLENGES[selectedChallengeId];
+  const selectedRunConfiguration = useMemo(
+    () =>
+      selectedChallengeConfiguration(selectedChallengeId, cubeMaxBankPerCycle),
+    [cubeMaxBankPerCycle, selectedChallengeId],
+  );
+  const loadedRunStale =
+    deriveLoadedRunFreshness(
+      loadedChallengeRun
+        ? configurationIntent(loadedChallengeRun.evidence.configuration)
+        : undefined,
+      configurationIntent(selectedRunConfiguration),
+    ) === "stale";
+  const challengeEvaluations = useMemo(() => {
+    const evaluations = {} as Record<ChallengeId, ChallengeEvaluation>;
+    for (const challenge of CHALLENGE_LIST) {
+      try {
+        if (challenge.id === "reduce-bank-conflicts") {
+          evaluations[challenge.id] =
+            baselineEvidence && improvedEvidence
+              ? evaluateImprovementChallenge(baselineEvidence, improvedEvidence)
+              : insufficientEvaluation(
+                  challenge.id,
+                  "需要 baseline 和 improved 两次绑定运行。",
+                );
+        } else {
+          evaluations[challenge.id] = loadedChallengeRun
+            ? evaluateChallenge(challenge.id, loadedChallengeRun.evidence)
+            : insufficientEvaluation(challenge.id, "尚未加载绑定运行证据。");
+        }
+      } catch (error) {
+        evaluations[challenge.id] = insufficientEvaluation(
+          challenge.id,
+          error instanceof Error ? error.message : "挑战证据无法评估。",
+        );
+      }
+    }
+    if (loadedRunStale) {
+      evaluations[selectedChallengeId] = {
+        challengeId: selectedChallengeId,
+        status: "stale-run",
+        diagnostics: ["配置已经改变；当前画面来自旧配置，请重新运行。"],
+        observed: evaluations[selectedChallengeId].observed,
+      };
+    }
+    return evaluations;
+  }, [
+    baselineEvidence,
+    improvedEvidence,
+    loadedChallengeRun,
+    loadedRunStale,
+    selectedChallengeId,
+  ]);
+  const selectedEvaluation = challengeEvaluations[selectedChallengeId];
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -458,6 +666,30 @@ export function App() {
     });
   };
 
+  const connectRunner = useCallback(async (reportFailure = true) => {
+    setRunnerConnection("connecting");
+    setRunnerDiagnostic(undefined);
+    try {
+      const nextCatalog = await runnerClient.current.catalog();
+      setRunnerCatalog(nextCatalog);
+      setRunnerConnection("connected");
+    } catch (error) {
+      setRunnerCatalog(undefined);
+      setRunnerConnection("offline");
+      setRunnerDiagnostic(
+        reportFailure
+          ? error instanceof Error
+            ? error.message
+            : "本地 runner 不可用。"
+          : undefined,
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    void connectRunner(false);
+  }, [connectRunner]);
+
   const closeTrace = useCallback(() => {
     const client = traceClient.current;
     traceClient.current = undefined;
@@ -467,6 +699,7 @@ export function App() {
     setTracePlaying(false);
     setTraceCycle("0");
     setCycleDraft("0");
+    setLoadedChallengeRun(undefined);
     void client?.close();
   }, []);
 
@@ -572,77 +805,274 @@ export function App() {
     [traceInfo],
   );
 
-  const loadRecordedTrace = useCallback(async () => {
-    closeTrace();
-    setNotice("正在 Worker 中加载 SuperScalarModel 真实回放…");
-    let client: TraceWorkerClient | undefined;
-    const loadRequestId = ++traceRequestId.current;
-    try {
-      client = TraceWorkerClient.spawn();
-      traceClient.current = client;
-      const baseUrl = new URL(
-        `${import.meta.env.BASE_URL}${recordedRun.path}`,
-        window.location.href,
-      ).href;
-      const [info, nextCatalog] = await Promise.all([
-        client.load({ kind: "http-directory", baseUrl }),
-        loadBundledCatalog(),
-      ]);
-      if (loadRequestId !== traceRequestId.current) {
-        await client.close();
-        return;
-      }
-      const nextDiagnostics = validateArchitectureTopology(
-        info.topology,
-        CORE_CATALOG,
-      );
-      if (nextDiagnostics.length > 0) {
-        throw new Error(
-          `Trace topology 校验失败：${nextDiagnostics[0]!.path} ${nextDiagnostics[0]!.message}`,
+  const loadRecordedTrace = useCallback(
+    async (requestedRunId?: RecordedRunId) => {
+      const targetRunId = requestedRunId ?? recordedRunId;
+      const targetRun = RECORDED_RUNS.find((run) => run.id === targetRunId)!;
+      closeTrace();
+      setNotice("正在 Worker 中加载 SuperScalarModel 录制回放…");
+      let client: TraceWorkerClient | undefined;
+      const loadRequestId = ++traceRequestId.current;
+      try {
+        client = TraceWorkerClient.spawn();
+        traceClient.current = client;
+        const baseUrl = new URL(
+          `${import.meta.env.BASE_URL}${targetRun.path}`,
+          window.location.href,
+        ).href;
+        const [info, nextCatalog, metrics] = await Promise.all([
+          client.load({ kind: "http-directory", baseUrl }),
+          loadBundledCatalog(),
+          loadRecordedMetrics(baseUrl),
+        ]);
+        if (loadRequestId !== traceRequestId.current) {
+          await client.close();
+          return;
+        }
+        const nextDiagnostics = validateArchitectureTopology(
+          info.topology,
+          CORE_CATALOG,
         );
-      }
-      const catalogDiagnostics = validateDavinciCatalogMapping(nextCatalog);
-      if (catalogDiagnostics.length > 0) {
-        throw new Error(
-          `H3 目录校验失败：${catalogDiagnostics[0]!.path} ${catalogDiagnostics[0]!.message}`,
-        );
-      }
-      setTopology(info.topology);
-      setCatalog(nextCatalog);
-      setTraceInfo(info);
-      setSelectedNodeId(undefined);
-      setSelectedCandidateId(undefined);
-      setBrowserMode("topology");
-      const firstCycle = info.manifest.window.firstCycle;
-      const preferredCycle = BigInt(recordedRun.initialCycle);
-      const initialCycle =
-        preferredCycle >= BigInt(firstCycle) &&
-        preferredCycle <= BigInt(info.manifest.window.lastCycle)
-          ? recordedRun.initialCycle
-          : firstCycle;
-      const requestId = ++traceRequestId.current;
-      const snapshot = await client.seek("core", initialCycle, requestId);
-      setTraceSnapshot(snapshot);
-      setTraceCycle(initialCycle);
-      setCycleDraft(initialCycle);
-      setNotice(
-        `已加载 ${recordedRun.label}：${info.manifest.eventCount} 个真实事件。`,
-      );
-    } catch (error) {
-      if (client && traceClient.current === client) {
-        closeTrace();
+        if (nextDiagnostics.length > 0) {
+          throw new Error(
+            `Trace topology 校验失败：${nextDiagnostics[0]!.path} ${nextDiagnostics[0]!.message}`,
+          );
+        }
+        const catalogDiagnostics = validateDavinciCatalogMapping(nextCatalog);
+        if (catalogDiagnostics.length > 0) {
+          throw new Error(
+            `H3 目录校验失败：${catalogDiagnostics[0]!.path} ${catalogDiagnostics[0]!.message}`,
+          );
+        }
+        setTopology(info.topology);
+        setCatalog(nextCatalog);
+        setTraceInfo(info);
+        setSelectedNodeId(undefined);
+        setSelectedCandidateId(undefined);
+        setBrowserMode("topology");
+        const firstCycle = info.manifest.window.firstCycle;
+        const preferredCycle = BigInt(targetRun.initialCycle);
+        const initialCycle =
+          preferredCycle >= BigInt(firstCycle) &&
+          preferredCycle <= BigInt(info.manifest.window.lastCycle)
+            ? targetRun.initialCycle
+            : firstCycle;
+        const requestId = ++traceRequestId.current;
+        const snapshot = await client.seek("core", initialCycle, requestId);
+        setTraceSnapshot(snapshot);
+        setTraceCycle(initialCycle);
+        setCycleDraft(initialCycle);
+        const challengeConfiguration = recordedRunConfiguration(targetRunId);
+        const evidence: ChallengeRunEvidence = {
+          configuration: challengeConfiguration,
+          manifest: info.manifest,
+          ...(metrics ? { metrics } : {}),
+        };
+        setLoadedChallengeRun({
+          source: "recorded",
+          label: targetRun.label,
+          evidence,
+          configSha256: info.manifest.simulator.configSha256,
+        });
+        if (targetRunId === "bank-conflict") setBaselineEvidence(evidence);
+        if (targetRunId === "bank-improved") setImprovedEvidence(evidence);
         setNotice(
-          error instanceof Error ? error.message : "无法加载 Trace bundle。",
+          `已加载 ${targetRun.label} 录制回放：${info.manifest.eventCount} 个真实事件。`,
         );
-      } else {
-        await client?.close();
+      } catch (error) {
+        if (client && traceClient.current === client) {
+          closeTrace();
+          setNotice(
+            error instanceof Error ? error.message : "无法加载 Trace bundle。",
+          );
+        } else {
+          await client?.close();
+        }
       }
-    }
-  }, [closeTrace, recordedRun]);
+    },
+    [closeTrace, recordedRunId],
+  );
 
   useEffect(() => {
     void loadRecordedTrace();
   }, [loadRecordedTrace]);
+
+  useEffect(() => {
+    let active = true;
+    const baselineRun = RECORDED_RUNS.find(
+      (run) => run.id === "bank-conflict",
+    )!;
+    const improvedRun = RECORDED_RUNS.find(
+      (run) => run.id === "bank-improved",
+    )!;
+    void Promise.all([
+      loadRecordedEvidence(baselineRun),
+      loadRecordedEvidence(improvedRun),
+    ])
+      .then(([baseline, improved]) => {
+        if (!active) return;
+        setBaselineEvidence(baseline);
+        setImprovedEvidence(improved);
+      })
+      .catch(() => {
+        // Optional static evidence remains insufficient until its files exist.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const launchSimulation = useCallback(async () => {
+    if (runnerConnection !== "connected") return;
+    setRunnerDiagnostic(undefined);
+    try {
+      const exported = await runnerClient.current.exportConfiguration({
+        backendId: selectedRunConfiguration.backendId,
+        workloadId: selectedRunConfiguration.workloadId,
+        scenarioId: selectedRunConfiguration.scenarioId,
+        parameters: selectedRunConfiguration.parameters,
+      });
+      setExportedConfiguration(exported);
+      const job = await runnerClient.current.startJob(exported);
+      setRunnerJob(job);
+      loadedRunnerJobId.current = undefined;
+      setNotice(`本地仿真 ${job.id.slice(0, 8)} 已启动。`);
+    } catch (error) {
+      setRunnerDiagnostic(
+        error instanceof Error ? error.message : "无法启动本地仿真。",
+      );
+    }
+  }, [runnerConnection, selectedRunConfiguration]);
+
+  const loadRunnerResult = useCallback(
+    async (job: RunnerJob) => {
+      if (!job.result) return;
+      closeTrace();
+      setNotice(`正在校验并加载本地运行 ${job.id.slice(0, 8)}…`);
+      let client: TraceWorkerClient | undefined;
+      const loadRequestId = ++traceRequestId.current;
+      try {
+        client = TraceWorkerClient.spawn();
+        traceClient.current = client;
+        const [info, nextCatalog] = await Promise.all([
+          client.load({
+            kind: "http-directory",
+            baseUrl: runnerClient.current.bundleBaseUrl(job.result),
+          }),
+          loadBundledCatalog(),
+        ]);
+        if (loadRequestId !== traceRequestId.current) {
+          await client.close();
+          return;
+        }
+        const nextDiagnostics = validateArchitectureTopology(
+          info.topology,
+          CORE_CATALOG,
+        );
+        if (nextDiagnostics.length > 0) {
+          throw new Error(
+            `Runner topology 校验失败：${nextDiagnostics[0]!.path} ${nextDiagnostics[0]!.message}`,
+          );
+        }
+        const catalogDiagnostics = validateDavinciCatalogMapping(nextCatalog);
+        if (catalogDiagnostics.length > 0) {
+          throw new Error(
+            `H3 目录校验失败：${catalogDiagnostics[0]!.path} ${catalogDiagnostics[0]!.message}`,
+          );
+        }
+        const firstCycle = info.manifest.window.firstCycle;
+        const preferred = 305n;
+        const initialCycle =
+          preferred >= BigInt(firstCycle) &&
+          preferred <= BigInt(info.manifest.window.lastCycle)
+            ? String(preferred)
+            : firstCycle;
+        const requestId = ++traceRequestId.current;
+        const snapshot = await client.seek("core", initialCycle, requestId);
+        const evidence: ChallengeRunEvidence = {
+          configuration: job.configuration,
+          manifest: info.manifest,
+          ...(job.result.metrics ? { metrics: job.result.metrics } : {}),
+        };
+        setTopology(info.topology);
+        setCatalog(nextCatalog);
+        setTraceInfo(info);
+        setTraceSnapshot(snapshot);
+        setTraceCycle(initialCycle);
+        setCycleDraft(initialCycle);
+        setSelectedNodeId(undefined);
+        setSelectedCandidateId(undefined);
+        setBrowserMode("topology");
+        setLoadedChallengeRun({
+          source: "runner",
+          label: `Run ${job.id.slice(0, 8)}`,
+          evidence,
+          configSha256: job.configSha256,
+        });
+        const banks = job.configuration.parameters.cubeMaxBankPerCycle;
+        if (job.configuration.scenarioId === "bank-conflict" && banks === 1) {
+          setBaselineEvidence(evidence);
+        } else if (
+          job.configuration.scenarioId === "bank-conflict" &&
+          typeof banks === "number" &&
+          banks >= 2
+        ) {
+          setImprovedEvidence(evidence);
+        }
+        setNotice(
+          `已加载本地运行 ${job.id.slice(0, 8)}：${info.manifest.eventCount} 个事件。`,
+        );
+      } catch (error) {
+        if (client && traceClient.current === client) closeTrace();
+        else await client?.close();
+        setRunnerDiagnostic(
+          error instanceof Error ? error.message : "Runner bundle 加载失败。",
+        );
+      }
+    },
+    [closeTrace],
+  );
+
+  useEffect(() => {
+    if (!runnerJob || !["running", "cancelling"].includes(runnerJob.status)) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void runnerClient.current
+        .getJob(runnerJob.id)
+        .then(setRunnerJob)
+        .catch((error: unknown) =>
+          setRunnerDiagnostic(
+            error instanceof Error ? error.message : "Runner 状态查询失败。",
+          ),
+        );
+    }, 700);
+    return () => window.clearTimeout(timer);
+  }, [runnerJob]);
+
+  useEffect(() => {
+    if (
+      runnerJob?.status === "succeeded" &&
+      runnerJob.result &&
+      loadedRunnerJobId.current !== runnerJob.id
+    ) {
+      loadedRunnerJobId.current = runnerJob.id;
+      void loadRunnerResult(runnerJob);
+    }
+  }, [loadRunnerResult, runnerJob]);
+
+  const cancelSimulation = useCallback(async () => {
+    if (!runnerJob || !["running", "cancelling"].includes(runnerJob.status)) {
+      return;
+    }
+    try {
+      setRunnerJob(await runnerClient.current.cancelJob(runnerJob.id));
+    } catch (error) {
+      setRunnerDiagnostic(
+        error instanceof Error ? error.message : "无法取消本地仿真。",
+      );
+    }
+  }, [runnerJob]);
 
   const stepTrace = useCallback(
     (delta: -1 | 1) => {
@@ -732,10 +1162,26 @@ export function App() {
           <button
             type="button"
             className="run-button"
-            onClick={() => void loadRecordedTrace()}
-            title="加载 SuperScalarModel current bundle，由 Worker 回放 Queue、Tile 与 Cube 状态"
+            disabled={
+              runnerJob?.status === "running" ||
+              runnerJob?.status === "cancelling"
+            }
+            onClick={() =>
+              runnerConnection === "connected"
+                ? void launchSimulation()
+                : void loadRecordedTrace()
+            }
+            title={
+              runnerConnection === "connected"
+                ? "按当前挑战配置启动本地 SuperScalarModel"
+                : "加载随网页发布的只读录制回放"
+            }
           >
-            {traceInfo ? "重新载入真实回放" : "载入真实回放"}
+            {runnerConnection === "connected"
+              ? "重跑当前配置"
+              : traceInfo
+                ? "重新载入录制回放"
+                : "载入录制回放"}
           </button>
         </div>
       </header>
@@ -1121,6 +1567,50 @@ export function App() {
             <span className="mode-light mode-topology" />
             Queue 折叠排序 · 尺寸感知布局 · SimQueue 管道
           </div>
+          {!challengeOpen ? (
+            <button
+              type="button"
+              className="challenge-launcher"
+              onClick={() => setChallengeOpen(true)}
+            >
+              <span>CHALLENGES</span>
+              <strong>{selectedEvaluation.status}</strong>
+            </button>
+          ) : null}
+          {challengeOpen ? (
+            <ChallengeConsole
+              challengeId={selectedChallengeId}
+              challenge={selectedChallenge}
+              evaluation={selectedEvaluation}
+              evaluations={challengeEvaluations}
+              runnerConnection={runnerConnection}
+              runnerCatalog={runnerCatalog}
+              runnerDiagnostic={runnerDiagnostic}
+              job={runnerJob}
+              exportedConfiguration={exportedConfiguration}
+              loadedRun={loadedChallengeRun}
+              loadedRunStale={loadedRunStale}
+              baselineEvidence={baselineEvidence}
+              improvedEvidence={improvedEvidence}
+              cubeMaxBankPerCycle={cubeMaxBankPerCycle}
+              onClose={() => setChallengeOpen(false)}
+              onSelectChallenge={(challengeId) => {
+                setSelectedChallengeId(challengeId);
+                setExportedConfiguration(undefined);
+              }}
+              onCubeMaxBankPerCycle={(value) => {
+                setCubeMaxBankPerCycle(value);
+                setExportedConfiguration(undefined);
+              }}
+              onConnect={() => void connectRunner(true)}
+              onRun={() => void launchSimulation()}
+              onCancel={() => void cancelSimulation()}
+              onLoadRecorded={(runId) => {
+                if (runId === recordedRunId) void loadRecordedTrace(runId);
+                else setRecordedRunId(runId);
+              }}
+            />
+          ) : null}
           {topologyView?.focusedEdgeIds.size ? (
             <div className="path-focus-banner">
               <span>
@@ -1269,6 +1759,270 @@ export function App() {
         </span>
       </footer>
     </main>
+  );
+}
+
+interface ChallengeConsoleProps {
+  readonly challengeId: ChallengeId;
+  readonly challenge: ChallengeDefinition;
+  readonly evaluation: ChallengeEvaluation;
+  readonly evaluations: Readonly<Record<ChallengeId, ChallengeEvaluation>>;
+  readonly runnerConnection: RunnerConnection;
+  readonly runnerCatalog: RunnerCatalog | undefined;
+  readonly runnerDiagnostic: string | undefined;
+  readonly job: RunnerJob | undefined;
+  readonly exportedConfiguration: ExportedRunConfiguration | undefined;
+  readonly loadedRun: LoadedChallengeRun | undefined;
+  readonly loadedRunStale: boolean;
+  readonly baselineEvidence: ChallengeRunEvidence | undefined;
+  readonly improvedEvidence: ChallengeRunEvidence | undefined;
+  readonly cubeMaxBankPerCycle: number;
+  readonly onClose: () => void;
+  readonly onSelectChallenge: (challengeId: ChallengeId) => void;
+  readonly onCubeMaxBankPerCycle: (value: number) => void;
+  readonly onConnect: () => void;
+  readonly onRun: () => void;
+  readonly onCancel: () => void;
+  readonly onLoadRecorded: (runId: RecordedRunId) => void;
+}
+
+function MetricsCard({
+  label,
+  evidence,
+}: {
+  readonly label: string;
+  readonly evidence: ChallengeRunEvidence | undefined;
+}) {
+  return (
+    <div className="challenge-metrics-card">
+      <strong>{label}</strong>
+      {evidence?.metrics ? (
+        <dl>
+          {Object.entries(evidence.metrics.values).map(([metric, value]) => (
+            <div key={metric}>
+              <dt>{METRIC_LABELS[metric as ObservableMetricId] ?? metric}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <span className="insufficient-metrics">insufficient-evidence</span>
+      )}
+    </div>
+  );
+}
+
+function ChallengeConsole({
+  challengeId,
+  challenge,
+  evaluation,
+  evaluations,
+  runnerConnection,
+  runnerCatalog,
+  runnerDiagnostic,
+  job,
+  exportedConfiguration,
+  loadedRun,
+  loadedRunStale,
+  baselineEvidence,
+  improvedEvidence,
+  cubeMaxBankPerCycle,
+  onClose,
+  onSelectChallenge,
+  onCubeMaxBankPerCycle,
+  onConnect,
+  onRun,
+  onCancel,
+  onLoadRecorded,
+}: ChallengeConsoleProps) {
+  const running = job?.status === "running" || job?.status === "cancelling";
+  const recordedRunId: RecordedRunId =
+    challengeId === "explain-topology" ? "normal" : "bank-conflict";
+  const boundedJobDiagnostic = (
+    job?.diagnostic ||
+    job?.stderr ||
+    job?.stdout ||
+    ""
+  )
+    .replaceAll(/\s+/gu, " ")
+    .slice(0, 480);
+  return (
+    <aside className="challenge-console" aria-label="挑战与本地仿真">
+      <header>
+        <div>
+          <span className="eyebrow">CHALLENGES</span>
+          <strong>验证任务</strong>
+        </div>
+        <button
+          type="button"
+          className={`runner-state runner-${runnerConnection}`}
+          onClick={onConnect}
+          disabled={runnerConnection === "connecting"}
+          title={`本地 runner：${DEFAULT_RUNNER_BASE_URL}`}
+        >
+          {runnerConnection === "connected"
+            ? `RUNNER · ${runnerCatalog?.scenarios.length ?? 0} SCENARIOS`
+            : runnerConnection === "connecting"
+              ? "CONNECTING"
+              : "录制回放"}
+        </button>
+        <button
+          type="button"
+          className="challenge-close"
+          onClick={onClose}
+          aria-label="关闭挑战面板"
+        >
+          ×
+        </button>
+      </header>
+
+      <div className="challenge-tabs" role="tablist">
+        {CHALLENGE_LIST.map((item, index) => (
+          <button
+            type="button"
+            role="tab"
+            key={item.id}
+            aria-selected={challengeId === item.id}
+            className={challengeId === item.id ? "active" : ""}
+            onClick={() => onSelectChallenge(item.id)}
+          >
+            <span>0{index + 1}</span>
+            <strong>{item.label}</strong>
+            <i className={`evaluation-${evaluations[item.id].status}`}>
+              {evaluations[item.id].status}
+            </i>
+          </button>
+        ))}
+      </div>
+
+      <div className="challenge-body">
+        <p className="challenge-objective">{challenge.objective}</p>
+        <section>
+          <h3>步骤</h3>
+          <ol>
+            {challenge.steps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </section>
+        <section>
+          <h3>证据要求</h3>
+          <p>{challenge.completion.description}</p>
+          <div className="evidence-tags">
+            {challenge.requiredTraceCapabilities.map((capability) => (
+              <code key={capability}>{capability}</code>
+            ))}
+            {challenge.completion.requiredMetrics.map((metric) => (
+              <code key={metric}>{METRIC_LABELS[metric]}</code>
+            ))}
+          </div>
+        </section>
+
+        {challengeId === "reduce-bank-conflicts" ? (
+          <label className="bank-control">
+            <span>Cube banks / cycle</span>
+            <input
+              type="range"
+              min="2"
+              max="8"
+              step="1"
+              value={cubeMaxBankPerCycle}
+              onChange={(event) =>
+                onCubeMaxBankPerCycle(Number(event.target.value))
+              }
+            />
+            <strong>{cubeMaxBankPerCycle}</strong>
+          </label>
+        ) : null}
+
+        <div className="challenge-actions">
+          {runnerConnection === "connected" ? (
+            <button type="button" onClick={onRun} disabled={running}>
+              {running ? "仿真运行中" : "重跑当前配置"}
+            </button>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => onLoadRecorded(recordedRunId)}
+              >
+                {challengeId === "reduce-bank-conflicts"
+                  ? "Baseline ×1"
+                  : "加载录制回放"}
+              </button>
+              {challengeId === "reduce-bank-conflicts" ? (
+                <button
+                  type="button"
+                  onClick={() => onLoadRecorded("bank-improved")}
+                >
+                  Improved ×2
+                </button>
+              ) : null}
+            </>
+          )}
+          {running ? (
+            <button type="button" className="cancel-run" onClick={onCancel}>
+              取消
+            </button>
+          ) : null}
+        </div>
+
+        {exportedConfiguration ? (
+          <div className="configuration-proof">
+            <span>CONFIG</span>
+            <code>{exportedConfiguration.configSha256.slice(0, 12)}</code>
+            <small>
+              {exportedConfiguration.simulatorOverrides.join(" · ")}
+            </small>
+          </div>
+        ) : null}
+        {job ? (
+          <div className={`job-status job-${job.status}`}>
+            <span>{job.status}</span>
+            <code>{job.id.slice(0, 12)}</code>
+            {boundedJobDiagnostic ? (
+              <small>{boundedJobDiagnostic}</small>
+            ) : null}
+          </div>
+        ) : null}
+        {runnerDiagnostic ? (
+          <p className="runner-diagnostic">{runnerDiagnostic.slice(0, 480)}</p>
+        ) : null}
+
+        <div className={`loaded-run-binding ${loadedRunStale ? "stale" : ""}`}>
+          <span>
+            {loadedRun?.source === "runner" ? "LIVE RUN" : "RECORDED"}
+          </span>
+          <strong>{loadedRun?.label ?? "No run loaded"}</strong>
+          <code>{loadedRun?.configSha256.slice(0, 12) ?? "—"}</code>
+          {loadedRunStale ? (
+            <small>STALE · 配置已改变，此画面不是当前改进结果</small>
+          ) : null}
+        </div>
+
+        <div className="evaluation-result">
+          <span>完成状态</span>
+          <strong className={`evaluation-${evaluation.status}`}>
+            {evaluation.status}
+          </strong>
+          {evaluation.diagnostics.slice(0, 3).map((diagnostic) => (
+            <small key={diagnostic}>{diagnostic}</small>
+          ))}
+        </div>
+
+        {challengeId === "reduce-bank-conflicts" ? (
+          <div className="metrics-comparison">
+            <MetricsCard label="BASELINE" evidence={baselineEvidence} />
+            <MetricsCard label="IMPROVED" evidence={improvedEvidence} />
+          </div>
+        ) : (
+          <MetricsCard
+            label="OBSERVED METRICS"
+            evidence={loadedRun?.evidence}
+          />
+        )}
+      </div>
+    </aside>
   );
 }
 

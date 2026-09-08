@@ -30,6 +30,10 @@ const sourceConflictRun = join(
   repositoryRoot,
   "apps/game/public/runs/superscalar-matmul-conflict.bundle",
 );
+const sourceImprovedRun = join(
+  repositoryRoot,
+  "apps/game/public/runs/superscalar-matmul-improved.bundle",
+);
 function createPagesFixture(indexHtml: string): string {
   const root = mkdtempSync(join(tmpdir(), "linxsimcity-pages-"));
   const dist = join(root, "apps/game/dist");
@@ -47,6 +51,11 @@ function createPagesFixture(indexHtml: string): string {
   cpSync(
     sourceConflictRun,
     join(dist, "runs/superscalar-matmul-conflict.bundle"),
+    { recursive: true },
+  );
+  cpSync(
+    sourceImprovedRun,
+    join(dist, "runs/superscalar-matmul-improved.bundle"),
     { recursive: true },
   );
   return root;
@@ -78,6 +87,7 @@ test("accepts the base-prefixed chip city game without the retired trace", () =>
       catalogCandidates: 240,
       traceEvents: 320486,
       conflictTraceEvents: 303275,
+      improvedTraceEvents: 306909,
     });
   } finally {
     rmSync(root, { recursive: true, force: true });

@@ -1,0 +1,206 @@
+{
+  "schema": "linxsimcity.trace-index",
+  "schemaVersion": "1",
+  "runId": "superscalar-matmul-bank-improved-m7",
+  "topologyFingerprint": "fnv1a64:ea6a74eb2b796df5",
+  "chunks": [
+    {
+      "id": "chunk-000000",
+      "path": "chunks/000000.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "0",
+      "lastCycle": "4094",
+      "eventCount": "16192",
+      "sha256": "63d3b8eee387e4f1f162722b32b22537458d655b31741bbc6dbe42e8451a8f48",
+      "compressedBytes": 238361,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000001",
+      "path": "chunks/000001.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "4096",
+      "lastCycle": "8191",
+      "eventCount": "17943",
+      "sha256": "8a98b88a723b18314059d2a9aa3d2190fa05045e3c86e6ea052fe23647fdb5fc",
+      "compressedBytes": 276843,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000002",
+      "path": "chunks/000002.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "8192",
+      "lastCycle": "12287",
+      "eventCount": "18799",
+      "sha256": "4c10db55665142f3fe662e0b88f32348df43b1cf04b5c9b894bc19c8ddbeee14",
+      "compressedBytes": 292623,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000003",
+      "path": "chunks/000003.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "12288",
+      "lastCycle": "16382",
+      "eventCount": "18781",
+      "sha256": "0e2cc1ba3921751644f3b80e80b3f79b314c496dbdcc970a249fe34e66c1d528",
+      "compressedBytes": 291886,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000004",
+      "path": "chunks/000004.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "16384",
+      "lastCycle": "20479",
+      "eventCount": "18794",
+      "sha256": "8dd5947b3eef0cee23deca9b203d712e1f851e31fe3a4cde387bc25a325695e3",
+      "compressedBytes": 293419,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000005",
+      "path": "chunks/000005.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "20480",
+      "lastCycle": "24575",
+      "eventCount": "18733",
+      "sha256": "0c361516ed0711824a09ee2872fb2f6b0235d8603e3f7a6cf73c766641458cbf",
+      "compressedBytes": 292155,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000006",
+      "path": "chunks/000006.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "24577",
+      "lastCycle": "28671",
+      "eventCount": "18833",
+      "sha256": "d1fae35e8683b6bcc33f01a3649fcad778d0ee68571c9544dba24696a4b83be0",
+      "compressedBytes": 293266,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000007",
+      "path": "chunks/000007.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "28672",
+      "lastCycle": "32767",
+      "eventCount": "18749",
+      "sha256": "c84f00c2ec5fe01caa4a5d91025258e469a4ad507d8ec6e09d628a3413d5a043",
+      "compressedBytes": 292511,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000008",
+      "path": "chunks/000008.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "32768",
+      "lastCycle": "36861",
+      "eventCount": "18845",
+      "sha256": "5b0cf9bcafad56189f489ef009d00131e42bcccb7b14663f9cf13f80b314af20",
+      "compressedBytes": 293316,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000009",
+      "path": "chunks/000009.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "36864",
+      "lastCycle": "40959",
+      "eventCount": "18780",
+      "sha256": "d171ec52ba3243bc3e818633d626b752421fc20c975464c182e9291a693a91a8",
+      "compressedBytes": 292412,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000010",
+      "path": "chunks/000010.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "40960",
+      "lastCycle": "45055",
+      "eventCount": "18765",
+      "sha256": "b24a366ea8e15eac5f37224535d41385456e73658c2606027e1b796064e51e85",
+      "compressedBytes": 293141,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000011",
+      "path": "chunks/000011.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "45056",
+      "lastCycle": "49151",
+      "eventCount": "18771",
+      "sha256": "70118c14772cd8d2c17991c054fbee01b78b347ce3a63cb0e97d4fe73de2eaca",
+      "compressedBytes": 292248,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000012",
+      "path": "chunks/000012.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "49152",
+      "lastCycle": "53247",
+      "eventCount": "18760",
+      "sha256": "026f71c1591f91596c95ede1fe4fe536736ac8c76eb906bbcec8d6a7c4264be1",
+      "compressedBytes": 292464,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000013",
+      "path": "chunks/000013.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "53248",
+      "lastCycle": "57343",
+      "eventCount": "18765",
+      "sha256": "97a5628968ef6c86d4f8235877f2dfcdbbedbdbc0c467488b290a66ef13cee55",
+      "compressedBytes": 292727,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000014",
+      "path": "chunks/000014.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "57344",
+      "lastCycle": "61439",
+      "eventCount": "18836",
+      "sha256": "430cd4058ca879a051329b8c4c7ce7d4542be29e21c44df353813c9fe6d8c43e",
+      "compressedBytes": 293165,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000015",
+      "path": "chunks/000015.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "61440",
+      "lastCycle": "65535",
+      "eventCount": "18228",
+      "sha256": "8225fed016041aaefc5581ab9f3688e75f6045ac330c9b7e72dcaeb4e92f3c32",
+      "compressedBytes": 287430,
+      "checkpointId": "checkpoint-000000"
+    },
+    {
+      "id": "chunk-000016",
+      "path": "chunks/000016.jsonl.gz",
+      "timeDomain": "core",
+      "firstCycle": "65536",
+      "lastCycle": "68038",
+      "eventCount": "10335",
+      "sha256": "717d246bfa16220dbd82410d4aaa1ceb7258ca33b5c8235035f8469776542d83",
+      "compressedBytes": 162471,
+      "checkpointId": "checkpoint-000000"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "checkpoint-000000",
+      "path": "checkpoints/000000.json.gz",
+      "timeDomain": "core",
+      "cycle": "0",
+      "eventOrdinal": "0",
+      "sha256": "350a557616aaa5d36a7547157f75cd2e641f3e1870b9bee61ed5892958066d8e",
+      "compressedBytes": 233
+    }
+  ]
+}

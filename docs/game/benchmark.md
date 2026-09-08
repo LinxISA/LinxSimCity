@@ -54,6 +54,8 @@ On 2026-09-09, trace-enabled `gfsim` at the pinned revision ran the pinned ELF
 and exited with status 0. The run closed at cycle 49,822 and emitted 320,486
 current events in 13 gzip chunks with zero dropped events and no truncation.
 The current TypeScript validator reported zero diagnostics.
+The normal typed configuration SHA-256 is
+`e96945115368e03a4762709543d7f36e4b5e5fc2d3d361415cd517221261c097`.
 
 | Current event          |   Count |
 | ---------------------- | ------: |
@@ -83,19 +85,28 @@ cell.perfect_mode=false
 cell.cube_max_bank_per_cycle=1
 ```
 
-Its configuration digest is
-`9943e6351b7894662ab34468412fb64cd459da32ba25be1e6dd44f22f6b9a68f`.
+Its typed scenario configuration digest is
+`be0972569e9182613f0cb0c5942c32befb86b8232e6b46334101d48ceefddb48`.
 It exited 0 after 68,785 cycles and emitted 303,275 current events with zero
 validator diagnostics. The model PMU recorded 362,905 bank-conflict cycles,
 815,151 non-winner waits, and 765,062 bank port-yields. The game run selector
 switches between the normal and conflict bundles without changing the topology
 or workload identity.
 
+The M7 improvement run keeps real arbitration enabled and changes only
+`cell.cube_max_bank_per_cycle` from 1 to 2. Its typed configuration SHA-256 is
+`986b3874db01dda15b1279d7a4e983d62889a5a367efdbc853a3eeabe1c4917d`.
+It exited 0 after 68,098 cycles with 111,617 bank-conflict cycles and 454,447
+non-winner waits. Relative to the one-bank baseline, bank-conflict cycles fell
+69.2% and total cycles also decreased. The validated run is stored at
+`apps/game/public/runs/superscalar-matmul-improved.bundle`.
+
 Validate the pinned bundle with:
 
 ```sh
 npm run trace:verify -- apps/game/public/runs/superscalar-matmul.bundle
 npm run trace:verify -- apps/game/public/runs/superscalar-matmul-conflict.bundle
+npm run trace:verify -- apps/game/public/runs/superscalar-matmul-improved.bundle
 ```
 
 ## Fixed M8 load
