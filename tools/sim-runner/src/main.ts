@@ -8,12 +8,14 @@ async function main(): Promise<void> {
   const [command, ...args] = process.argv.slice(2);
   if (command !== "serve") {
     throw new Error(
-      "usage: linxsimcity-runner serve [--host HOST] [--port PORT] [--gfsim PATH] [--model-dir PATH] [--matmul-elf PATH] [--matmul-sha256 SHA256] [--runs-dir PATH] [--revision REV]",
+      "usage: linxsimcity-runner serve [--host HOST] [--port PORT] [--gfsim PATH] [--model-dir PATH] [--matmul-elf PATH] [--matmul-sha256 SHA256] [--runs-dir PATH] [--revision REV] [--allow-origin ORIGIN]...",
     );
   }
   const options = parseRunnerServerOptions(args);
   const runner = await LocalSimulationRunner.create(options);
-  const server = createRunnerServer(runner);
+  const server = createRunnerServer(runner, {
+    allowedOrigins: options.allowedOrigins,
+  });
   server.listen(options.port, options.host, () => {
     const address = server.address();
     const port =

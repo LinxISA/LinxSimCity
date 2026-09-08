@@ -64,10 +64,8 @@ function snapshot(job: MutableJob): SimulationJob {
 }
 
 function appendBounded(existing: string, chunk: Buffer): string {
-  if (Buffer.byteLength(existing) >= MAX_LOG_BYTES) return existing;
-  return Buffer.concat([Buffer.from(existing), chunk])
-    .subarray(0, MAX_LOG_BYTES)
-    .toString("utf8");
+  const combined = Buffer.concat([Buffer.from(existing), chunk]);
+  return combined.subarray(-MAX_LOG_BYTES).toString("utf8");
 }
 
 async function resolveFile(path: string, executable: boolean): Promise<string> {
@@ -288,13 +286,17 @@ export class LocalSimulationRunner {
       return;
     }
     try {
-      job.result = await validateResultBundle(bundlePath, {
-        runId: job.id,
-        simulatorRevision: this.#options.simulatorRevision,
-        configSha256: job.configSha256,
-        workloadName,
-        workloadSha256,
-      });
+      job.result = await validateResultBundle(
+        bundlePath,
+        {
+          runId: job.id,
+          simulatorRevision: this.#options.simulatorRevision,
+          configSha256: job.configSha256,
+          workloadName,
+          workloadSha256,
+        },
+        job.stdout,
+      );
       job.status = "succeeded";
     } catch (error) {
       job.status = "failed";

@@ -4,9 +4,15 @@ import {
   createRunConfiguration,
   exportRunConfiguration,
   parseRunConfiguration,
+  sha256Text,
 } from "./index.js";
 
 describe("typed run scenarios", () => {
+  test("uses a browser-safe SHA-256 implementation", () => {
+    expect(sha256Text("abc")).toBe(
+      "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad",
+    );
+  });
   test("exports a deterministic normal configuration and digest", () => {
     const configuration = createRunConfiguration({
       backendId: "superscalar-model",

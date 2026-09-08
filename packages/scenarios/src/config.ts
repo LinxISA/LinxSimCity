@@ -1,6 +1,5 @@
-import { createHash } from "node:crypto";
-
 import { BACKENDS, SCENARIOS, WORKLOADS } from "./catalog.js";
+import { sha256Text } from "./sha256.js";
 import {
   RUN_CONFIG_SCHEMA,
   RUN_CONFIG_VERSION,
@@ -158,9 +157,7 @@ export function canonicalRunConfiguration(
 }
 
 export function hashRunConfiguration(configuration: RunConfiguration): string {
-  return createHash("sha256")
-    .update(canonicalRunConfiguration(configuration))
-    .digest("hex");
+  return sha256Text(canonicalRunConfiguration(configuration));
 }
 
 function encodeConfigValue(value: ScenarioParameterValue): string {

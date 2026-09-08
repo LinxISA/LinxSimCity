@@ -9,10 +9,33 @@ const DEFAULT_ELF =
 const DEFAULT_REVISION = "2406db2944317b8d64dc05b621f37fc9a13f8c81";
 const DEFAULT_ELF_SHA256 =
   "4c3a93ec7394b3a159dcdaab4457a95c4f0be1b49d77bae8661b67e24ca93928";
+const DEFAULT_ALLOWED_ORIGINS = Object.freeze([
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+]);
 
 export interface RunnerServerOptions extends LocalRunnerOptions {
   readonly host: string;
   readonly port: number;
+  readonly allowedOrigins: readonly string[];
+}
+
+function parseAllowedOrigins(source: string | undefined): string[] {
+  if (source === undefined) return [...DEFAULT_ALLOWED_ORIGINS];
+  return source
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function validateOrigin(origin: string): void {
+  const url = new URL(origin);
+  if (
+    url.origin !== origin ||
+    (url.protocol !== "http:" && url.protocol !== "https:")
+  ) {
+    throw new Error(`runner allowed origin must be an HTTP origin: ${origin}`);
+  }
 }
 
 function takeValue(
@@ -45,6 +68,10 @@ export function parseRunnerServerOptions(
     environment.LINXSIMCITY_RUNS_DIR ?? resolve(".linxsimcity/runs");
   let simulatorRevision =
     environment.LINXSIMCITY_SIMULATOR_REVISION ?? DEFAULT_REVISION;
+  let allowedOrigins = parseAllowedOrigins(
+    environment.LINXSIMCITY_RUNNER_ALLOWED_ORIGINS,
+  );
+  let commandLineOrigins = false;
 
   for (let index = 0; index < args.length; index += 2) {
     const option = args[index]!;
@@ -57,7 +84,11 @@ export function parseRunnerServerOptions(
     else if (option === "--matmul-sha256") workloadSha256 = value;
     else if (option === "--runs-dir") resultsDirectory = value;
     else if (option === "--revision") simulatorRevision = value;
-    else throw new Error(`unknown runner option: ${option}`);
+    else if (option === "--allow-origin") {
+      if (!commandLineOrigins) allowedOrigins = [];
+      commandLineOrigins = true;
+      allowedOrigins.push(value);
+    } else throw new Error(`unknown runner option: ${option}`);
   }
 
   const port = Number(portText);
@@ -70,6 +101,7 @@ export function parseRunnerServerOptions(
   if (workloadSha256 && !/^[a-f0-9]{64}$/.test(workloadSha256)) {
     throw new Error("workload SHA-256 must contain 64 lowercase hex digits");
   }
+  for (const origin of allowedOrigins) validateOrigin(origin);
 
   return {
     host,
@@ -78,6 +110,7 @@ export function parseRunnerServerOptions(
     workingDirectory,
     resultsDirectory,
     simulatorRevision,
+    allowedOrigins: [...new Set(allowedOrigins)],
     workloads: {
       "supernpubench-matmul-fp32-m256-n256-k256": {
         path: workloadPath,

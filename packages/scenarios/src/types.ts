@@ -69,3 +69,102 @@ export interface ExportedRunConfiguration {
   readonly configSha256: string;
   readonly simulatorOverrides: readonly string[];
 }
+
+export type ChallengeId =
+  "explain-topology" | "find-queue-bottleneck" | "reduce-bank-conflicts";
+
+export type ObservableMetricId =
+  | "cycles"
+  | "queueBackpressureCycles"
+  | "bankConflictCycles"
+  | "waitCycles"
+  | "tileTransferCount";
+
+export interface ChallengeParameterRange {
+  readonly parameter: string;
+  readonly type: "boolean" | "integer";
+  readonly minimum?: number;
+  readonly maximum?: number;
+  readonly values?: readonly boolean[];
+}
+
+export interface ChallengeCompletionRule {
+  readonly kind: "evidence" | "positive-metrics" | "relative-improvement";
+  readonly requiredMetrics: readonly ObservableMetricId[];
+  readonly description: string;
+  readonly minimumReductionPercent?: number;
+  readonly mustReduceCycles?: boolean;
+}
+
+export interface ChallengeDefinition {
+  readonly id: ChallengeId;
+  readonly label: string;
+  readonly objective: string;
+  readonly backendId: BackendId;
+  readonly workloadId: WorkloadId;
+  readonly workloadSha256: string;
+  readonly topologyFingerprint: string;
+  readonly initialConfiguration: RunConfiguration;
+  readonly allowedParameters: readonly ChallengeParameterRange[];
+  readonly requiredTraceCapabilities: readonly string[];
+  readonly steps: readonly string[];
+  readonly observableMetrics: readonly ObservableMetricId[];
+  readonly completion: ChallengeCompletionRule;
+}
+
+/** The current trace manifest fields used by challenge evaluation. */
+export interface ChallengeRunManifest {
+  readonly runId: string;
+  readonly topologyFingerprint: string;
+  readonly simulator: {
+    readonly name: string;
+    readonly configSha256: string;
+  };
+  readonly workload: {
+    readonly name: string;
+    readonly sha256: string;
+  };
+  readonly window: {
+    readonly complete: boolean;
+  };
+  readonly capabilities: readonly string[];
+  readonly loss: {
+    readonly droppedEvents: string;
+    readonly truncated: boolean;
+  };
+}
+
+export interface ObservableRunMetrics {
+  readonly schema: "linxsimcity.run-metrics";
+  readonly schemaVersion: "1";
+  readonly source:
+    | "simulator-pmu"
+    | "validated-trace-aggregate"
+    | "validated-trace-and-simulator-pmu";
+  readonly runId: string;
+  readonly configSha256: string;
+  readonly topologyFingerprint: string;
+  readonly workloadSha256: string;
+  readonly values: Partial<Readonly<Record<ObservableMetricId, string>>>;
+}
+
+export interface ChallengeRunEvidence {
+  readonly configuration: RunConfiguration;
+  readonly manifest: ChallengeRunManifest;
+  readonly metrics?: ObservableRunMetrics;
+}
+
+export type ChallengeEvaluationStatus =
+  | "complete"
+  | "incomplete"
+  | "insufficient-evidence"
+  | "stale-run"
+  | "incomparable-run"
+  | "unsupported-run";
+
+export interface ChallengeEvaluation {
+  readonly challengeId: ChallengeId;
+  readonly status: ChallengeEvaluationStatus;
+  readonly diagnostics: readonly string[];
+  readonly observed: Partial<Readonly<Record<ObservableMetricId, string>>>;
+}

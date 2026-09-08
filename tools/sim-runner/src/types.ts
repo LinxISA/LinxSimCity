@@ -1,5 +1,6 @@
 import type {
   ExportedRunConfiguration,
+  ObservableRunMetrics,
   RunConfiguration,
   WorkloadId,
 } from "@linxsimcity/scenarios";
@@ -22,6 +23,8 @@ export interface LocalRunnerOptions {
 
 export interface SimulationJobResult {
   readonly bundlePath: string;
+  readonly bundleBaseUrl: string;
+  readonly metrics: ObservableRunMetrics;
   readonly manifest: {
     readonly runId: string;
     readonly topologyFingerprint: string;
