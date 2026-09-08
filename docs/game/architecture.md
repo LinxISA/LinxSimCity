@@ -38,44 +38,45 @@ invalid parent, incompatible edge, missing endpoint, and duplicate input
 binding. The generator produces scene instances and links only from a valid
 topology. There is no UI operation that creates, deletes, or rewires an edge.
 
-The layout first removes hierarchy-only containers from the data-flow graph and
-runs a stable Kahn topological sort. Longest-path rank becomes the X-axis: every
-producer is left of its consumer. Stable IDs break ties, so shuffled source JSON
-produces the same order. Cyclic nodes are reported by the sorter and placed in a
-deterministic trailing rank rather than being silently treated as acyclic.
+The layout removes hierarchy-only containers and folds every Queue node into
+its producer-to-consumer relationship before running a stable Kahn topological
+sort. Longest-path rank becomes the X-axis: every acyclic producer is left of
+its consumer. Stable IDs break ties, so shuffled source JSON produces the same
+order. Cyclic nodes are reported and placed in a deterministic trailing rank.
 
-Within each rank, four forward/backward barycenter sweeps use predecessor and
-successor positions to reduce edge crossings. Parent scope becomes a Z-axis
-swimlane. Node dimensions determine rank spacing and lane height, preventing
-adjacent buildings from overlapping. Layout is derived data and is excluded
-from the topology fingerprint.
+Within each rank, four forward/backward barycenter sweeps reduce crossings.
+Hierarchy provides only the stable initial tie order; it does not reserve a
+fixed scope swimlane. Each rank uses the largest module width, and nodes are
+packed on Z using their individual depth plus a fixed gap. The result is a
+compact, module-size-aware layout without overlapping leaf bounds. Layout is
+derived data and is excluded from the topology fingerprint.
 
 ## Hierarchy rendering
 
 `parentId` is the only hierarchy authority. A parent must exist and must use a
 container definition; parent cycles are rejected. After graph nodes have been
-placed in ranks and scope lanes, container bounds are calculated bottom-up from
-their immediate children. Each hierarchy depth receives a raised Y level. The
-renderer draws containers as labeled district plates and ordinary modules as
-buildings inside those plates. The topology inspector uses the same parent
-chain, so 3D districts and the selected-node path cannot disagree.
+placed, container bounds are calculated bottom-up from their immediate
+children. Containers are thin, labeled district plates at the ground plane;
+ordinary modules are buildings inside those bounds. The inspector uses the same
+parent chain, so 3D districts and the selected-node path cannot disagree.
 
 Each district receives a stable color derived from its topology ID. The root
 uses a neutral graphite-blue; child scopes use a restrained categorical palette
 with translucent fills and matching labels. Color is presentation metadata and
 does not enter the topology fingerprint or imply area, latency, or ownership.
 
-The sorter never changes `parentId` to make an edge shorter. Cross-scope edges
-remain visible between district plates and use orthogonal X/Y/Z routes. Small
-per-edge routing heights keep coincident links distinguishable while preserving
-their exact endpoints.
+The sorter never changes `parentId` to shorten a connection. Queue corridors
+and direct links use axis-aligned X/Z segments between exact port anchors. All
+leaf buildings are eight world units high and their ports sit on the same
+`Y=8` roof plane, so ordinary Queue routes have no raised deck or up/down
+segment.
 
-`SimQueue` is rendered as a transparent pipe rather than a building. Its local
-positive X axis is the transfer direction. The world generator calculates a
-continuous Y-axis angle from the average producer position to the average
-consumer position; one-sided boundary queues point toward or away from their
-known neighbor. Input/output rings and line anchors use the same rotation, so
-the pipe body, direction chevrons, and topology edges stay aligned.
+A `SimQueue` remains a topology node with identity, capacity, area, selection,
+and runtime state, but it is not drawn as a separate building. Its visual is the
+producer-to-consumer transparent glass corridor itself. Direction markers and
+fluorescent packets follow that corridor. Preview occupancy may drive bounded
+sample packets during M2; M4 replaces it with accepted current-format Queue
+events. A Queue with no data has no moving packet.
 
 ## Physical area
 

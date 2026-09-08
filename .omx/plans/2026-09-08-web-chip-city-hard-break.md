@@ -82,10 +82,10 @@
 
 ### M0 — 定义产品、视觉基准和删除清单
 
-- [ ] 新建 `DESIGN.md`、`docs/game/architecture.md`、`docs/game/hard-break.md`，明确上述玩法、交互、组件语言、单一格式与后端边界；标注取代的旧文档。
-- [ ] 列出旧 UI/场景/格式/fixtures/测试的删除、替换、候选保留清单，每项写清新 owner 和仍保留的语义验证。
-- [ ] 固定首个真实 workload、仿真 revision、最小链路、参考浏览器/GPU/机器、画质与性能场景，形成可重现基准。
-- [ ] 制作城区总览和 queue/table/SRAM 近景的视觉参考；以可操作小场景检查尺度、端口、标签与选中状态。
+- [x] 新建 `DESIGN.md`、`docs/game/architecture.md`、`docs/game/hard-break.md`，明确上述玩法、交互、组件语言、单一格式与后端边界；标注取代的旧文档。
+- [x] 列出旧 UI/场景/格式/fixtures/测试的删除、替换、候选保留清单，每项写清新 owner、删除时点和仍保留的语义验证。
+- [x] 在 `docs/game/benchmark.md` 固定首个真实 workload、仿真 revision、最小链路、参考浏览器/GPU/机器、画质与 M8 性能场景，形成可重现基准。
+- [x] 在 `docs/game/visual-baseline.md` 固定城区总览与 Queue/Table/ROB/Vector/Cube/TMA 近景节点及验收条件，并记录可操作小场景的实机检查；自动截图测试仍由 M2 交付。
 
 **完成条件：** 所有后续模块有明确边界；视觉参考和交互流程可审阅；最小链路能从指定模拟器产生数据，缺失事件有明确补采位置。
 
