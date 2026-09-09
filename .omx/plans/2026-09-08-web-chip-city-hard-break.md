@@ -99,7 +99,7 @@
 - [x] 每个 topology node 强制记录 `µm²` 面积、状态与来源；QueueGraph 未提供的 PPA 数据保留为 unknown，容器保留为 aggregate。
 - [x] 定义当前 `linxsimcity.trace` manifest 和 16 类 queue/Tile/association/compute/run-control 事件；cycle、地址、版本和 epoch 使用无损 u64 字符串，并提供独立 `simtrace validate` CLI。
 
-- [ ] 重建 `packages/topology`、`packages/trace-schema`；新增 `packages/component-catalog`，定义积木、装配图、布局、存档、run、事件和快照。
+- [x] 重建 `packages/topology`、`packages/trace-schema`；新增 `packages/component-catalog`，定义积木、装配图、布局、存档、run、事件和快照。
 - [x] 编写 catalog import，从固定 pyCircuit commit 的 `catalog.json` 与 Git tree manifest 生成带出处和 hash 的 240 项映射报告；reported snapshot 状态与 committed source/test-path evidence 分开记录，不能把目录候选升级成执行拓扑。
 - [x] 增加负向 fixture/contract matrix：重复 ID、悬空端口、类型/宽度/方向不符、重复 owner、错误配置 hash、无损整数类型/溢出、非法事件顺序、旧格式、丢事件或截断矛盾。
 - [x] 提供当前格式 synthetic gzip bundle、topology fixture、index/checkpoint schema 和 `tools/simtrace` 目录校验入口；hard-break 重写 `sdk/cpp` 最小 writer，并由 CI 使用 TypeScript validator 互验其输出。旧 `tools/linxtrace` 仅为隔离的 viewer 历史路径，M8 随旧 viewer 删除。
@@ -169,7 +169,7 @@
 
 ### M8 — 大场景、回归、旧实现清除与发行（依赖 M6、M7）
 
-- [ ] 在 M0 固定的参考机/浏览器上测量 1440×900、DPR=1、固定画质/镜头路径：至少 240 个可渲染实例、20,000 个槽位/存储单元、1,000 个活动令牌、1,000,000 个 trace 事件。此处 240 实例是性能负载，不等同于候选目录的 240 项。
+- [x] 在 M0 固定的参考机/浏览器上测量 1440×900、DPR=1、固定画质/镜头路径：至少 240 个可渲染实例、20,000 个槽位/存储单元、1,000 个活动令牌、1,000,000 个 trace 事件。此处 240 实例是性能负载，不等同于候选目录的 240 项。
 - [ ] 初始验收目标：预热后 60 秒路径的帧耗时 p95 ≤ 25 ms；100 次随机 warm seek 的响应 p95 ≤ 500 ms；连续 30 分钟播放/切换不崩溃；分块缓存配置上限且无随总 trace 长度持续增长的驻留。记录 CPU/GPU/内存/长任务与原始测量结果。
 - [ ] 对 XYZ 各轴 ±1,000,000 个场景单位的跨区编辑、连线和重载运行 fixture，验证逻辑坐标/ID 不变、拾取正确；聚焦后几何不抖动。该测试是大坐标验证，不宣称无限容量。
 - [ ] 浏览器 E2E 覆盖拓扑生成、搜索/选择、导入错误、run 失配、trace seek、Tile 定位、挑战闭环和 runner 断连；至少检查 Chromium、Firefox、Safari 的首发核心流程与降级说明。

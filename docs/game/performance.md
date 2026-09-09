@@ -36,6 +36,20 @@ Both hard gates must pass:
 - frame-duration p95 ≤ 25 ms
 - warm-seek p95 ≤ 500 ms
 
+## Recorded M8 gate
+
+The fixed 60-second path passed on 2026-09-09 using an Apple M5 MacBook with
+32 GiB memory and Chrome 152.0.7977.83. Fixture
+`90206e0e89b21cebbb1580a9b92957782cbd925508af842e254fe35aef0099d7`
+produced 3,601 frame samples at 16.8 ms p95 and 100 warm seeks at 134.24 ms
+p95. Both thresholds passed. The complete machine record, CDP counters, long
+tasks, heap data, and raw samples are preserved in
+[`evidence/m8-performance-report.json`](./evidence/m8-performance-report.json).
+
+This gate records the required 60-second interaction path. The separate
+30-minute soak remains a release check and must be recorded before M8 is
+closed.
+
 The command writes the complete report before exiting nonzero on a failed gate.
 A shorter run is useful only as wiring smoke evidence and does not qualify the
 release gate:
