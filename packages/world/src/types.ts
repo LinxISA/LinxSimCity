@@ -1,4 +1,4 @@
-import type { BrickSize, PhysicalArea } from "@linxsimcity/component-catalog";
+import type { BrickSize } from "@linxsimcity/component-catalog";
 
 export const WORLD_CHUNK_SIZE = 64;
 
@@ -33,50 +33,6 @@ export interface BrickInstance {
   readonly laneId: string;
 }
 
-export interface TopologyEndpoint {
-  readonly nodeId: string;
-  readonly portId: string;
-}
-
-export interface TopologyNode {
-  readonly id: string;
-  readonly definitionId: string;
-  readonly label?: string;
-  readonly parentId?: string;
-  readonly parameters: Readonly<Record<string, number>>;
-  readonly attributes?: Readonly<Record<string, string | number | boolean>>;
-  readonly area: PhysicalArea;
-}
-
-export interface TopologyEdge {
-  readonly id: string;
-  readonly from: TopologyEndpoint;
-  readonly to: TopologyEndpoint;
-}
-
-export interface ArchitectureTopology {
-  readonly schema: "linxsimcity.topology";
-  readonly schemaVersion: "1";
-  readonly id: string;
-  readonly name: string;
-  readonly revision: string;
-  readonly source?: TopologySource;
-  readonly nodes: readonly TopologyNode[];
-  readonly edges: readonly TopologyEdge[];
-}
-
-export interface TopologySource {
-  readonly kind: string;
-  readonly repository: string;
-  readonly revision: string;
-  readonly worktreeDirty: boolean;
-  readonly relevantInputsDirty: boolean;
-  readonly planSchema: string;
-  readonly planVersion: string;
-  readonly planSha256: string;
-  readonly modelSha256: string;
-}
-
 export interface WorldLinkEndpoint {
   readonly instanceId: string;
   readonly portId: string;
@@ -106,22 +62,4 @@ export interface GeneratedWorld {
   readonly instances: readonly BrickInstance[];
   readonly links: readonly WorldLink[];
   readonly queueCorridors: readonly WorldQueueCorridor[];
-}
-
-export interface TopologyDiagnostic {
-  readonly path: string;
-  readonly code:
-    | "duplicate_id"
-    | "missing_definition"
-    | "invalid_parameter"
-    | "missing_endpoint"
-    | "missing_port"
-    | "invalid_direction"
-    | "protocol_mismatch"
-    | "width_mismatch"
-    | "input_already_connected"
-    | "invalid_parent"
-    | "invalid_source"
-    | "invalid_area";
-  readonly message: string;
 }

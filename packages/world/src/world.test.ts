@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+
 import { CORE_CATALOG } from "@linxsimcity/component-catalog";
 import { describe, expect, test } from "vitest";
 
@@ -11,6 +13,7 @@ import {
   topologyFingerprint,
   topologyHierarchy,
   validateArchitectureTopology,
+  WORLD_CHUNK_SIZE,
   worldPosition,
 } from "./index.js";
 import type { ArchitectureTopology } from "./index.js";
@@ -21,6 +24,16 @@ const unknownArea = {
   status: "unknown",
   source: "test:no-area",
 } as const;
+
+const multicoreTopology = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../../fixtures/current/multicore-composite.topology.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+) as ArchitectureTopology;
 
 function topology(): ArchitectureTopology {
   return {
@@ -118,6 +131,116 @@ describe("world coordinates", () => {
 });
 
 describe("topology-driven world generation", () => {
+  test("keeps multicore topology nodes, edges, parameters, and Queue corridors 1:1", () => {
+    const generated = generateWorldFromTopology(
+      multicoreTopology,
+      CORE_CATALOG,
+    );
+    expect(new Set(generated.instances.map((instance) => instance.id))).toEqual(
+      new Set(multicoreTopology.nodes.map((node) => node.id)),
+    );
+    expect(generated.links).toHaveLength(multicoreTopology.edges.length);
+    expect(new Set(generated.links.map((link) => link.id))).toEqual(
+      new Set(multicoreTopology.edges.map((edge) => edge.id)),
+    );
+    expect(generated.queueCorridors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "core.0.pe.0.queue",
+          queueInstanceId: "core.0.pe.0.queue",
+          topologyEdgeIds: [
+            "core.0.edge.source-queue",
+            "core.0.edge.queue-vector",
+          ],
+        }),
+        expect.objectContaining({
+          id: "core.1.pe.0.queue",
+          queueInstanceId: "core.1.pe.0.queue",
+          topologyEdgeIds: [
+            "core.1.edge.source-queue",
+            "core.1.edge.queue-vector",
+          ],
+        }),
+      ]),
+    );
+    expect(generated.queueCorridors).toHaveLength(2);
+    expect(
+      generated.instances.find((item) => item.id === "core.0.pe.0.vector")
+        ?.parameters.lanes,
+    ).toBe(4);
+    expect(
+      generated.instances.find((item) => item.id === "core.1.pe.0.vector")
+        ?.parameters.lanes,
+    ).toBe(8);
+  });
+
+  test("preserves a direct link identity while localizing endpoints across chunks", () => {
+    const generated = generateWorldFromTopology(
+      multicoreTopology,
+      CORE_CATALOG,
+    );
+    const fromId = "core.0.pe.0.vector";
+    const toId = "core.1.pe.1.sink";
+    const displaced = {
+      ...generated,
+      instances: generated.instances.map((instance) => ({
+        ...instance,
+        transform: {
+          ...instance.transform,
+          position:
+            instance.id === fromId
+              ? worldPosition(WORLD_CHUNK_SIZE - 1, 0, -WORLD_CHUNK_SIZE - 1)
+              : instance.id === toId
+                ? worldPosition(WORLD_CHUNK_SIZE + 2, 0, -WORLD_CHUNK_SIZE + 3)
+                : instance.transform.position,
+        },
+      })),
+    };
+    const from = displaced.instances.find((item) => item.id === fromId)!;
+    const to = displaced.instances.find((item) => item.id === toId)!;
+    expect(from.transform.position.x.chunk).not.toBe(
+      to.transform.position.x.chunk,
+    );
+    expect(from.transform.position.z.chunk).not.toBe(
+      to.transform.position.z.chunk,
+    );
+
+    const origin = from.transform.position;
+    const localized = {
+      ...displaced,
+      instances: displaced.instances.map((instance) => {
+        const local = positionRelativeTo(instance.transform.position, origin);
+        return {
+          ...instance,
+          transform: {
+            ...instance.transform,
+            position: worldPosition(local[0], local[1], local[2]),
+          },
+        };
+      }),
+    };
+    expect(
+      positionToTuple(
+        localized.instances.find((item) => item.id === fromId)!.transform
+          .position,
+      ),
+    ).toEqual([0, 0, 0]);
+    expect(
+      positionToTuple(
+        localized.instances.find((item) => item.id === toId)!.transform
+          .position,
+      ),
+    ).toEqual([3, 0, 4]);
+    expect(
+      localized.links.find((link) => link.id === "fabric.edge.core0-core1"),
+    ).toEqual({
+      id: "fabric.edge.core0-core1",
+      from: { instanceId: fromId, portId: "out" },
+      to: { instanceId: toId, portId: "in" },
+    });
+    expect(localized.topologyFingerprint).toBe(generated.topologyFingerprint);
+  });
+
   test("performs a stable topological sort before assigning X positions", () => {
     const source = topology();
     const sorted = stableTopologicalSort(source, CORE_CATALOG);

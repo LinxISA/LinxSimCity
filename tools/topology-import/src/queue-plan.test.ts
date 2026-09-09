@@ -1,5 +1,5 @@
 import { CORE_CATALOG } from "@linxsimcity/component-catalog";
-import { validateArchitectureTopology } from "@linxsimcity/world";
+import { validateArchitectureTopology } from "@linxsimcity/topology";
 import { expect, test } from "vitest";
 
 import { convertAgenticQueuePlan, parseAgenticQueuePlan } from "./index.js";

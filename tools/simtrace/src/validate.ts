@@ -8,10 +8,11 @@ import type {
   SimTraceRun,
 } from "@linxsimcity/trace-schema";
 import {
+  parseArchitectureTopology,
   topologyFingerprint,
   validateArchitectureTopology,
-} from "@linxsimcity/world";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+} from "@linxsimcity/topology";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 
 interface RunDocument {
   readonly manifest: unknown;
@@ -29,22 +30,6 @@ function runDocument(value: unknown): RunDocument {
   return { manifest: candidate.manifest, events: candidate.events };
 }
 
-function topologyDocument(value: unknown): ArchitectureTopology {
-  if (!value || typeof value !== "object") {
-    throw new Error("topology document must be an object");
-  }
-  const candidate = value as Partial<ArchitectureTopology>;
-  if (
-    candidate.schema !== "linxsimcity.topology" ||
-    candidate.schemaVersion !== "1" ||
-    !Array.isArray(candidate.nodes) ||
-    !Array.isArray(candidate.edges)
-  ) {
-    throw new Error("topology document is not the current LinxSimCity format");
-  }
-  return candidate as ArchitectureTopology;
-}
-
 export interface SimTraceValidationResult {
   readonly run: SimTraceRun;
   readonly topology: ArchitectureTopology;
@@ -56,7 +41,7 @@ export function validateRunDocument(
   topologyValue: unknown,
 ): SimTraceValidationResult {
   const sourceRun = runDocument(runValue);
-  const topology = topologyDocument(topologyValue);
+  const topology = parseArchitectureTopology(topologyValue);
   const topologyDiagnostics = validateArchitectureTopology(
     topology,
     CORE_CATALOG,

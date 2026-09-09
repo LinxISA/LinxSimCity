@@ -8,7 +8,7 @@ import type {
   SimTraceManifest,
   SimTracePhase,
 } from "@linxsimcity/trace-schema";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 
 import { restoreCheckpoint } from "./checkpoint.js";
 import { reduceEvents } from "./reduce-event.js";

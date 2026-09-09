@@ -1,423 +1,217 @@
-import type { EventEnvelope } from "@linxsimcity/trace-schema";
+import type {
+  BrickDefinition,
+  ComponentCatalog,
+} from "@linxsimcity/component-catalog";
 
 import type {
-  Diagnostic,
-  TopologyDescriptor,
-  TopologyDistrict,
-  TopologyPlacement,
-  TopologyPort,
-  TopologyVector3,
-  ValidationResult,
+  ArchitectureTopology,
+  TopologyDiagnostic,
+  TopologyEndpoint,
+  TopologyNode,
 } from "./types.js";
 
-function error(
-  code: Diagnostic["code"],
-  path: string,
-  message: string,
-): Diagnostic {
-  return { severity: "error", code, path, message };
-}
+const STABLE_ID = /^[a-z][a-z0-9]*(?:[.-][a-z0-9]+)*$/;
 
-function validateVector(
-  value: TopologyVector3,
-  path: string,
-  code: "invalid_layout" | "invalid_placement" | "invalid_route",
-  errors: Diagnostic[],
-  requirePositive = false,
-): boolean {
-  let valid = true;
-  value.forEach((coordinate, index) => {
-    if (!Number.isFinite(coordinate) || (requirePositive && coordinate <= 0)) {
-      errors.push(
-        error(
-          code,
-          `${path}[${index}]`,
-          requirePositive
-            ? "coordinate must be finite and positive"
-            : "coordinate must be finite",
-        ),
-      );
-      valid = false;
-    }
-  });
-  return valid;
-}
-
-function isPlacementInsideDistrict(
-  placement: TopologyPlacement,
-  district: TopologyDistrict,
-): boolean {
-  if (placement.position === undefined || placement.size === undefined) {
-    return true;
-  }
-  return placement.position.every(
-    (coordinate, axis) =>
-      Math.abs(coordinate - district.position[axis]!) +
-        placement.size![axis]! / 2 <=
-      district.size[axis]! / 2 + Number.EPSILON,
+function findEndpoint(
+  endpoint: TopologyEndpoint,
+  nodeById: ReadonlyMap<string, TopologyNode>,
+  definitionById: ReadonlyMap<string, BrickDefinition>,
+):
+  | { node: TopologyNode; definition: BrickDefinition; portIndex: number }
+  | undefined {
+  const node = nodeById.get(endpoint.nodeId);
+  if (!node) return undefined;
+  const definition = definitionById.get(node.definitionId);
+  if (!definition) return undefined;
+  const portIndex = definition.ports.findIndex(
+    (port) => port.id === endpoint.portId,
   );
+  return portIndex < 0 ? undefined : { node, definition, portIndex };
 }
 
-export function validateTopology(
-  topology: TopologyDescriptor,
-): ValidationResult {
-  const errors: Diagnostic[] = [];
-  const districtById = new Map<string, TopologyDistrict>();
-  if (topology.layout !== undefined) {
-    const layoutFields = [
-      ["schema", topology.layout.schema, "linx-city-v1"],
-      ["units", topology.layout.units, "scene-unit"],
-      ["upAxis", topology.layout.upAxis, "y"],
-      ["forwardAxis", topology.layout.forwardAxis, "-z"],
-    ] as const;
-    layoutFields.forEach(([field, actual, expected]) => {
-      if (actual !== expected) {
-        errors.push(
-          error(
-            "invalid_layout",
-            `layout.${field}`,
-            `layout ${field} must be "${expected}"`,
-          ),
-        );
-      }
+export function validateArchitectureTopology(
+  topology: ArchitectureTopology,
+  catalog: ComponentCatalog,
+): readonly TopologyDiagnostic[] {
+  const diagnostics: TopologyDiagnostic[] = [];
+  if (
+    topology.source &&
+    (!topology.source.repository ||
+      !topology.source.revision ||
+      !/^[a-f0-9]{64}$/.test(topology.source.planSha256) ||
+      !/^[a-f0-9]{64}$/.test(topology.source.modelSha256))
+  ) {
+    diagnostics.push({
+      path: "source",
+      code: "invalid_source",
+      message: "provenance source, revision, and SHA-256 values are required",
     });
   }
-  topology.layout?.districts.forEach((district, districtIndex) => {
-    const districtPath = `layout.districts[${districtIndex}]`;
-    if (districtById.has(district.id)) {
-      errors.push(
-        error(
-          "duplicate_entity_id",
-          `${districtPath}.id`,
-          `duplicate district ID "${district.id}"`,
-        ),
-      );
-    } else {
-      districtById.set(district.id, district);
-    }
-    validateVector(
-      district.position,
-      `${districtPath}.position`,
-      "invalid_layout",
-      errors,
-    );
-    validateVector(
-      district.size,
-      `${districtPath}.size`,
-      "invalid_layout",
-      errors,
-      true,
-    );
-  });
-  const entityById = new Map(
-    topology.entities.map((entity) => [entity.id, entity] as const),
+  const definitionById = new Map(
+    catalog.definitions.map((item) => [item.id, item]),
   );
-  const seenEntityIds = new Set<string>();
-  const portById = new Map<string, TopologyPort>();
+  const nodeById = new Map<string, TopologyNode>();
 
-  topology.entities.forEach((entity, entityIndex) => {
-    const entityPath = `entities[${entityIndex}]`;
-
-    if (seenEntityIds.has(entity.id)) {
-      errors.push(
-        error(
-          "duplicate_entity_id",
-          `${entityPath}.id`,
-          `duplicate entity ID "${entity.id}"`,
-        ),
-      );
-    } else {
-      seenEntityIds.add(entity.id);
-    }
-
-    if (
-      entity.capacity !== undefined &&
-      (!Number.isSafeInteger(entity.capacity) || entity.capacity <= 0)
-    ) {
-      errors.push(
-        error(
-          "invalid_capacity",
-          `${entityPath}.capacity`,
-          "capacity must be a positive safe integer",
-        ),
-      );
-    }
-
-    entity.ports?.forEach((port, portIndex) => {
-      if (portById.has(port.id)) {
-        errors.push(
-          error(
-            "duplicate_entity_id",
-            `${entityPath}.ports[${portIndex}].id`,
-            `duplicate port ID "${port.id}"`,
-          ),
-        );
-      } else {
-        portById.set(port.id, port);
-      }
-      if (port.position !== undefined) {
-        validateVector(
-          port.position,
-          `${entityPath}.ports[${portIndex}].position`,
-          "invalid_placement",
-          errors,
-        );
-      }
-    });
-
-    if (entity.placement !== undefined) {
-      const placement = entity.placement;
-      const placementPath = `${entityPath}.placement`;
-      if (placement.position !== undefined) {
-        validateVector(
-          placement.position,
-          `${placementPath}.position`,
-          "invalid_placement",
-          errors,
-        );
-      }
-      if (placement.size !== undefined) {
-        validateVector(
-          placement.size,
-          `${placementPath}.size`,
-          "invalid_placement",
-          errors,
-          true,
-        );
-      }
-      if (placement.rotation !== undefined) {
-        validateVector(
-          placement.rotation,
-          `${placementPath}.rotation`,
-          "invalid_placement",
-          errors,
-        );
-      }
-      if (
-        placement.thread !== undefined &&
-        (!Number.isSafeInteger(placement.thread) ||
-          placement.thread < 0 ||
-          placement.thread > 3)
-      ) {
-        errors.push(
-          error(
-            "invalid_placement",
-            `${placementPath}.thread`,
-            "thread must be a safe integer from 0 through 3",
-          ),
-        );
-      }
-    }
-  });
-
-  topology.entities.forEach((entity, entityIndex) => {
-    const entityPath = `entities[${entityIndex}]`;
-    const instanceIndex = entity.instance.index;
-    const validInstanceIndex =
-      typeof instanceIndex === "number" &&
-      Number.isSafeInteger(instanceIndex) &&
-      instanceIndex >= 0;
-
-    if (instanceIndex !== undefined && !validInstanceIndex) {
-      errors.push(
-        error(
-          "instance_out_of_range",
-          `${entityPath}.instance.index`,
-          `instance index ${instanceIndex} must be a non-negative safe integer`,
-        ),
-      );
-    }
-
-    if (entity.parentId !== undefined && !entityById.has(entity.parentId)) {
-      errors.push(
-        error(
-          "missing_parent",
-          `${entityPath}.parentId`,
-          `parent entity "${entity.parentId}" does not exist`,
-        ),
-      );
-    }
-
-    if (entity.parentId === undefined) {
-      // Parentless entities still participate in placement and route checks.
-    } else {
-      const parent = entityById.get(entity.parentId);
-      if (
-        validInstanceIndex &&
-        parent?.capacity !== undefined &&
-        instanceIndex >= parent.capacity
-      ) {
-        errors.push(
-          error(
-            "instance_out_of_range",
-            `${entityPath}.instance.index`,
-            `instance index ${instanceIndex} is outside parent capacity ${parent.capacity}`,
-          ),
-        );
-      }
-    }
-
-    const placement = entity.placement;
-    if (placement !== undefined && topology.layout !== undefined) {
-      const district = districtById.get(placement.district);
-      if (district === undefined) {
-        errors.push(
-          error(
-            "invalid_placement",
-            `${entityPath}.placement.district`,
-            `placement district "${placement.district}" does not exist`,
-          ),
-        );
-      } else if (
-        placement.position !== undefined &&
-        placement.size !== undefined &&
-        placement.position.every(Number.isFinite) &&
-        placement.size.every(
-          (coordinate) => Number.isFinite(coordinate) && coordinate > 0,
-        ) &&
-        district.position.every(Number.isFinite) &&
-        district.size.every(
-          (coordinate) => Number.isFinite(coordinate) && coordinate > 0,
-        ) &&
-        !isPlacementInsideDistrict(placement, district)
-      ) {
-        errors.push(
-          error(
-            "placement_out_of_bounds",
-            `${entityPath}.placement`,
-            `entity bounds exceed district "${placement.district}"`,
-          ),
-        );
-      }
-    }
-
-    const route = entity.route;
-    if (route !== undefined) {
-      const sourcePort = portById.get(route.fromPortId);
-      const destinationPort = portById.get(route.toPortId);
-      if (sourcePort === undefined) {
-        errors.push(
-          error(
-            "missing_port_reference",
-            `${entityPath}.route.fromPortId`,
-            `route source port "${route.fromPortId}" does not exist`,
-          ),
-        );
-      }
-      if (destinationPort === undefined) {
-        errors.push(
-          error(
-            "missing_port_reference",
-            `${entityPath}.route.toPortId`,
-            `route destination port "${route.toPortId}" does not exist`,
-          ),
-        );
-      }
-      if (route.points.length < 2) {
-        errors.push(
-          error(
-            "invalid_route",
-            `${entityPath}.route.points`,
-            "route must contain at least two points",
-          ),
-        );
-      }
-      const firstPoint = route.points[0];
-      const lastPoint = route.points.at(-1);
-      if (
-        sourcePort?.position !== undefined &&
-        firstPoint !== undefined &&
-        !firstPoint.every(
-          (coordinate, axis) => coordinate === sourcePort.position![axis],
-        )
-      ) {
-        errors.push(
-          error(
-            "invalid_route",
-            `${entityPath}.route.points[0]`,
-            "route must start at its source port position",
-          ),
-        );
-      }
-      if (
-        destinationPort?.position !== undefined &&
-        lastPoint !== undefined &&
-        !lastPoint.every(
-          (coordinate, axis) => coordinate === destinationPort.position![axis],
-        )
-      ) {
-        errors.push(
-          error(
-            "invalid_route",
-            `${entityPath}.route.points[${route.points.length - 1}]`,
-            "route must end at its destination port position",
-          ),
-        );
-      }
-      route.points.forEach((point, pointIndex) => {
-        const pointPath = `${entityPath}.route.points[${pointIndex}]`;
-        const pointValid = validateVector(
-          point,
-          pointPath,
-          "invalid_route",
-          errors,
-        );
-        const previous = route.points[pointIndex - 1];
-        if (pointIndex === 0 || previous === undefined || !pointValid) {
-          return;
-        }
-        const changedAxes = point.reduce(
-          (count, coordinate, axis) =>
-            count + Number(coordinate !== previous[axis]),
-          0,
-        );
-        if (changedAxes !== 1) {
-          errors.push(
-            error(
-              "invalid_route",
-              pointPath,
-              "each route segment must change exactly one coordinate",
-            ),
-          );
-        }
+  topology.nodes.forEach((node, index) => {
+    const path = `nodes[${index}]`;
+    if (!STABLE_ID.test(node.id) || nodeById.has(node.id)) {
+      diagnostics.push({
+        path: `${path}.id`,
+        code: "duplicate_id",
+        message: "node ID is invalid or duplicated",
       });
     }
+    nodeById.set(node.id, node);
+    const definition = definitionById.get(node.definitionId);
+    if (!definition) {
+      diagnostics.push({
+        path: `${path}.definitionId`,
+        code: "missing_definition",
+        message: `definition ${node.definitionId} does not exist`,
+      });
+      return;
+    }
+    const area = node.area;
+    const validAreaValue =
+      area &&
+      (area.value === null || (Number.isFinite(area.value) && area.value > 0));
+    const valueRequired =
+      area && ["measured", "estimated"].includes(area.status);
+    if (
+      !area ||
+      !["measured", "estimated", "aggregate", "unknown"].includes(
+        area.status,
+      ) ||
+      area.unit !== "um2" ||
+      !area.source ||
+      !validAreaValue ||
+      (valueRequired && area.value === null) ||
+      (area.status === "unknown" && area.value !== null)
+    ) {
+      diagnostics.push({
+        path: `${path}.area`,
+        code: "invalid_area",
+        message:
+          "area must use um2, carry a source, and match its evidence status",
+      });
+    }
+    for (const [parameterId, value] of Object.entries(node.parameters)) {
+      const parameter = definition.parameters[parameterId];
+      if (
+        !parameter ||
+        !Number.isSafeInteger(value) ||
+        value < parameter.minimum ||
+        value > parameter.maximum ||
+        (value - parameter.minimum) % parameter.step !== 0
+      ) {
+        diagnostics.push({
+          path: `${path}.parameters.${parameterId}`,
+          code: "invalid_parameter",
+          message:
+            "parameter is missing from the definition or outside its integer range",
+        });
+      }
+    }
   });
 
-  return { errors, warnings: [] };
-}
+  topology.nodes.forEach((node, index) => {
+    if (node.parentId && !nodeById.has(node.parentId)) {
+      diagnostics.push({
+        path: `nodes[${index}].parentId`,
+        code: "invalid_parent",
+        message: `parent ${node.parentId} does not exist`,
+      });
+    } else if (node.parentId) {
+      const parent = nodeById.get(node.parentId)!;
+      if (definitionById.get(parent.definitionId)?.kind !== "container") {
+        diagnostics.push({
+          path: `nodes[${index}].parentId`,
+          code: "invalid_parent",
+          message: `parent ${node.parentId} is not a hierarchy container`,
+        });
+      }
+      const visited = new Set([node.id]);
+      let ancestor: TopologyNode | undefined = parent;
+      while (ancestor) {
+        if (visited.has(ancestor.id)) {
+          diagnostics.push({
+            path: `nodes[${index}].parentId`,
+            code: "invalid_parent",
+            message: "hierarchy contains a parent cycle",
+          });
+          break;
+        }
+        visited.add(ancestor.id);
+        ancestor = ancestor.parentId
+          ? nodeById.get(ancestor.parentId)
+          : undefined;
+      }
+    }
+  });
 
-export interface EventReferenceIndex {
-  readonly entityIds: ReadonlySet<string>;
-}
-
-export function createEventReferenceIndex(
-  topology: TopologyDescriptor,
-): EventReferenceIndex {
-  return {
-    entityIds: new Set(topology.entities.map(({ id }) => id)),
-  };
-}
-
-export function validateEventReferences(
-  topologyOrIndex: TopologyDescriptor | EventReferenceIndex,
-  events: readonly EventEnvelope[],
-): ValidationResult {
-  const entityIds =
-    "entityIds" in topologyOrIndex
-      ? topologyOrIndex.entityIds
-      : createEventReferenceIndex(topologyOrIndex).entityIds;
-  const errors = events.flatMap((event, eventIndex) =>
-    entityIds.has(event.entity_id)
-      ? []
-      : [
-          error(
-            "missing_entity_reference",
-            `events[${eventIndex}].entity_id`,
-            `event references missing entity "${event.entity_id}"`,
-          ),
-        ],
-  );
-
-  return { errors, warnings: [] };
+  const edgeIds = new Set<string>();
+  const occupiedInputs = new Set<string>();
+  topology.edges.forEach((edge, index) => {
+    const path = `edges[${index}]`;
+    if (!STABLE_ID.test(edge.id) || edgeIds.has(edge.id)) {
+      diagnostics.push({
+        path: `${path}.id`,
+        code: "duplicate_id",
+        message: "edge ID is invalid or duplicated",
+      });
+    }
+    edgeIds.add(edge.id);
+    const from = findEndpoint(edge.from, nodeById, definitionById);
+    const to = findEndpoint(edge.to, nodeById, definitionById);
+    if (!from || !to) {
+      const missingNode =
+        !nodeById.has(edge.from.nodeId) || !nodeById.has(edge.to.nodeId);
+      diagnostics.push({
+        path,
+        code: missingNode ? "missing_endpoint" : "missing_port",
+        message: "edge endpoint or port does not exist",
+      });
+      return;
+    }
+    const fromPort = from.definition.ports[from.portIndex]!;
+    const toPort = to.definition.ports[to.portIndex]!;
+    if (
+      !["output", "bidirectional"].includes(fromPort.direction) ||
+      !["input", "bidirectional"].includes(toPort.direction)
+    ) {
+      diagnostics.push({
+        path,
+        code: "invalid_direction",
+        message: "edges must run from an output to an input",
+      });
+    }
+    if (fromPort.protocol !== toPort.protocol) {
+      diagnostics.push({
+        path,
+        code: "protocol_mismatch",
+        message: `${fromPort.protocol} cannot connect to ${toPort.protocol}`,
+      });
+    }
+    if (
+      fromPort.widthBits !== null &&
+      toPort.widthBits !== null &&
+      fromPort.widthBits !== toPort.widthBits
+    ) {
+      diagnostics.push({
+        path,
+        code: "width_mismatch",
+        message: `${fromPort.widthBits}-bit output cannot connect to ${toPort.widthBits}-bit input`,
+      });
+    }
+    const inputKey = `${edge.to.nodeId}.${edge.to.portId}`;
+    if (occupiedInputs.has(inputKey) && toPort.cardinality === "one") {
+      diagnostics.push({
+        path,
+        code: "input_already_connected",
+        message: "input already has a producer",
+      });
+    }
+    occupiedInputs.add(inputKey);
+  });
+  return diagnostics;
 }

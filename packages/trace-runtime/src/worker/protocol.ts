@@ -4,7 +4,7 @@ import type {
   SimTraceIndex,
   SimTraceManifest,
 } from "@linxsimcity/trace-schema";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 
 import type { TraceBundleSource } from "../bundle/types.js";
 import type { SimTraceSnapshot } from "../reducer/state.js";

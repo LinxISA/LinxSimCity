@@ -12,14 +12,14 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/world",
+    "prebuild": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/topology",
     "build": "tsc --project tsconfig.json",
-    "pretypecheck": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/world",
+    "pretypecheck": "npm run build --workspace @linxsimcity/trace-schema && npm run build --workspace @linxsimcity/topology",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
     "@linxsimcity/component-catalog": "0.1.0",
     "@linxsimcity/trace-schema": "0.1.0",
-    "@linxsimcity/world": "0.1.0"
+    "@linxsimcity/topology": "0.1.0"
   }
 }

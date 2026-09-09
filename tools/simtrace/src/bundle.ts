@@ -17,8 +17,8 @@ import {
 import {
   topologyFingerprint,
   validateArchitectureTopology,
-} from "@linxsimcity/world";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+} from "@linxsimcity/topology";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 
 import { CORE_CATALOG } from "@linxsimcity/component-catalog";
 

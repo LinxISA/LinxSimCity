@@ -15,12 +15,13 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "npm run build --workspace @linxsimcity/component-catalog",
+    "prebuild": "npm run build --workspace @linxsimcity/component-catalog && npm run build --workspace @linxsimcity/topology",
     "build": "tsc --project tsconfig.json",
-    "pretypecheck": "npm run build --workspace @linxsimcity/component-catalog",
+    "pretypecheck": "npm run build --workspace @linxsimcity/component-catalog && npm run build --workspace @linxsimcity/topology",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@linxsimcity/component-catalog": "0.1.0"
+    "@linxsimcity/component-catalog": "0.1.0",
+    "@linxsimcity/topology": "0.1.0"
   }
 }

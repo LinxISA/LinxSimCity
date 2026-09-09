@@ -1,5 +1,5 @@
 import type { DecimalU64, SimTracePhase } from "@linxsimcity/trace-schema";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 
 export interface SimTracePosition {
   readonly timeDomain: string;

@@ -1,7 +1,7 @@
 import { CORE_CATALOG } from "@linxsimcity/component-catalog";
 import type { BrickDefinition } from "@linxsimcity/component-catalog";
-import type { ArchitectureTopology, TopologyNode } from "@linxsimcity/world";
-import { validateArchitectureTopology } from "@linxsimcity/world";
+import type { ArchitectureTopology, TopologyNode } from "@linxsimcity/topology";
+import { validateArchitectureTopology } from "@linxsimcity/topology";
 
 import type {
   AgenticQueuePlan,

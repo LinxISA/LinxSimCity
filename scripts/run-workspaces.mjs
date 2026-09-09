@@ -9,6 +9,7 @@ const repositoryRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 
 export const declarationWorkspaces = Object.freeze([
   "@linxsimcity/component-catalog",
+  "@linxsimcity/topology",
   "@linxsimcity/scenarios",
   "@linxsimcity/world",
   "@linxsimcity/topology-import",

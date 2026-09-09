@@ -16,7 +16,6 @@ export default defineConfig({
       "apps/viewer/**",
       "packages/scene-core/**",
       "packages/scene-modules/**",
-      "packages/topology/**",
       "packages/trace-runtime/src/causal/**",
       "tools/linxtrace/**",
       "tests/showcase/**",

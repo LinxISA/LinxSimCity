@@ -6,7 +6,7 @@ import type {
   SimTraceIndex,
   SimTraceManifest,
 } from "@linxsimcity/trace-schema";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 
 export interface NodeDirectorySource {
   readonly kind: "node-directory";

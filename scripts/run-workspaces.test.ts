@@ -9,6 +9,7 @@ describe("workspace execution plan", () => {
   test("builds every workspace once in dependency order", () => {
     expect(workspaceExecutionPlan("build")).toEqual([
       ["build", "@linxsimcity/component-catalog"],
+      ["build", "@linxsimcity/topology"],
       ["build", "@linxsimcity/scenarios"],
       ["build", "@linxsimcity/world"],
       ["build", "@linxsimcity/topology-import"],
@@ -30,6 +31,7 @@ describe("workspace execution plan", () => {
     expect(plan.slice(declarationWorkspaces.length)).toEqual([
       ["root-typecheck", "linxsimcity"],
       ["typecheck", "@linxsimcity/component-catalog"],
+      ["typecheck", "@linxsimcity/topology"],
       ["typecheck", "@linxsimcity/scenarios"],
       ["typecheck", "@linxsimcity/world"],
       ["typecheck", "@linxsimcity/topology-import"],

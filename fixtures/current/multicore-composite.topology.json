@@ -1,0 +1,286 @@
+{
+  "schema": "linxsimcity.topology",
+  "schemaVersion": "1",
+  "id": "fixture.multicore-composite",
+  "name": "Two-core four-PE flat composite",
+  "revision": "fixture",
+  "nodes": [
+    {
+      "id": "scope.root",
+      "definitionId": "core.container",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:aggregate"
+      }
+    },
+    {
+      "id": "core.0",
+      "definitionId": "core.container",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:aggregate"
+      }
+    },
+    {
+      "id": "core.1",
+      "definitionId": "core.container",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:aggregate"
+      }
+    },
+    {
+      "id": "core.0.pe.0",
+      "definitionId": "core.container",
+      "parentId": "core.0",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:aggregate"
+      }
+    },
+    {
+      "id": "core.0.pe.1",
+      "definitionId": "core.container",
+      "parentId": "core.0",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:aggregate"
+      }
+    },
+    {
+      "id": "core.1.pe.0",
+      "definitionId": "core.container",
+      "parentId": "core.1",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:aggregate"
+      }
+    },
+    {
+      "id": "core.1.pe.1",
+      "definitionId": "core.container",
+      "parentId": "core.1",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "fixture:aggregate"
+      }
+    },
+
+    {
+      "id": "core.0.pe.0.source",
+      "definitionId": "ac.source",
+      "parentId": "core.0.pe.0",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.0.pe.0.queue",
+      "definitionId": "core.queue",
+      "parentId": "core.0.pe.0",
+      "parameters": { "capacity": 4, "latency": 1 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.0.pe.0.vector",
+      "definitionId": "ac.vector-engine",
+      "parentId": "core.0.pe.0",
+      "parameters": { "latency": 1, "lanes": 4 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.0.pe.0.sram",
+      "definitionId": "core.sram",
+      "parentId": "core.0.pe.0",
+      "parameters": { "banks": 4, "rows": 64 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.0.pe.1.transform",
+      "definitionId": "ac.transform",
+      "parentId": "core.0.pe.1",
+      "parameters": { "latency": 2 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.0.pe.1.sink",
+      "definitionId": "ac.sink",
+      "parentId": "core.0.pe.1",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+
+    {
+      "id": "core.1.pe.0.source",
+      "definitionId": "ac.source",
+      "parentId": "core.1.pe.0",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.1.pe.0.queue",
+      "definitionId": "core.queue",
+      "parentId": "core.1.pe.0",
+      "parameters": { "capacity": 8, "latency": 2 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.1.pe.0.vector",
+      "definitionId": "ac.vector-engine",
+      "parentId": "core.1.pe.0",
+      "parameters": { "latency": 2, "lanes": 8 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.1.pe.0.sram",
+      "definitionId": "core.sram",
+      "parentId": "core.1.pe.0",
+      "parameters": { "banks": 8, "rows": 128 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.1.pe.1.transform",
+      "definitionId": "ac.transform",
+      "parentId": "core.1.pe.1",
+      "parameters": { "latency": 3 },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    },
+    {
+      "id": "core.1.pe.1.sink",
+      "definitionId": "ac.sink",
+      "parentId": "core.1.pe.1",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "fixture:no-ppa"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "core.0.edge.source-queue",
+      "from": { "nodeId": "core.0.pe.0.source", "portId": "out" },
+      "to": { "nodeId": "core.0.pe.0.queue", "portId": "in" }
+    },
+    {
+      "id": "core.0.edge.queue-vector",
+      "from": { "nodeId": "core.0.pe.0.queue", "portId": "out" },
+      "to": { "nodeId": "core.0.pe.0.vector", "portId": "in" }
+    },
+    {
+      "id": "core.0.edge.vector-transform",
+      "from": { "nodeId": "core.0.pe.0.vector", "portId": "out" },
+      "to": { "nodeId": "core.0.pe.1.transform", "portId": "in" }
+    },
+    {
+      "id": "core.0.edge.transform-sink",
+      "from": { "nodeId": "core.0.pe.1.transform", "portId": "out" },
+      "to": { "nodeId": "core.0.pe.1.sink", "portId": "in" }
+    },
+
+    {
+      "id": "core.1.edge.source-queue",
+      "from": { "nodeId": "core.1.pe.0.source", "portId": "out" },
+      "to": { "nodeId": "core.1.pe.0.queue", "portId": "in" }
+    },
+    {
+      "id": "core.1.edge.queue-vector",
+      "from": { "nodeId": "core.1.pe.0.queue", "portId": "out" },
+      "to": { "nodeId": "core.1.pe.0.vector", "portId": "in" }
+    },
+    {
+      "id": "core.1.edge.vector-transform",
+      "from": { "nodeId": "core.1.pe.0.vector", "portId": "out" },
+      "to": { "nodeId": "core.1.pe.1.transform", "portId": "in" }
+    },
+    {
+      "id": "core.1.edge.transform-sink",
+      "from": { "nodeId": "core.1.pe.1.transform", "portId": "out" },
+      "to": { "nodeId": "core.1.pe.1.sink", "portId": "in" }
+    },
+    {
+      "id": "fabric.edge.core0-core1",
+      "from": { "nodeId": "core.0.pe.0.vector", "portId": "out" },
+      "to": { "nodeId": "core.1.pe.1.sink", "portId": "in" }
+    }
+  ]
+}

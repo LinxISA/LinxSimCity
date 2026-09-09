@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+
 import type { SimTraceEvent } from "@linxsimcity/trace-schema";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 import { expect, test } from "vitest";
 
 import { restoreCheckpoint, snapshotToCheckpoint } from "./checkpoint.js";
@@ -34,6 +36,16 @@ const topology: ArchitectureTopology = {
   ],
   edges: [],
 };
+
+const multicoreTopology = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../../../fixtures/current/multicore-composite.topology.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+) as ArchitectureTopology;
 
 function event(
   cycle: string,
@@ -298,4 +310,119 @@ test("rejects duplicate same-cycle phase and sequence keys", () => {
   expect(() =>
     reduceEvents(initialSnapshot(topology, ["core"]), [duplicate, duplicate]),
   ).toThrow(/duplicate event order key/);
+});
+
+test("keeps namespaced Queue, token, Tile, residency, and compute state isolated per core", () => {
+  const core0 = "core.0.pe.0";
+  const core1 = "core.1.pe.0";
+  const events = [
+    event("1", "work", 0, "queue.write-attempt", `${core0}.queue`, {
+      tokenId: `${core0}.token.0`,
+      producerNodeId: `${core0}.source`,
+    }),
+    event("1", "work", 1, "queue.write-attempt", `${core1}.queue`, {
+      tokenId: `${core1}.token.0`,
+      producerNodeId: `${core1}.source`,
+    }),
+    event("1", "work", 2, "compute.start", `${core0}.vector`, {
+      tokenId: `${core0}.token.0`,
+      operation: "mac",
+      inputTileIds: [`${core0}.tile.input`],
+      outputTileIds: [`${core0}.tile.output`],
+    }),
+    event("1", "work", 3, "compute.start", `${core1}.vector`, {
+      tokenId: `${core1}.token.0`,
+      operation: "mac",
+      inputTileIds: [`${core1}.tile.input`],
+      outputTileIds: [`${core1}.tile.output`],
+    }),
+    event("1", "xfer", 0, "queue.accept", `${core0}.queue`, {
+      tokenId: `${core0}.token.0`,
+      slot: 0,
+      occupancy: 1,
+      capacity: 4,
+    }),
+    event("1", "xfer", 1, "queue.accept", `${core1}.queue`, {
+      tokenId: `${core1}.token.0`,
+      slot: 1,
+      occupancy: 1,
+      capacity: 8,
+    }),
+    event("1", "xfer", 2, "tile.allocate", `${core0}.sram`, {
+      residencyId: `${core0}.residency.0`,
+      tileId: `${core0}.tile.output`,
+      version: "1",
+      storageNodeId: `${core0}.sram`,
+      allocationEpoch: "1",
+      bank: 0,
+      row: 7,
+      slot: 0,
+      byteOffset: 0,
+      byteLength: 128,
+      fragmentIndex: 0,
+      fragmentCount: 1,
+    }),
+    event("1", "xfer", 3, "tile.allocate", `${core1}.sram`, {
+      residencyId: `${core1}.residency.0`,
+      tileId: `${core1}.tile.output`,
+      version: "1",
+      storageNodeId: `${core1}.sram`,
+      allocationEpoch: "1",
+      bank: 1,
+      row: 7,
+      slot: 0,
+      byteOffset: 0,
+      byteLength: 128,
+      fragmentIndex: 0,
+      fragmentCount: 1,
+    }),
+    event("1", "commit", 0, "link.associate", `${core0}.vector`, {
+      tokenId: `${core0}.token.0`,
+      tileId: `${core0}.tile.output`,
+      version: "1",
+      relation: "produces",
+    }),
+    event("1", "commit", 1, "link.associate", `${core1}.vector`, {
+      tokenId: `${core1}.token.0`,
+      tileId: `${core1}.tile.output`,
+      version: "1",
+      relation: "produces",
+    }),
+    event("2", "work", 0, "queue.cancel", `${core0}.queue`, {
+      tokenId: `${core0}.token.0`,
+      occupancy: 0,
+      capacity: 4,
+      reason: "core-local-flush",
+    }),
+  ];
+
+  const snapshot = reduceEvents(
+    initialSnapshot(multicoreTopology, ["core"]),
+    events,
+  );
+  const queue0 = snapshot.queues.find(
+    (queue) => queue.queueId === `${core0}.queue`,
+  )!;
+  const queue1 = snapshot.queues.find(
+    (queue) => queue.queueId === `${core1}.queue`,
+  )!;
+  expect(queue0.tokens).toEqual([]);
+  expect(queue0.occupancy).toBe(0);
+  expect(queue1.tokens).toEqual([
+    { tokenId: `${core1}.token.0`, state: "accepted", slot: 1 },
+  ]);
+  expect(queue1.occupancy).toBe(1);
+  expect(snapshot.tileResidencies.map((item) => item.residencyId)).toEqual([
+    `${core0}.residency.0`,
+    `${core1}.residency.0`,
+  ]);
+  expect(snapshot.associations.map((item) => item.tokenId)).toEqual([
+    `${core1}.token.0`,
+  ]);
+  expect(
+    snapshot.computations.map(({ tokenId, status }) => ({ tokenId, status })),
+  ).toEqual([
+    { tokenId: `${core0}.token.0`, status: "cancelled" },
+    { tokenId: `${core1}.token.0`, status: "active" },
+  ]);
 });

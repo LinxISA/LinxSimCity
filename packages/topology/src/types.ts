@@ -1,99 +1,98 @@
-export const TOPOLOGY_ENTITY_KINDS = [
-  "module",
-  "cache-line",
-  "rob-slot",
-  "queue-slot",
-  "register",
-  "cell",
-  "xbar-lane",
-  "cube-mac",
-  "stgbufb-subspace",
-  "pipe",
-] as const;
+import type { PhysicalArea } from "@linxsimcity/component-catalog";
 
-export type TopologyEntityKind = (typeof TOPOLOGY_ENTITY_KINDS)[number];
-
-export type TopologyVector3 = [number, number, number];
-
-export interface TopologyDistrict {
-  id: string;
-  position: TopologyVector3;
-  size: TopologyVector3;
+export interface TopologyEndpoint {
+  readonly nodeId: string;
+  readonly portId: string;
 }
 
-export interface TopologyLayout {
-  schema: "linx-city-v1";
-  units: "scene-unit";
-  upAxis: "y";
-  forwardAxis: "-z";
-  districts: TopologyDistrict[];
+export interface TopologyNode {
+  readonly id: string;
+  readonly definitionId: string;
+  readonly label?: string;
+  readonly parentId?: string;
+  readonly parameters: Readonly<Record<string, number>>;
+  readonly attributes?: Readonly<Record<string, string | number | boolean>>;
+  readonly area: PhysicalArea;
 }
 
-export interface TopologyPort {
-  id: string;
-  direction: "in" | "out" | "inout";
-  widthBytes?: number;
-  position?: TopologyVector3;
+export interface TopologyEdge {
+  readonly id: string;
+  readonly from: TopologyEndpoint;
+  readonly to: TopologyEndpoint;
 }
 
-export interface TopologyPlacement {
-  district: string;
-  thread?: number;
-  position?: TopologyVector3;
-  size?: TopologyVector3;
-  rotation?: TopologyVector3;
-  order?: number;
-  row?: number;
-  column?: number;
-  lodGroup?: string;
+export interface TopologySource {
+  readonly kind: string;
+  readonly repository: string;
+  readonly revision: string;
+  readonly worktreeDirty: boolean;
+  readonly relevantInputsDirty: boolean;
+  readonly planSchema: string;
+  readonly planVersion: string;
+  readonly planSha256: string;
+  readonly modelSha256: string;
 }
 
-export interface TopologyRoute {
-  style: "orthogonal";
-  fromPortId: string;
-  toPortId: string;
-  points: TopologyVector3[];
+export interface ArchitectureTopology {
+  readonly schema: "linxsimcity.topology";
+  readonly schemaVersion: "1";
+  readonly id: string;
+  readonly name: string;
+  readonly revision: string;
+  readonly source?: TopologySource;
+  readonly nodes: readonly TopologyNode[];
+  readonly edges: readonly TopologyEdge[];
 }
 
-export interface TopologyEntity {
-  id: string;
-  kind: TopologyEntityKind;
-  parentId?: string;
-  label: string;
-  instance: Record<string, number | string>;
-  capacity?: number;
-  ports?: TopologyPort[];
-  placement?: TopologyPlacement;
-  route?: TopologyRoute;
-  attributes?: Record<string, number | string | boolean>;
+export type TopologyDiagnosticCode =
+  | "invalid_schema"
+  | "missing_field"
+  | "invalid_type"
+  | "duplicate_id"
+  | "missing_definition"
+  | "invalid_parameter"
+  | "missing_endpoint"
+  | "missing_port"
+  | "invalid_direction"
+  | "protocol_mismatch"
+  | "width_mismatch"
+  | "input_already_connected"
+  | "invalid_parent"
+  | "invalid_source"
+  | "invalid_area";
+
+export interface TopologyDiagnostic {
+  readonly path: string;
+  readonly code: TopologyDiagnosticCode;
+  readonly message: string;
 }
 
-export interface TopologyDescriptor {
-  schemaVersion: string;
-  layout?: TopologyLayout;
-  entities: TopologyEntity[];
+export interface TopologyHierarchyEntry {
+  readonly node: TopologyNode;
+  readonly depth: number;
 }
 
-export type DiagnosticCode =
-  | "duplicate_entity_id"
-  | "missing_parent"
-  | "invalid_capacity"
-  | "missing_entity_reference"
-  | "instance_out_of_range"
-  | "invalid_layout"
-  | "invalid_placement"
-  | "placement_out_of_bounds"
-  | "missing_port_reference"
-  | "invalid_route";
-
-export interface Diagnostic {
-  severity: "error" | "warning";
-  code: DiagnosticCode;
-  path: string;
-  message: string;
+export interface TopologyNodeConnections {
+  readonly incoming: readonly TopologyEdge[];
+  readonly outgoing: readonly TopologyEdge[];
 }
 
-export interface ValidationResult {
-  errors: Diagnostic[];
-  warnings: Diagnostic[];
+export interface TopologyConnectionIndex {
+  readonly byNodeId: ReadonlyMap<string, TopologyNodeConnections>;
+  readonly byPort: ReadonlyMap<string, readonly TopologyEdge[]>;
 }
+
+export interface TopologyModuleFlowEdge {
+  readonly fromNodeId: string;
+  readonly toNodeId: string;
+  readonly queueNodeId?: string;
+}
+
+export interface TopologicalSortResult {
+  readonly orderedNodeIds: readonly string[];
+  readonly rankByNodeId: ReadonlyMap<string, number>;
+  readonly cyclicNodeIds: readonly string[];
+  readonly rankCount: number;
+}
+
+export type { PhysicalArea } from "@linxsimcity/component-catalog";

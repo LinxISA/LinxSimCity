@@ -10,7 +10,11 @@ import {
   type SimTraceIndex,
   type SimTraceManifest,
 } from "@linxsimcity/trace-schema";
-import type { ArchitectureTopology } from "@linxsimcity/world";
+import {
+  parseArchitectureTopology,
+  topologyFingerprint,
+} from "@linxsimcity/topology";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 import { gunzipSync } from "fflate";
 
 import {
@@ -76,61 +80,20 @@ function stable(value: unknown): string {
   if (value === null || typeof value !== "object") return JSON.stringify(value);
   if (Array.isArray(value)) return `[${value.map(stable).join(",")}]`;
   return `{${Object.entries(value as Record<string, unknown>)
-    .sort(([a], [b]) => a.localeCompare(b))
+    .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, item]) => `${JSON.stringify(key)}:${stable(item)}`)
     .join(",")}}`;
 }
 
-function fingerprint(topology: ArchitectureTopology): string {
-  const normalized = {
-    schema: topology.schema,
-    schemaVersion: topology.schemaVersion,
-    id: topology.id,
-    revision: topology.revision,
-    nodes: [...topology.nodes]
-      .map(({ id, definitionId, parentId, parameters, attributes, area }) => ({
-        id,
-        definitionId,
-        ...(parentId ? { parentId } : {}),
-        parameters,
-        ...(attributes ? { attributes } : {}),
-        area,
-      }))
-      .sort((a, b) => a.id.localeCompare(b.id)),
-    edges: [...topology.edges]
-      .map(({ id, from, to }) => ({ id, from, to }))
-      .sort((a, b) => a.id.localeCompare(b.id)),
-  };
-  let hash = 0xcbf29ce484222325n;
-  for (const byte of new TextEncoder().encode(stable(normalized))) {
-    hash ^= BigInt(byte);
-    hash = BigInt.asUintN(64, hash * 0x100000001b3n);
-  }
-  return `fnv1a64:${hash.toString(16).padStart(16, "0")}`;
-}
-
 function parseTopology(value: unknown): ArchitectureTopology {
-  if (!value || typeof value !== "object")
+  try {
+    return parseArchitectureTopology(value);
+  } catch (error) {
     throw new TraceBundleError(
       "invalid_bundle",
-      "topology.json must be an object",
-    );
-  const candidate = value as Partial<ArchitectureTopology>;
-  if (
-    candidate.schema !== "linxsimcity.topology" ||
-    candidate.schemaVersion !== "1" ||
-    typeof candidate.id !== "string" ||
-    typeof candidate.name !== "string" ||
-    typeof candidate.revision !== "string" ||
-    !Array.isArray(candidate.nodes) ||
-    !Array.isArray(candidate.edges)
-  ) {
-    throw new TraceBundleError(
-      "invalid_bundle",
-      "topology.json is not the current ArchitectureTopology format",
+      `topology.json is invalid: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
-  return candidate as ArchitectureTopology;
 }
 
 async function hash(bytes: Uint8Array): Promise<string> {
@@ -175,7 +138,7 @@ function validateBinding(
   if (
     index.runId !== manifest.runId ||
     index.topologyFingerprint !== manifest.topologyFingerprint ||
-    manifest.topologyFingerprint !== fingerprint(topology)
+    manifest.topologyFingerprint !== topologyFingerprint(topology)
   ) {
     throw new TraceBundleError(
       "invalid_bundle",
