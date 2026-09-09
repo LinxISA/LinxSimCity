@@ -25,6 +25,7 @@
     "runner:start": "npm run runner:build && npm run start --workspace @linxsimcity/sim-runner --",
     "visual:capture": "node scripts/visual/harness.mjs",
     "test:visual": "node scripts/visual/harness.mjs --check build/visual-evidence",
+    "perf:city": "node scripts/perf/harness.mjs",
     "test": "vitest run",
     "typecheck": "node scripts/run-workspaces.mjs typecheck",
     "lint": "eslint .",
