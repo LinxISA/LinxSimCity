@@ -18,9 +18,8 @@
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@linxsimcity/topology": "0.1.0",
     "@linxsimcity/trace-schema": "0.1.0",
-    "@zip.js/zip.js": "2.8.43",
+    "@linxsimcity/topology": "0.1.0",
     "comlink": "4.4.2",
     "fflate": "0.8.3"
   }

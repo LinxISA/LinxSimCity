@@ -1,34 +1,24 @@
 import type {
-  EventEnvelope,
-  TraceIndex,
-  TraceManifest,
+  DecimalU64,
+  SimTraceEvent,
+  SimTraceIndex,
+  SimTraceManifest,
 } from "@linxsimcity/trace-schema";
-import type { TopologyDescriptor } from "@linxsimcity/topology";
+import type { ArchitectureTopology } from "@linxsimcity/topology";
 
 import type { TraceBundleSource } from "../bundle/types.js";
-import type { EntityState } from "../reducer/state.js";
-import type { SerializableCausalState } from "../causal/types.js";
+import type { SimTraceSnapshot } from "../reducer/state.js";
 
 export type WorkerTraceSource = TraceBundleSource;
 
 export interface LoadedTraceInfo {
-  readonly manifest: TraceManifest;
-  readonly topology: TopologyDescriptor;
-  readonly index: TraceIndex;
+  readonly manifest: SimTraceManifest;
+  readonly topology: ArchitectureTopology;
+  readonly index: SimTraceIndex;
 }
 
-export interface SerializedViewerSnapshot {
-  readonly cycle: number;
-  readonly entities: readonly (readonly [string, EntityState])[];
-  readonly activeEvents: readonly EventEnvelope[];
-  readonly changedEntityIds: readonly string[];
-  readonly profileAvailability: Readonly<{
-    overview: boolean;
-    pipeline: boolean;
-    forensic: boolean;
-  }>;
-  readonly causal: SerializableCausalState;
-}
+/** A reducer snapshot containing only structured-clone-safe JSON values. */
+export type SerializedSimTraceSnapshot = SimTraceSnapshot;
 
 export interface WorkerDiagnostic {
   readonly code: string;
@@ -40,12 +30,20 @@ export interface WorkerDiagnostic {
 
 export interface TraceWorkerApi {
   load(source: WorkerTraceSource): Promise<LoadedTraceInfo>;
-  seek(cycle: number, requestId: number): Promise<SerializedViewerSnapshot>;
-  eventsAt(cycle: number): Promise<readonly EventEnvelope[]>;
+  seek(
+    timeDomain: string,
+    cycle: DecimalU64,
+    requestId: number,
+  ): Promise<SerializedSimTraceSnapshot>;
+  eventsAt(
+    timeDomain: string,
+    cycle: DecimalU64,
+  ): Promise<readonly SimTraceEvent[]>;
   entityHistory(
+    timeDomain: string,
     entityId: string,
-    from: number,
-    to: number,
-  ): Promise<readonly EventEnvelope[]>;
+    from: DecimalU64,
+    to: DecimalU64,
+  ): Promise<readonly SimTraceEvent[]>;
   close(): Promise<void>;
 }

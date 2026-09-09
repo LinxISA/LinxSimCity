@@ -14,19 +14,48 @@ import { expect, test } from "vitest";
 import { verifyPagesBuild } from "../scripts/verify-pages-build.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
-const sourceTraceDirectory = join(
+const sourceTopology = join(
   repositoryRoot,
-  "apps/viewer/public/traces/supernpubench-fa-250-blocks",
+  "apps/game/public/topologies/davincioo-queue-model.json",
 );
-
+const sourceCatalog = join(
+  repositoryRoot,
+  "apps/game/public/catalogs/davincioo-h3.json",
+);
+const sourceRun = join(
+  repositoryRoot,
+  "apps/game/public/runs/superscalar-matmul.bundle",
+);
+const sourceConflictRun = join(
+  repositoryRoot,
+  "apps/game/public/runs/superscalar-matmul-conflict.bundle",
+);
+const sourceImprovedRun = join(
+  repositoryRoot,
+  "apps/game/public/runs/superscalar-matmul-improved.bundle",
+);
 function createPagesFixture(indexHtml: string): string {
   const root = mkdtempSync(join(tmpdir(), "linxsimcity-pages-"));
-  const dist = join(root, "apps/viewer/dist");
-  mkdirSync(join(dist, "traces"), { recursive: true });
+  const dist = join(root, "apps/game/dist");
+  mkdirSync(join(dist, "assets"), { recursive: true });
+  mkdirSync(join(dist, "topologies"), { recursive: true });
+  mkdirSync(join(dist, "catalogs"), { recursive: true });
+  mkdirSync(join(dist, "runs"), { recursive: true });
   writeFileSync(join(dist, "index.html"), indexHtml);
+  writeFileSync(join(dist, "assets/index.js"), "export {};\n");
+  cpSync(sourceTopology, join(dist, "topologies/davincioo-queue-model.json"));
+  cpSync(sourceCatalog, join(dist, "catalogs/davincioo-h3.json"));
+  cpSync(sourceRun, join(dist, "runs/superscalar-matmul.bundle"), {
+    recursive: true,
+  });
   cpSync(
-    sourceTraceDirectory,
-    join(dist, "traces/supernpubench-fa-250-blocks"),
+    sourceConflictRun,
+    join(dist, "runs/superscalar-matmul-conflict.bundle"),
+    { recursive: true },
+  );
+  cpSync(
+    sourceImprovedRun,
+    join(dist, "runs/superscalar-matmul-improved.bundle"),
     { recursive: true },
   );
   return root;
@@ -43,20 +72,40 @@ test("rejects a Pages artifact whose assets escape the repository base", () => {
   }
 });
 
-test("accepts the base-prefixed Viewer with the verified FA logical bundle", () => {
+test("accepts the base-prefixed chip city game without the retired trace", () => {
   const root = createPagesFixture(
-    '<script type="module" src="/LinxSimCity/assets/index.js"></script>',
+    "<title>LinxSimCity · 芯片城市实验台</title>" +
+      '<script type="module" src="/LinxSimCity/assets/index.js"></script>',
   );
   try {
     expect(verifyPagesBuild(root)).toEqual({
       assetBase: "/LinxSimCity/assets/",
-      eventCount: 199_585,
-      traceDirectory: "/LinxSimCity/traces/supernpubench-fa-250-blocks/",
-      manifestSha256:
-        "f84ae484d8004a86156da6ee8f7697a917f1a15fc7876ac15eb4435f78ab3dbe",
-      topologySha256:
-        "71eaab6780714ef47bee5262af493bafa7325b068545517b48cfa20b658a5636",
+      app: "game",
+      assets: 1,
+      topologyNodes: 39,
+      topologyEdges: 32,
+      catalogCandidates: 240,
+      traceEvents: 320486,
+      conflictTraceEvents: 303275,
+      improvedTraceEvents: 306909,
     });
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects a game artifact that still ships the retired default trace", () => {
+  const root = createPagesFixture(
+    "<title>LinxSimCity · 芯片城市实验台</title>" +
+      '<script type="module" src="/LinxSimCity/assets/index.js"></script>',
+  );
+  mkdirSync(join(root, "apps/game/dist/traces/supernpubench-fa-250-blocks"), {
+    recursive: true,
+  });
+  try {
+    expect(() => verifyPagesBuild(root)).toThrow(
+      /retired viewer default trace/i,
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

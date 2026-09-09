@@ -11,6 +11,14 @@ import {
   TraceIndexSchema,
   TraceManifestSchema,
 } from "./schemas.js";
+import {
+  SimTraceEventSchema,
+  SimTraceManifestSchema,
+} from "./current-schemas.js";
+import {
+  SimTraceCheckpointSchema,
+  SimTraceIndexSchema,
+} from "./current-bundle-schemas.js";
 
 export const TRACE_SCHEMA_ID =
   "https://linxisa.github.io/LinxSimCity/schema/linxtrace-v1.schema.json";
@@ -31,6 +39,40 @@ export function createTraceJsonSchema(): Record<string, unknown> {
   };
 }
 
+export const SIM_TRACE_SCHEMA_ID =
+  "https://linxisa.github.io/LinxSimCity/schema/linxsimcity-trace.schema.json";
+
+export function createSimTraceJsonSchema(): Record<string, unknown> {
+  return {
+    ...z.toJSONSchema(
+      z.strictObject({
+        manifest: SimTraceManifestSchema,
+        event: SimTraceEventSchema,
+      }),
+      { target: "draft-2020-12" },
+    ),
+    $id: SIM_TRACE_SCHEMA_ID,
+    title: "LinxSimCity simulation trace contract",
+  };
+}
+
+export const SIM_TRACE_BUNDLE_SCHEMA_ID =
+  "https://linxisa.github.io/LinxSimCity/schema/linxsimcity-trace-bundle.schema.json";
+
+export function createSimTraceBundleJsonSchema(): Record<string, unknown> {
+  return {
+    ...z.toJSONSchema(
+      z.strictObject({
+        index: SimTraceIndexSchema,
+        checkpoint: SimTraceCheckpointSchema,
+      }),
+      { target: "draft-2020-12" },
+    ),
+    $id: SIM_TRACE_BUNDLE_SCHEMA_ID,
+    title: "LinxSimCity trace bundle index and checkpoint contract",
+  };
+}
+
 const outputPath = fileURLToPath(
   new URL("../schema/linxtrace-v1.schema.json", import.meta.url),
 );
@@ -40,3 +82,21 @@ const formattedSchema = await format(JSON.stringify(createTraceJsonSchema()), {
   parser: "json",
 });
 writeFileSync(outputPath, formattedSchema);
+
+const simOutputPath = fileURLToPath(
+  new URL("../schema/linxsimcity-trace.schema.json", import.meta.url),
+);
+const formattedSimSchema = await format(
+  JSON.stringify(createSimTraceJsonSchema()),
+  { parser: "json" },
+);
+writeFileSync(simOutputPath, formattedSimSchema);
+
+const bundleOutputPath = fileURLToPath(
+  new URL("../schema/linxsimcity-trace-bundle.schema.json", import.meta.url),
+);
+const formattedBundleSchema = await format(
+  JSON.stringify(createSimTraceBundleJsonSchema()),
+  { parser: "json" },
+);
+writeFileSync(bundleOutputPath, formattedBundleSchema);

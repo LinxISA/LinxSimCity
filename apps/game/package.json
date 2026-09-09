@@ -1,0 +1,33 @@
+{
+  "name": "@linxsimcity/game",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prebuild": "npm run build --workspace @linxsimcity/world && npm run build --workspace @linxsimcity/brick-kit && npm run build --workspace @linxsimcity/trace-runtime && npm run build --workspace @linxsimcity/scenarios",
+    "build": "vite build",
+    "build:pages": "vite build --base=/LinxSimCity/",
+    "dev": "vite --host 127.0.0.1",
+    "preview": "vite preview --host 127.0.0.1",
+    "pretypecheck": "npm run build --workspace @linxsimcity/world && npm run build --workspace @linxsimcity/brick-kit && npm run build --workspace @linxsimcity/trace-runtime && npm run build --workspace @linxsimcity/scenarios",
+    "typecheck": "tsc --project tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@linxsimcity/brick-kit": "0.1.0",
+    "@linxsimcity/component-catalog": "0.1.0",
+    "@linxsimcity/scenarios": "0.1.0",
+    "@linxsimcity/trace-runtime": "0.1.0",
+    "@linxsimcity/world": "0.1.0",
+    "@react-three/fiber": "9.7.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4",
+    "@types/three": "0.185.4",
+    "@vitejs/plugin-react": "6.0.5",
+    "vite": "8.2.1"
+  }
+}

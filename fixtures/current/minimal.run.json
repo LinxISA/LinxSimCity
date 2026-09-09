@@ -1,0 +1,224 @@
+{
+  "manifest": {
+    "schema": "linxsimcity.trace",
+    "schemaVersion": "1",
+    "runId": "synthetic.queue-tile-compute",
+    "topologyFingerprint": "fnv1a64:815740de3e4b867f",
+    "simulator": {
+      "name": "linxsimcity-synthetic",
+      "revision": "fixture",
+      "configSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "workload": {
+      "name": "one-tile-vector",
+      "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+    },
+    "timeDomains": [
+      {
+        "id": "core",
+        "unit": "cycle",
+        "tickRatio": {
+          "numerator": 1,
+          "denominator": 1
+        }
+      }
+    ],
+    "window": {
+      "firstCycle": "0",
+      "lastCycle": "5",
+      "startsFromReset": true,
+      "complete": true
+    },
+    "eventCount": "12",
+    "capabilities": [
+      "queue-lifecycle",
+      "tile-residency",
+      "instruction-link",
+      "compute-lifecycle"
+    ],
+    "loss": {
+      "droppedEvents": "0",
+      "truncated": false
+    }
+  },
+  "events": [
+    {
+      "timeDomain": "core",
+      "cycle": "0",
+      "phase": "work",
+      "sequence": 0,
+      "type": "run.reset",
+      "entityId": "scope.root",
+      "payload": {
+        "reason": "fixture-start"
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "1",
+      "phase": "work",
+      "sequence": 0,
+      "type": "queue.write-attempt",
+      "entityId": "queue.ingress",
+      "payload": {
+        "tokenId": "inst.0",
+        "producerNodeId": "source.ingress"
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "1",
+      "phase": "xfer",
+      "sequence": 0,
+      "type": "queue.accept",
+      "entityId": "queue.ingress",
+      "payload": {
+        "tokenId": "inst.0",
+        "slot": 0,
+        "occupancy": 1,
+        "capacity": 4
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "2",
+      "phase": "work",
+      "sequence": 0,
+      "type": "queue.visible",
+      "entityId": "queue.ingress",
+      "payload": {
+        "tokenId": "inst.0",
+        "slot": 0,
+        "occupancy": 1,
+        "capacity": 4
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "2",
+      "phase": "work",
+      "sequence": 1,
+      "type": "link.associate",
+      "entityId": "queue.ingress",
+      "payload": {
+        "tokenId": "inst.0",
+        "tileId": "tile.output",
+        "version": "0",
+        "relation": "produces"
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "2",
+      "phase": "work",
+      "sequence": 2,
+      "type": "queue.read",
+      "entityId": "queue.ingress",
+      "payload": {
+        "tokenId": "inst.0",
+        "slot": 0,
+        "occupancy": 0,
+        "capacity": 4,
+        "consumerNodeId": "compute.vector"
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "2",
+      "phase": "xfer",
+      "sequence": 0,
+      "type": "tile.allocate",
+      "entityId": "sram.tile",
+      "payload": {
+        "residencyId": "residency.tile.output.0",
+        "tileId": "tile.output",
+        "version": "0",
+        "storageNodeId": "sram.tile",
+        "allocationEpoch": "0",
+        "bank": 0,
+        "row": 2,
+        "slot": 2,
+        "address": "4096",
+        "byteOffset": 0,
+        "byteLength": 128,
+        "fragmentIndex": 0,
+        "fragmentCount": 1,
+        "producerTokenId": "inst.0"
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "3",
+      "phase": "work",
+      "sequence": 0,
+      "type": "tile.read",
+      "entityId": "sram.tile",
+      "payload": {
+        "residencyId": "residency.tile.output.0",
+        "tileId": "tile.output",
+        "version": "0",
+        "tokenId": "inst.0",
+        "byteOffset": 0,
+        "byteLength": 128
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "3",
+      "phase": "work",
+      "sequence": 1,
+      "type": "compute.start",
+      "entityId": "compute.vector",
+      "payload": {
+        "tokenId": "inst.0",
+        "operation": "vector.add",
+        "inputTileIds": ["tile.input"],
+        "outputTileIds": ["tile.output"]
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "4",
+      "phase": "work",
+      "sequence": 0,
+      "type": "compute.complete",
+      "entityId": "compute.vector",
+      "payload": {
+        "tokenId": "inst.0",
+        "operation": "vector.add",
+        "outputTileIds": ["tile.output"],
+        "outcome": "completed"
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "4",
+      "phase": "work",
+      "sequence": 1,
+      "type": "tile.write",
+      "entityId": "sram.tile",
+      "payload": {
+        "residencyId": "residency.tile.output.0",
+        "tileId": "tile.output",
+        "version": "0",
+        "tokenId": "inst.0",
+        "byteOffset": 0,
+        "byteLength": 128
+      }
+    },
+    {
+      "timeDomain": "core",
+      "cycle": "5",
+      "phase": "commit",
+      "sequence": 0,
+      "type": "tile.release",
+      "entityId": "sram.tile",
+      "payload": {
+        "residencyId": "residency.tile.output.0",
+        "tileId": "tile.output",
+        "version": "0",
+        "reason": "fixture-complete"
+      }
+    }
+  ]
+}

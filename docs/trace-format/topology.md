@@ -1,4 +1,8 @@
-# Topology and stable entity IDs
+# Legacy viewer topology and stable entity IDs
+
+> Historical fixed-viewer contract. The new game uses generated
+> [`linxsimcity.topology`](../game/architecture.md) and does not treat this file
+> as a compatibility contract.
 
 `topology.json` describes hardware identity and hierarchy. It carries placement hints, not WebGL coordinates. The viewer derives 3D geometry from entity kinds, capacities, and district placement.
 

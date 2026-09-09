@@ -1,0 +1,42 @@
+{
+  "schema": "linxsimcity.trace",
+  "schemaVersion": "1",
+  "runId": "synthetic.queue-tile-compute",
+  "topologyFingerprint": "fnv1a64:815740de3e4b867f",
+  "simulator": {
+    "name": "linxsimcity-synthetic",
+    "revision": "fixture",
+    "configSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "workload": {
+    "name": "one-tile-vector",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "timeDomains": [
+    {
+      "id": "core",
+      "unit": "cycle",
+      "tickRatio": {
+        "numerator": 1,
+        "denominator": 1
+      }
+    }
+  ],
+  "window": {
+    "firstCycle": "0",
+    "lastCycle": "5",
+    "startsFromReset": true,
+    "complete": true
+  },
+  "eventCount": "12",
+  "capabilities": [
+    "queue-lifecycle",
+    "tile-residency",
+    "instruction-link",
+    "compute-lifecycle"
+  ],
+  "loss": {
+    "droppedEvents": "0",
+    "truncated": false
+  }
+}

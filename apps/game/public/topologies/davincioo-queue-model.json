@@ -1,0 +1,1205 @@
+{
+  "schema": "linxsimcity.topology",
+  "schemaVersion": "1",
+  "id": "agentic.davincioo.queue.model",
+  "name": "davincioo_queue_model QueueGraph",
+  "revision": "b69cbd7d0a67aa3d9352e0b012b41d482006d5c6:a988cf3e5a42",
+  "source": {
+    "kind": "agentic-circuit-queue-graph-plan",
+    "repository": "https://github.com/PTO-ISA/pyCircuit.git",
+    "revision": "b69cbd7d0a67aa3d9352e0b012b41d482006d5c6",
+    "worktreeDirty": false,
+    "relevantInputsDirty": false,
+    "planSchema": "agentic-circuit-queue-graph-plan",
+    "planVersion": "0.5",
+    "planSha256": "a988cf3e5a423811424c41dcd1fcd900c9fe2de98f178fd71556c64947c580d9",
+    "modelSha256": "10845ecf3b737c28117af3c27c80eef361aa6a7ca73d9ca28ca7a53257366bb0"
+  },
+  "nodes": [
+    {
+      "id": "scope.root",
+      "definitionId": "core.container",
+      "label": "davincioo_queue_model",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/"
+      }
+    },
+    {
+      "id": "scope.frontend",
+      "definitionId": "core.container",
+      "label": "frontend",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/frontend"
+      }
+    },
+    {
+      "id": "scope.dependency",
+      "definitionId": "core.container",
+      "label": "dependency",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/dependency"
+      }
+    },
+    {
+      "id": "scope.dispatch",
+      "definitionId": "core.container",
+      "label": "dispatch",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/dispatch"
+      }
+    },
+    {
+      "id": "scope.scalar.engine",
+      "definitionId": "core.container",
+      "label": "scalar_engine",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/scalar_engine"
+      }
+    },
+    {
+      "id": "scope.vector.engine",
+      "definitionId": "core.container",
+      "label": "vector_engine",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/vector_engine"
+      }
+    },
+    {
+      "id": "scope.cube.engine",
+      "definitionId": "core.container",
+      "label": "cube_engine",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/cube_engine"
+      }
+    },
+    {
+      "id": "scope.tma.engine",
+      "definitionId": "core.container",
+      "label": "tma_engine",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/tma_engine"
+      }
+    },
+    {
+      "id": "scope.retire",
+      "definitionId": "core.container",
+      "label": "retire",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "aggregate",
+        "source": "linxsimcity:children-have-unknown-area"
+      },
+      "attributes": {
+        "sourceKind": "scope",
+        "scope": "/retire"
+      }
+    },
+    {
+      "id": "block.b000.trace",
+      "definitionId": "ac.source",
+      "label": "trace",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "source",
+        "scope": "/",
+        "lexicalOrder": 0,
+        "inputCount": 0,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b001.prepared",
+      "definitionId": "ac.transform",
+      "label": "prepared",
+      "parentId": "scope.frontend",
+      "parameters": {
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "transform",
+        "scope": "/frontend",
+        "lexicalOrder": 1,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b002.scheduled",
+      "definitionId": "ac.dependency",
+      "label": "scheduled",
+      "parentId": "scope.dependency",
+      "parameters": {
+        "capacity": 8,
+        "resources": 4
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "dependency",
+        "scope": "/dependency",
+        "lexicalOrder": 2,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b003.observe.5",
+      "definitionId": "ac.observe",
+      "label": "observe_5",
+      "parentId": "scope.dependency",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "observe",
+        "scope": "/dependency",
+        "lexicalOrder": 3,
+        "inputCount": 1,
+        "outputCount": 0
+      }
+    },
+    {
+      "id": "block.b004.route.scalar",
+      "definitionId": "ac.route",
+      "label": "route_scalar",
+      "parentId": "scope.dispatch",
+      "parameters": {
+        "outputs": 4
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "route",
+        "scope": "/dispatch",
+        "lexicalOrder": 4,
+        "inputCount": 1,
+        "outputCount": 4
+      }
+    },
+    {
+      "id": "block.b005.scalar.done",
+      "definitionId": "ac.transform",
+      "label": "scalar_done",
+      "parentId": "scope.scalar.engine",
+      "parameters": {
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "transform",
+        "scope": "/scalar_engine",
+        "lexicalOrder": 5,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b006.vector.done",
+      "definitionId": "ac.vector-engine",
+      "label": "vector_done",
+      "parentId": "scope.vector.engine",
+      "parameters": {
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "transform",
+        "scope": "/vector_engine",
+        "lexicalOrder": 6,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b007.observe.12",
+      "definitionId": "ac.observe",
+      "label": "observe_12",
+      "parentId": "scope.vector.engine",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "observe",
+        "scope": "/vector_engine",
+        "lexicalOrder": 7,
+        "inputCount": 1,
+        "outputCount": 0
+      }
+    },
+    {
+      "id": "block.b008.cube.done",
+      "definitionId": "ac.cube-engine",
+      "label": "cube_done",
+      "parentId": "scope.cube.engine",
+      "parameters": {
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "transform",
+        "scope": "/cube_engine",
+        "lexicalOrder": 8,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b009.tma.done",
+      "definitionId": "ac.tma-engine",
+      "label": "tma_done",
+      "parentId": "scope.tma.engine",
+      "parameters": {
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "transform",
+        "scope": "/tma_engine",
+        "lexicalOrder": 9,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b010.observe.17",
+      "definitionId": "ac.observe",
+      "label": "observe_17",
+      "parentId": "scope.tma.engine",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "observe",
+        "scope": "/tma_engine",
+        "lexicalOrder": 10,
+        "inputCount": 1,
+        "outputCount": 0
+      }
+    },
+    {
+      "id": "block.b011.completed",
+      "definitionId": "ac.merge",
+      "label": "completed",
+      "parentId": "scope.root",
+      "parameters": {
+        "inputs": 4
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "merge",
+        "scope": "/",
+        "lexicalOrder": 11,
+        "inputCount": 4,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b012.observe.19",
+      "definitionId": "ac.observe",
+      "label": "observe_19",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "observe",
+        "scope": "/",
+        "lexicalOrder": 12,
+        "inputCount": 1,
+        "outputCount": 0
+      }
+    },
+    {
+      "id": "block.b013.ordered",
+      "definitionId": "ac.reorder",
+      "label": "ordered",
+      "parentId": "scope.root",
+      "parameters": {
+        "capacity": 64
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "reorder",
+        "scope": "/",
+        "lexicalOrder": 13,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b014.retired",
+      "definitionId": "ac.transform",
+      "label": "retired",
+      "parentId": "scope.retire",
+      "parameters": {
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "transform",
+        "scope": "/retire",
+        "lexicalOrder": 14,
+        "inputCount": 1,
+        "outputCount": 1
+      }
+    },
+    {
+      "id": "block.b015.sink.23",
+      "definitionId": "ac.sink",
+      "label": "sink_23",
+      "parentId": "scope.root",
+      "parameters": {},
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "block",
+        "blockKind": "sink",
+        "scope": "/",
+        "lexicalOrder": 15,
+        "inputCount": 1,
+        "outputCount": 0
+      }
+    },
+    {
+      "id": "queue.q000.trace",
+      "definitionId": "core.queue",
+      "label": "trace",
+      "parentId": "scope.root",
+      "parameters": {
+        "capacity": 16,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "trace",
+        "scope": "/",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q001.prepared",
+      "definitionId": "core.queue",
+      "label": "prepared",
+      "parentId": "scope.frontend",
+      "parameters": {
+        "capacity": 4,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "prepared",
+        "scope": "/frontend",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q002.scheduled",
+      "definitionId": "core.queue",
+      "label": "scheduled",
+      "parentId": "scope.dependency",
+      "parameters": {
+        "capacity": 16,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "scheduled",
+        "scope": "/dependency",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q003.scalar",
+      "definitionId": "core.queue",
+      "label": "scalar",
+      "parentId": "scope.dispatch",
+      "parameters": {
+        "capacity": 8,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "scalar",
+        "scope": "/dispatch",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q004.vector",
+      "definitionId": "core.queue",
+      "label": "vector",
+      "parentId": "scope.dispatch",
+      "parameters": {
+        "capacity": 8,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "vector",
+        "scope": "/dispatch",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q005.cube",
+      "definitionId": "core.queue",
+      "label": "cube",
+      "parentId": "scope.dispatch",
+      "parameters": {
+        "capacity": 8,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "cube",
+        "scope": "/dispatch",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q006.tma",
+      "definitionId": "core.queue",
+      "label": "tma",
+      "parentId": "scope.dispatch",
+      "parameters": {
+        "capacity": 8,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "tma",
+        "scope": "/dispatch",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q007.scalar.done",
+      "definitionId": "core.queue",
+      "label": "scalar_done",
+      "parentId": "scope.scalar.engine",
+      "parameters": {
+        "capacity": 1,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "scalar_done",
+        "scope": "/scalar_engine",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q008.vector.done",
+      "definitionId": "core.queue",
+      "label": "vector_done",
+      "parentId": "scope.vector.engine",
+      "parameters": {
+        "capacity": 1,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "vector_done",
+        "scope": "/vector_engine",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q009.cube.done",
+      "definitionId": "core.queue",
+      "label": "cube_done",
+      "parentId": "scope.cube.engine",
+      "parameters": {
+        "capacity": 1,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "cube_done",
+        "scope": "/cube_engine",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q010.tma.done",
+      "definitionId": "core.queue",
+      "label": "tma_done",
+      "parentId": "scope.tma.engine",
+      "parameters": {
+        "capacity": 1,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "tma_done",
+        "scope": "/tma_engine",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q011.completed",
+      "definitionId": "core.queue",
+      "label": "completed",
+      "parentId": "scope.root",
+      "parameters": {
+        "capacity": 8,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "completed",
+        "scope": "/",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q012.ordered",
+      "definitionId": "core.queue",
+      "label": "ordered",
+      "parentId": "scope.root",
+      "parameters": {
+        "capacity": 8,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "ordered",
+        "scope": "/",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    },
+    {
+      "id": "queue.q013.retired",
+      "definitionId": "core.queue",
+      "label": "retired",
+      "parentId": "scope.retire",
+      "parameters": {
+        "capacity": 1,
+        "latency": 1
+      },
+      "area": {
+        "value": null,
+        "unit": "um2",
+        "status": "unknown",
+        "source": "agentic-circuit-queue-plan:no-physical-area"
+      },
+      "attributes": {
+        "sourceKind": "queue",
+        "sourceName": "retired",
+        "scope": "/retire",
+        "payloadType": "!ac.struct<@types::@WorkItem>",
+        "rate": 1
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge.e000.trace.produce",
+      "from": {
+        "nodeId": "block.b000.trace",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q000.trace",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e001.trace.consume.b001",
+      "from": {
+        "nodeId": "queue.q000.trace",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b001.prepared",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e002.prepared.produce",
+      "from": {
+        "nodeId": "block.b001.prepared",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q001.prepared",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e003.prepared.consume.b002",
+      "from": {
+        "nodeId": "queue.q001.prepared",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b002.scheduled",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e004.scheduled.produce",
+      "from": {
+        "nodeId": "block.b002.scheduled",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q002.scheduled",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e005.scheduled.consume.b003",
+      "from": {
+        "nodeId": "queue.q002.scheduled",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b003.observe.5",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e006.scheduled.consume.b004",
+      "from": {
+        "nodeId": "queue.q002.scheduled",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b004.route.scalar",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e007.scalar.produce",
+      "from": {
+        "nodeId": "block.b004.route.scalar",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q003.scalar",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e008.scalar.consume.b005",
+      "from": {
+        "nodeId": "queue.q003.scalar",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b005.scalar.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e009.vector.produce",
+      "from": {
+        "nodeId": "block.b004.route.scalar",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q004.vector",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e010.vector.consume.b006",
+      "from": {
+        "nodeId": "queue.q004.vector",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b006.vector.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e011.cube.produce",
+      "from": {
+        "nodeId": "block.b004.route.scalar",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q005.cube",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e012.cube.consume.b008",
+      "from": {
+        "nodeId": "queue.q005.cube",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b008.cube.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e013.tma.produce",
+      "from": {
+        "nodeId": "block.b004.route.scalar",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q006.tma",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e014.tma.consume.b009",
+      "from": {
+        "nodeId": "queue.q006.tma",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b009.tma.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e015.scalar.done.produce",
+      "from": {
+        "nodeId": "block.b005.scalar.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q007.scalar.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e016.scalar.done.consume.b011",
+      "from": {
+        "nodeId": "queue.q007.scalar.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b011.completed",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e017.vector.done.produce",
+      "from": {
+        "nodeId": "block.b006.vector.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q008.vector.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e018.vector.done.consume.b007",
+      "from": {
+        "nodeId": "queue.q008.vector.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b007.observe.12",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e019.vector.done.consume.b011",
+      "from": {
+        "nodeId": "queue.q008.vector.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b011.completed",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e020.cube.done.produce",
+      "from": {
+        "nodeId": "block.b008.cube.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q009.cube.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e021.cube.done.consume.b011",
+      "from": {
+        "nodeId": "queue.q009.cube.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b011.completed",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e022.tma.done.produce",
+      "from": {
+        "nodeId": "block.b009.tma.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q010.tma.done",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e023.tma.done.consume.b010",
+      "from": {
+        "nodeId": "queue.q010.tma.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b010.observe.17",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e024.tma.done.consume.b011",
+      "from": {
+        "nodeId": "queue.q010.tma.done",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b011.completed",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e025.completed.produce",
+      "from": {
+        "nodeId": "block.b011.completed",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q011.completed",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e026.completed.consume.b012",
+      "from": {
+        "nodeId": "queue.q011.completed",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b012.observe.19",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e027.completed.consume.b013",
+      "from": {
+        "nodeId": "queue.q011.completed",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b013.ordered",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e028.ordered.produce",
+      "from": {
+        "nodeId": "block.b013.ordered",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q012.ordered",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e029.ordered.consume.b014",
+      "from": {
+        "nodeId": "queue.q012.ordered",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b014.retired",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e030.retired.produce",
+      "from": {
+        "nodeId": "block.b014.retired",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "queue.q013.retired",
+        "portId": "in"
+      }
+    },
+    {
+      "id": "edge.e031.retired.consume.b015",
+      "from": {
+        "nodeId": "queue.q013.retired",
+        "portId": "out"
+      },
+      "to": {
+        "nodeId": "block.b015.sink.23",
+        "portId": "in"
+      }
+    }
+  ]
+}

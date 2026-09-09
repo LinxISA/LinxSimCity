@@ -1,0 +1,53 @@
+{
+  "schema": "linxsimcity.visual-evidence",
+  "version": 1,
+  "generatedAt": "2026-09-09T00:00:00.000Z",
+  "url": "http://127.0.0.1:5173/",
+  "viewport": {
+    "width": 1440,
+    "height": 900,
+    "deviceScaleFactor": 1
+  },
+  "browser": {
+    "product": "FixtureChrome/152.0.0.0",
+    "executable": "/fixture/chrome"
+  },
+  "captures": [
+    {
+      "id": "overview",
+      "file": "01-overview.png",
+      "description": "Topology-generated chip-city overview",
+      "step": "Fixture step 1",
+      "width": 1440,
+      "height": 900,
+      "sha256": "ebe4d14db5473f2272d128fe49631a581cda7b53db8fbc2d3380d04fc768d498"
+    },
+    {
+      "id": "h3-expanded",
+      "file": "02-h3-expanded.png",
+      "description": "Expanded DavinciOO H3 catalog hierarchy",
+      "step": "Fixture step 2",
+      "width": 1440,
+      "height": 900,
+      "sha256": "ebe4d14db5473f2272d128fe49631a581cda7b53db8fbc2d3380d04fc768d498"
+    },
+    {
+      "id": "selected-inspector",
+      "file": "03-selected-inspector.png",
+      "description": "Selected topology node with the inspector populated",
+      "step": "Fixture step 3",
+      "width": 1440,
+      "height": 900,
+      "sha256": "ebe4d14db5473f2272d128fe49631a581cda7b53db8fbc2d3380d04fc768d498"
+    },
+    {
+      "id": "bank-conflict-run",
+      "file": "04-bank-conflict-run.png",
+      "description": "Recorded bank-conflict bundle loaded at its declared initial cycle",
+      "step": "Fixture step 4",
+      "width": 1440,
+      "height": 900,
+      "sha256": "ebe4d14db5473f2272d128fe49631a581cda7b53db8fbc2d3380d04fc768d498"
+    }
+  ]
+}

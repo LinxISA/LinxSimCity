@@ -15,12 +15,12 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "npm run build --workspace @linxsimcity/trace-schema",
+    "prebuild": "npm run build --workspace @linxsimcity/component-catalog",
     "build": "tsc --project tsconfig.json",
-    "pretypecheck": "npm run build --workspace @linxsimcity/trace-schema",
+    "pretypecheck": "npm run build --workspace @linxsimcity/component-catalog",
     "typecheck": "tsc --project tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@linxsimcity/trace-schema": "0.1.0"
+    "@linxsimcity/component-catalog": "0.1.0"
   }
 }

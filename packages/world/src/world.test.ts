@@ -1,0 +1,480 @@
+import { readFileSync } from "node:fs";
+
+import { CORE_CATALOG } from "@linxsimcity/component-catalog";
+import { describe, expect, test } from "vitest";
+
+import {
+  addPosition,
+  axisRelativeTo,
+  generateWorldFromTopology,
+  positionToTuple,
+  positionRelativeTo,
+  stableTopologicalSort,
+  topologyFingerprint,
+  topologyHierarchy,
+  validateArchitectureTopology,
+  WORLD_CHUNK_SIZE,
+  worldPosition,
+} from "./index.js";
+import type { ArchitectureTopology } from "./index.js";
+
+const unknownArea = {
+  value: null,
+  unit: "um2",
+  status: "unknown",
+  source: "test:no-area",
+} as const;
+
+const multicoreTopology = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../../fixtures/current/multicore-composite.topology.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+) as ArchitectureTopology;
+
+function topology(): ArchitectureTopology {
+  return {
+    schema: "linxsimcity.topology",
+    schemaVersion: "1",
+    id: "test.pipeline",
+    name: "Test pipeline",
+    revision: "test-revision",
+    nodes: [
+      {
+        id: "source.1",
+        definitionId: "ac.source",
+        parameters: {},
+        area: unknownArea,
+      },
+      {
+        id: "queue.1",
+        definitionId: "core.queue",
+        parameters: { capacity: 16 },
+        area: unknownArea,
+      },
+      {
+        id: "vector.1",
+        definitionId: "core.vector",
+        parameters: { lanes: 8 },
+        area: unknownArea,
+      },
+      {
+        id: "sram.1",
+        definitionId: "core.sram",
+        parameters: { banks: 8 },
+        area: unknownArea,
+      },
+    ],
+    edges: [
+      {
+        id: "edge.source-queue",
+        from: { nodeId: "source.1", portId: "out" },
+        to: { nodeId: "queue.1", portId: "in" },
+      },
+      {
+        id: "edge.queue-vector",
+        from: { nodeId: "queue.1", portId: "out" },
+        to: { nodeId: "vector.1", portId: "issue" },
+      },
+      {
+        id: "edge.sram-vector",
+        from: { nodeId: "sram.1", portId: "tile-out" },
+        to: { nodeId: "vector.1", portId: "tile" },
+      },
+    ],
+  };
+}
+
+describe("world coordinates", () => {
+  test("normalize positive and negative positions across chunks", () => {
+    expect(positionToTuple(worldPosition(-65, 130, 63))).toEqual([
+      -65, 130, 63,
+    ]);
+    expect(
+      positionToTuple(addPosition(worldPosition(63, 0, 0), [2, -1, 0])),
+    ).toEqual([65, -1, 0]);
+  });
+
+  test("keeps chunk and local coordinates authoritative at large XYZ positions", () => {
+    const position = worldPosition(1_000_037, -1_000_065, 2_000_130);
+    expect(position).toEqual({
+      x: { chunk: 15_625, local: 37 },
+      y: { chunk: -15_627, local: 63 },
+      z: { chunk: 31_252, local: 2 },
+    });
+    expect(positionToTuple(position)).toEqual([
+      1_000_037, -1_000_065, 2_000_130,
+    ]);
+  });
+
+  test("converts positive and negative large XYZ coordinates relative to a local origin", () => {
+    const origin = worldPosition(1_000_000, -1_000_000, 1_000_000);
+    expect(
+      positionRelativeTo(worldPosition(1_000_037, -1_000_065, 999_870), origin),
+    ).toEqual([37, -65, -130]);
+    expect(
+      positionRelativeTo(
+        worldPosition(-1_000_037, 1_000_065, -999_870),
+        worldPosition(-1_000_000, 1_000_000, -1_000_000),
+      ),
+    ).toEqual([-37, 65, 130]);
+    expect(
+      axisRelativeTo(
+        { chunk: -15_626, local: 27 },
+        { chunk: -15_625, local: 0 },
+      ),
+    ).toBe(-37);
+  });
+});
+
+describe("topology-driven world generation", () => {
+  test("keeps multicore topology nodes, edges, parameters, and Queue corridors 1:1", () => {
+    const generated = generateWorldFromTopology(
+      multicoreTopology,
+      CORE_CATALOG,
+    );
+    expect(new Set(generated.instances.map((instance) => instance.id))).toEqual(
+      new Set(multicoreTopology.nodes.map((node) => node.id)),
+    );
+    expect(generated.links).toHaveLength(multicoreTopology.edges.length);
+    expect(new Set(generated.links.map((link) => link.id))).toEqual(
+      new Set(multicoreTopology.edges.map((edge) => edge.id)),
+    );
+    expect(generated.queueCorridors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "core.0.pe.0.queue",
+          queueInstanceId: "core.0.pe.0.queue",
+          topologyEdgeIds: [
+            "core.0.edge.source-queue",
+            "core.0.edge.queue-vector",
+          ],
+        }),
+        expect.objectContaining({
+          id: "core.1.pe.0.queue",
+          queueInstanceId: "core.1.pe.0.queue",
+          topologyEdgeIds: [
+            "core.1.edge.source-queue",
+            "core.1.edge.queue-vector",
+          ],
+        }),
+      ]),
+    );
+    expect(generated.queueCorridors).toHaveLength(2);
+    expect(
+      generated.instances.find((item) => item.id === "core.0.pe.0.vector")
+        ?.parameters.lanes,
+    ).toBe(4);
+    expect(
+      generated.instances.find((item) => item.id === "core.1.pe.0.vector")
+        ?.parameters.lanes,
+    ).toBe(8);
+  });
+
+  test("preserves a direct link identity while localizing endpoints across chunks", () => {
+    const generated = generateWorldFromTopology(
+      multicoreTopology,
+      CORE_CATALOG,
+    );
+    const fromId = "core.0.pe.0.vector";
+    const toId = "core.1.pe.1.sink";
+    const displaced = {
+      ...generated,
+      instances: generated.instances.map((instance) => ({
+        ...instance,
+        transform: {
+          ...instance.transform,
+          position:
+            instance.id === fromId
+              ? worldPosition(WORLD_CHUNK_SIZE - 1, 0, -WORLD_CHUNK_SIZE - 1)
+              : instance.id === toId
+                ? worldPosition(WORLD_CHUNK_SIZE + 2, 0, -WORLD_CHUNK_SIZE + 3)
+                : instance.transform.position,
+        },
+      })),
+    };
+    const from = displaced.instances.find((item) => item.id === fromId)!;
+    const to = displaced.instances.find((item) => item.id === toId)!;
+    expect(from.transform.position.x.chunk).not.toBe(
+      to.transform.position.x.chunk,
+    );
+    expect(from.transform.position.z.chunk).not.toBe(
+      to.transform.position.z.chunk,
+    );
+
+    const origin = from.transform.position;
+    const localized = {
+      ...displaced,
+      instances: displaced.instances.map((instance) => {
+        const local = positionRelativeTo(instance.transform.position, origin);
+        return {
+          ...instance,
+          transform: {
+            ...instance.transform,
+            position: worldPosition(local[0], local[1], local[2]),
+          },
+        };
+      }),
+    };
+    expect(
+      positionToTuple(
+        localized.instances.find((item) => item.id === fromId)!.transform
+          .position,
+      ),
+    ).toEqual([0, 0, 0]);
+    expect(
+      positionToTuple(
+        localized.instances.find((item) => item.id === toId)!.transform
+          .position,
+      ),
+    ).toEqual([3, 0, 4]);
+    expect(
+      localized.links.find((link) => link.id === "fabric.edge.core0-core1"),
+    ).toEqual({
+      id: "fabric.edge.core0-core1",
+      from: { instanceId: fromId, portId: "out" },
+      to: { instanceId: toId, portId: "in" },
+    });
+    expect(localized.topologyFingerprint).toBe(generated.topologyFingerprint);
+  });
+
+  test("performs a stable topological sort before assigning X positions", () => {
+    const source = topology();
+    const sorted = stableTopologicalSort(source, CORE_CATALOG);
+    expect(sorted.orderedNodeIds).toEqual(["source.1", "sram.1", "vector.1"]);
+    expect(sorted.rankByNodeId.has("queue.1")).toBe(false);
+    expect(sorted.rankByNodeId.get("source.1")).toBe(0);
+    expect(sorted.rankByNodeId.get("sram.1")).toBe(0);
+    expect(sorted.rankByNodeId.get("vector.1")).toBe(1);
+    expect(sorted.cyclicNodeIds).toEqual([]);
+    expect(
+      stableTopologicalSort(
+        {
+          ...source,
+          nodes: [...source.nodes].reverse(),
+          edges: [...source.edges].reverse(),
+        },
+        CORE_CATALOG,
+      ).orderedNodeIds,
+    ).toEqual(sorted.orderedNodeIds);
+
+    const world = generateWorldFromTopology(source, CORE_CATALOG);
+    const xById = new Map(
+      world.instances.map((instance) => [
+        instance.id,
+        positionToTuple(instance.transform.position)[0],
+      ]),
+    );
+    for (const edge of source.edges) {
+      expect(xById.get(edge.from.nodeId)!).toBeLessThan(
+        xById.get(edge.to.nodeId)!,
+      );
+    }
+    const queue = world.instances.find((item) => item.id === "queue.1")!;
+    const sourceInstance = world.instances.find(
+      (item) => item.id === "source.1",
+    )!;
+    const vector = world.instances.find((item) => item.id === "vector.1")!;
+    const queuePosition = positionToTuple(queue.transform.position);
+    const sourcePosition = positionToTuple(sourceInstance.transform.position);
+    const vectorPosition = positionToTuple(vector.transform.position);
+    const deltaX = vectorPosition[0] - queuePosition[0];
+    const deltaZ = vectorPosition[2] - queuePosition[2];
+    const magnitude = Math.hypot(deltaX, deltaZ);
+    const alignment =
+      (Math.cos(queue.transform.yawRadians) * deltaX -
+        Math.sin(queue.transform.yawRadians) * deltaZ) /
+      magnitude;
+    expect(alignment).toBeGreaterThan(0.99);
+    expect(
+      Math.abs(queuePosition[0] - (sourcePosition[0] + vectorPosition[0]) / 2),
+    ).toBeLessThanOrEqual(1);
+    const sourceSize = CORE_CATALOG.definitions.find(
+      (definition) => definition.id === sourceInstance.definitionId,
+    )!.size;
+    const vectorSize = CORE_CATALOG.definitions.find(
+      (definition) => definition.id === vector.definitionId,
+    )!.size;
+    expect(vectorPosition[0] - sourcePosition[0]).toBeGreaterThanOrEqual(
+      sourceSize.x / 2 + vectorSize.x / 2 + 9,
+    );
+  });
+
+  test("barycenter ordering removes a simple two-edge crossing", () => {
+    const node = (id: string) => ({
+      id,
+      definitionId: "ac.transform",
+      parameters: { latency: 1 },
+      area: unknownArea,
+    });
+    const crossing: ArchitectureTopology = {
+      schema: "linxsimcity.topology",
+      schemaVersion: "1",
+      id: "test.crossing",
+      name: "Crossing reduction",
+      revision: "test-revision",
+      nodes: [node("a"), node("b"), node("c"), node("d")],
+      edges: [
+        {
+          id: "edge.a-d",
+          from: { nodeId: "a", portId: "out" },
+          to: { nodeId: "d", portId: "in" },
+        },
+        {
+          id: "edge.b-c",
+          from: { nodeId: "b", portId: "out" },
+          to: { nodeId: "c", portId: "in" },
+        },
+      ],
+    };
+    const world = generateWorldFromTopology(crossing, CORE_CATALOG);
+    const z = new Map(
+      world.instances.map((instance) => [
+        instance.id,
+        positionToTuple(instance.transform.position)[2],
+      ]),
+    );
+    expect(z.get("a")!).toBeLessThan(z.get("b")!);
+    expect(z.get("d")!).toBeLessThan(z.get("c")!);
+  });
+
+  test("generates every scene connection directly from a valid topology edge", () => {
+    const source = topology();
+    expect(validateArchitectureTopology(source, CORE_CATALOG)).toEqual([]);
+    const world = generateWorldFromTopology(source, CORE_CATALOG);
+    expect(world.instances.map((item) => item.id).sort()).toEqual([
+      "queue.1",
+      "source.1",
+      "sram.1",
+      "vector.1",
+    ]);
+    expect(world.links).toEqual([
+      {
+        id: "edge.source-queue",
+        from: { instanceId: "source.1", portId: "out" },
+        to: { instanceId: "queue.1", portId: "in" },
+      },
+      {
+        id: "edge.queue-vector",
+        from: { instanceId: "queue.1", portId: "out" },
+        to: { instanceId: "vector.1", portId: "issue" },
+      },
+      {
+        id: "edge.sram-vector",
+        from: { instanceId: "sram.1", portId: "tile-out" },
+        to: { instanceId: "vector.1", portId: "tile" },
+      },
+    ]);
+    expect(world.queueCorridors).toEqual([
+      {
+        id: "queue.1",
+        queueInstanceId: "queue.1",
+        from: { instanceId: "source.1", portId: "out" },
+        to: { instanceId: "vector.1", portId: "issue" },
+        topologyEdgeIds: ["edge.source-queue", "edge.queue-vector"],
+      },
+    ]);
+    expect(world.topologyFingerprint).toBe(topologyFingerprint(source));
+  });
+
+  test("keeps generated layout out of the topology fingerprint", () => {
+    const source = topology();
+    const first = generateWorldFromTopology(source, CORE_CATALOG);
+    const movedWorld = {
+      ...first,
+      instances: first.instances.map((instance, index) => ({
+        ...instance,
+        transform: {
+          ...instance.transform,
+          position: worldPosition(index * 100, 0, 0),
+        },
+      })),
+    };
+    expect(movedWorld.topologyFingerprint).toBe(first.topologyFingerprint);
+  });
+
+  test("draws parent containers around children and preserves hierarchy depth", () => {
+    const source = topology();
+    const hierarchical: ArchitectureTopology = {
+      ...source,
+      nodes: [
+        {
+          id: "scope.root",
+          definitionId: "core.container",
+          parameters: {},
+          area: {
+            value: null,
+            unit: "um2",
+            status: "aggregate",
+            source: "test:children-have-unknown-area",
+          },
+        },
+        ...source.nodes.map((node) => ({ ...node, parentId: "scope.root" })),
+      ],
+    };
+    const world = generateWorldFromTopology(hierarchical, CORE_CATALOG);
+    const root = world.instances.find((item) => item.id === "scope.root")!;
+    const child = world.instances.find((item) => item.id === "queue.1")!;
+    expect(root.hierarchyDepth).toBe(0);
+    expect(child.hierarchyDepth).toBe(1);
+    expect(root.visualSize?.x).toBeGreaterThan(10);
+    expect(topologyHierarchy(hierarchical).map((item) => item.depth)).toEqual([
+      0, 1, 1, 1, 1,
+    ]);
+  });
+
+  test("requires an evidence-qualified physical area on every node", () => {
+    const source = topology();
+    const invalid: ArchitectureTopology = {
+      ...source,
+      nodes: [
+        {
+          ...source.nodes[0]!,
+          area: {
+            value: null,
+            unit: "um2",
+            status: "measured",
+            source: "test:missing-value",
+          },
+        },
+        ...source.nodes.slice(1),
+      ],
+    };
+    expect(validateArchitectureTopology(invalid, CORE_CATALOG)).toContainEqual(
+      expect.objectContaining({ code: "invalid_area" }),
+    );
+  });
+
+  test("rejects a tile edge into a transaction input", () => {
+    const invalid: ArchitectureTopology = {
+      ...topology(),
+      nodes: [
+        {
+          id: "sram.1",
+          definitionId: "core.sram",
+          parameters: {},
+          area: unknownArea,
+        },
+        {
+          id: "alu.1",
+          definitionId: "core.alu",
+          parameters: {},
+          area: unknownArea,
+        },
+      ],
+      edges: [
+        {
+          id: "edge.bad",
+          from: { nodeId: "sram.1", portId: "tile-out" },
+          to: { nodeId: "alu.1", portId: "issue" },
+        },
+      ],
+    };
+    expect(validateArchitectureTopology(invalid, CORE_CATALOG)).toContainEqual(
+      expect.objectContaining({ code: "protocol_mismatch" }),
+    );
+  });
+});

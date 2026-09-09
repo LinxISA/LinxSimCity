@@ -1,0 +1,25 @@
+{
+  "name": "@linxsimcity/sim-runner",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "linxsimcity-runner": "./dist/main.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "prebuild": "npm run build --workspace @linxsimcity/scenarios && npm run build --workspace @linxsimcity/simtrace",
+    "build": "tsc --project tsconfig.json",
+    "pretypecheck": "npm run build --workspace @linxsimcity/scenarios && npm run build --workspace @linxsimcity/simtrace",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "start": "node dist/main.js serve"
+  },
+  "dependencies": {
+    "@linxsimcity/scenarios": "0.1.0",
+    "@linxsimcity/simtrace": "0.1.0"
+  }
+}

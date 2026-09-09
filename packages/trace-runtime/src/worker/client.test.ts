@@ -8,38 +8,68 @@ import { TraceWorkerService } from "./trace-worker.js";
 
 const fixture = resolve(
   import.meta.dirname,
-  "../../../../fixtures/synthetic/minimal.trace-dir",
+  "../../../../fixtures/current/minimal.bundle",
 );
 
 function client(): TraceWorkerClient {
   return TraceWorkerClient.inProcess(new TraceWorkerService());
 }
 
-test("worker loads, seeks, and queries a trace", async () => {
+test("worker loads, seeks, and queries the current trace", async () => {
   const trace = client();
   const info = await trace.load({ kind: "node-directory", path: fixture });
-  expect(info.manifest.eventCount).toBe(267);
-  expect(info.topology.entities.length).toBeGreaterThan(40);
+  expect(info.manifest.eventCount).toBe("12");
+  expect(info.topology.nodes).toHaveLength(5);
 
-  const snapshot = await trace.seek(44, 1);
-  expect(snapshot.cycle).toBe(44);
-  expect(snapshot.entities[0]?.[0]).toBeDefined();
-  expect(snapshot.entities.length).toBeLessThan(info.topology.entities.length);
+  const snapshot = await trace.seek("core", "2", 1);
+  expect(snapshot.positions[0]?.cycle).toBe("2");
+  expect(snapshot.queues[0]).toMatchObject({ occupancy: 0, tokens: [] });
+  expect(snapshot.tileResidencies[0]).toMatchObject({
+    tileId: "tile.output",
+    allocationEpoch: "0",
+  });
   expect(() => structuredClone(snapshot)).not.toThrow();
-  expect(await trace.eventsAt(44)).toHaveLength(1);
-  expect((await trace.entityHistory("pe0.bg.bank0.row0", 0, 255)).length).toBe(
-    21,
-  );
+  expect(await trace.eventsAt("core", "2")).toHaveLength(4);
+  expect(
+    (await trace.entityHistory("core", "queue.ingress", "1", "2")).map(
+      (event) => event.type,
+    ),
+  ).toEqual([
+    "queue.write-attempt",
+    "queue.accept",
+    "queue.visible",
+    "link.associate",
+    "queue.read",
+  ]);
   await trace.close();
 });
 
-test("a newer seek supersedes an older request", async () => {
+test("a newer seek aborts and supersedes an older request", async () => {
   const trace = client();
   await trace.load({ kind: "node-directory", path: fixture });
-  const older = trace.seek(255, 1);
-  const newer = trace.seek(2, 2);
+  const older = trace.seek("core", "5", 1);
+  const newer = trace.seek("core", "2", 2);
   await expect(older).rejects.toBeInstanceOf(SeekSupersededError);
-  await expect(newer).resolves.toMatchObject({ cycle: 2 });
+  await expect(newer).resolves.toMatchObject({
+    positions: [expect.objectContaining({ cycle: "2" })],
+  });
+  await trace.close();
+});
+
+test("one hundred rapid seeks publish only the latest result", async () => {
+  const trace = client();
+  await trace.load({ kind: "node-directory", path: fixture });
+  const requests = Array.from({ length: 100 }, (_, index) =>
+    trace.seek("core", String(index % 6), index + 1),
+  );
+  const results = await Promise.allSettled(requests);
+  expect(
+    results.slice(0, -1).every((result) => result.status === "rejected"),
+  ).toBe(true);
+  expect(results.at(-1)).toMatchObject({
+    status: "fulfilled",
+    value: { positions: [expect.objectContaining({ cycle: "3" })] },
+  });
   await trace.close();
 });
 

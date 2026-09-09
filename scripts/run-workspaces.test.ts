@@ -8,13 +8,17 @@ import {
 describe("workspace execution plan", () => {
   test("builds every workspace once in dependency order", () => {
     expect(workspaceExecutionPlan("build")).toEqual([
-      ["build", "@linxsimcity/trace-schema"],
+      ["build", "@linxsimcity/component-catalog"],
       ["build", "@linxsimcity/topology"],
+      ["build", "@linxsimcity/scenarios"],
+      ["build", "@linxsimcity/world"],
+      ["build", "@linxsimcity/topology-import"],
+      ["build", "@linxsimcity/trace-schema"],
+      ["build", "@linxsimcity/simtrace"],
       ["build", "@linxsimcity/trace-runtime"],
-      ["build", "@linxsimcity/scene-core"],
-      ["build", "@linxsimcity/scene-modules"],
-      ["build", "@linxsimcity/viewer"],
-      ["build", "@linxsimcity/linxtrace"],
+      ["build", "@linxsimcity/brick-kit"],
+      ["build", "@linxsimcity/sim-runner"],
+      ["build", "@linxsimcity/game"],
     ]);
   });
 
@@ -26,13 +30,17 @@ describe("workspace execution plan", () => {
     );
     expect(plan.slice(declarationWorkspaces.length)).toEqual([
       ["root-typecheck", "linxsimcity"],
-      ["typecheck", "@linxsimcity/trace-schema"],
+      ["typecheck", "@linxsimcity/component-catalog"],
       ["typecheck", "@linxsimcity/topology"],
+      ["typecheck", "@linxsimcity/scenarios"],
+      ["typecheck", "@linxsimcity/world"],
+      ["typecheck", "@linxsimcity/topology-import"],
+      ["typecheck", "@linxsimcity/trace-schema"],
+      ["typecheck", "@linxsimcity/simtrace"],
       ["typecheck", "@linxsimcity/trace-runtime"],
-      ["typecheck", "@linxsimcity/scene-core"],
-      ["typecheck", "@linxsimcity/scene-modules"],
-      ["typecheck", "@linxsimcity/viewer"],
-      ["typecheck", "@linxsimcity/linxtrace"],
+      ["typecheck", "@linxsimcity/brick-kit"],
+      ["typecheck", "@linxsimcity/sim-runner"],
+      ["typecheck", "@linxsimcity/game"],
     ]);
   });
 

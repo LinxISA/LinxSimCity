@@ -1,3 +1,4 @@
+import type { DecimalU64, SimTraceEvent } from "@linxsimcity/trace-schema";
 import { wrap, type Remote } from "comlink";
 
 import {
@@ -7,7 +8,7 @@ import {
 } from "./errors.js";
 import type {
   LoadedTraceInfo,
-  SerializedViewerSnapshot,
+  SerializedSimTraceSnapshot,
   TraceWorkerApi,
   WorkerTraceSource,
 } from "./protocol.js";
@@ -57,16 +58,30 @@ export class TraceWorkerClient implements TraceWorkerApi {
     return this.invoke(() => this.api.load(source));
   }
 
-  seek(cycle: number, requestId: number): Promise<SerializedViewerSnapshot> {
-    return this.invoke(() => this.api.seek(cycle, requestId));
+  seek(
+    timeDomain: string,
+    cycle: DecimalU64,
+    requestId: number,
+  ): Promise<SerializedSimTraceSnapshot> {
+    return this.invoke(() => this.api.seek(timeDomain, cycle, requestId));
   }
 
-  eventsAt(cycle: number) {
-    return this.invoke(() => this.api.eventsAt(cycle));
+  eventsAt(
+    timeDomain: string,
+    cycle: DecimalU64,
+  ): Promise<readonly SimTraceEvent[]> {
+    return this.invoke(() => this.api.eventsAt(timeDomain, cycle));
   }
 
-  entityHistory(entityId: string, from: number, to: number) {
-    return this.invoke(() => this.api.entityHistory(entityId, from, to));
+  entityHistory(
+    timeDomain: string,
+    entityId: string,
+    from: DecimalU64,
+    to: DecimalU64,
+  ): Promise<readonly SimTraceEvent[]> {
+    return this.invoke(() =>
+      this.api.entityHistory(timeDomain, entityId, from, to),
+    );
   }
 
   async close(): Promise<void> {
