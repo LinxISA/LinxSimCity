@@ -33,6 +33,7 @@ import {
   matrixEntryLayout,
 } from "./entry-layout.js";
 import type { BrickActivity, EntryLayoutProfile } from "./entry-layout.js";
+import { sampledLineCount } from "./engine-layout.js";
 import {
   entryDetailBudget,
   groupEntryInstances,
@@ -426,6 +427,7 @@ function Interior({
         <VectorMacArray
           size={definition.size}
           active={activity.occupiedEntries > 0}
+          lanes={instance.parameters.lanes ?? 8}
         />
       );
     case "cube":
@@ -433,6 +435,8 @@ function Interior({
         <SystolicArray
           size={definition.size}
           active={activity.occupiedEntries > 0}
+          rows={instance.parameters.rows ?? 4}
+          columns={instance.parameters.columns ?? 4}
         />
       );
     case "tma":
@@ -440,35 +444,46 @@ function Interior({
         <TmaMemoryEngine
           size={definition.size}
           active={activity.occupiedEntries > 0}
+          channels={instance.parameters.channels ?? 4}
         />
       );
-    case "crossbar":
+    case "crossbar": {
+      const lanes = sampledLineCount(instance.parameters.lanes ?? 4, 12);
       return (
         <group position={[0, y * 0.16, 0]}>
-          {[-1, 0, 1].map((lane) => (
-            <group key={lane}>
-              <mesh position={[0, lane * y * 0.12, lane * z * 0.2]}>
-                <boxGeometry args={[x * 0.72, y * 0.08, z * 0.1]} />
-                <meshStandardMaterial
-                  color="#c496ff"
-                  emissive="#6d32a5"
-                  emissiveIntensity={0.42}
-                  metalness={0.62}
-                />
-              </mesh>
-              <mesh position={[lane * x * 0.2, lane * y * 0.12, 0]}>
-                <boxGeometry args={[x * 0.1, y * 0.08, z * 0.72]} />
-                <meshStandardMaterial
-                  color="#c496ff"
-                  emissive="#6d32a5"
-                  emissiveIntensity={0.42}
-                  metalness={0.62}
-                />
-              </mesh>
-            </group>
-          ))}
+          {Array.from({ length: lanes }, (_, lane) => {
+            const offset = lane - (lanes - 1) / 2;
+            const normalized = lanes === 1 ? 0 : offset / (lanes - 1);
+            return (
+              <group key={lane}>
+                <mesh
+                  position={[0, normalized * y * 0.58, normalized * z * 0.72]}
+                >
+                  <boxGeometry args={[x * 0.72, y * 0.08, z * 0.1]} />
+                  <meshStandardMaterial
+                    color="#c496ff"
+                    emissive="#6d32a5"
+                    emissiveIntensity={0.42}
+                    metalness={0.62}
+                  />
+                </mesh>
+                <mesh
+                  position={[normalized * x * 0.72, normalized * y * 0.58, 0]}
+                >
+                  <boxGeometry args={[x * 0.1, y * 0.08, z * 0.72]} />
+                  <meshStandardMaterial
+                    color="#c496ff"
+                    emissive="#6d32a5"
+                    emissiveIntensity={0.42}
+                    metalness={0.62}
+                  />
+                </mesh>
+              </group>
+            );
+          })}
         </group>
       );
+    }
     case "container":
       return (
         <mesh position={[0, 0.14, 0]} rotation={[-Math.PI / 2, 0, 0]}>

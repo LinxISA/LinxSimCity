@@ -36,4 +36,16 @@ describe("core component catalog", () => {
       "duplicates another port ID",
     );
   });
+
+  test("specialized engines expose topology-controlled array dimensions", () => {
+    const byId = new Map(
+      CORE_CATALOG.definitions.map((definition) => [definition.id, definition]),
+    );
+    expect(byId.get("ac.vector-engine")?.parameters.lanes?.default).toBe(8);
+    expect(byId.get("ac.cube-engine")?.parameters).toMatchObject({
+      rows: { default: 4, maximum: 64 },
+      columns: { default: 4, maximum: 64 },
+    });
+    expect(byId.get("ac.tma-engine")?.parameters.channels?.default).toBe(4);
+  });
 });

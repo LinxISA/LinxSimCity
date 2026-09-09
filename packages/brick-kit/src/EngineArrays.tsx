@@ -4,6 +4,8 @@ import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import type { Group, MeshStandardMaterial } from "three";
 
+import { sampledGrid, sampledLineCount } from "./engine-layout.js";
+
 function pulse(intensity: number): number {
   return 0.18 + Math.pow(Math.max(0, intensity), 6) * 2.6;
 }
@@ -11,40 +13,52 @@ function pulse(intensity: number): number {
 export function SystolicArray({
   size,
   active,
+  rows,
+  columns,
 }: {
   readonly size: BrickSize;
   readonly active: boolean;
+  readonly rows: number;
+  readonly columns: number;
 }) {
   const materials = useRef<(MeshStandardMaterial | null)[]>([]);
-  const dimension = 4;
-  const cells = Array.from({ length: dimension * dimension }, (_, index) => ({
-    row: Math.floor(index / dimension),
-    column: index % dimension,
-  }));
+  const visible = sampledGrid(rows, columns);
+  const cells = Array.from(
+    { length: visible.rows * visible.columns },
+    (_, index) => ({
+      row: Math.floor(index / visible.columns),
+      column: index % visible.columns,
+    }),
+  );
+  const rowCenter = (visible.rows - 1) / 2;
+  const columnCenter = (visible.columns - 1) / 2;
+  const stepX = (size.x * 0.68) / Math.max(1, visible.columns - 1);
+  const stepZ = (size.z * 0.64) / Math.max(1, visible.rows - 1);
+  const cellWidth = Math.min(size.x * 0.16, Math.max(0.16, stepX * 0.68));
+  const cellDepth = Math.min(size.z * 0.16, Math.max(0.16, stepZ * 0.68));
+  const label = `${rows}×${columns} SYSTOLIC${visible.sampled ? " · LOD" : ""}`;
   useFrame(({ clock }) => {
     const time = clock.getElapsedTime() * 2.15;
     materials.current.forEach((material, index) => {
       if (!material) return;
-      const row = Math.floor(index / dimension);
-      const column = index % dimension;
+      const row = Math.floor(index / visible.columns);
+      const column = index % visible.columns;
       material.emissiveIntensity = active
         ? pulse(Math.sin(time - row * 0.72 - column * 0.58))
         : 0.08;
     });
   });
-  const stepX = (size.x * 0.62) / (dimension - 1);
-  const stepZ = (size.z * 0.58) / (dimension - 1);
   const y = size.y * 0.93;
   return (
     <group>
       <Html position={[0, y + 0.72, 0]} center distanceFactor={12}>
-        <span className="engine-label engine-cube-label">4×4 SYSTOLIC</span>
+        <span className="engine-label engine-cube-label">{label}</span>
       </Html>
-      {Array.from({ length: dimension }, (_, row) => (
+      {Array.from({ length: visible.rows }, (_, row) => (
         <RoundedBox
           key={`row-${row}`}
-          position={[0, y - 0.16, (row - 1.5) * stepZ]}
-          args={[size.x * 0.72, 0.08, 0.1]}
+          position={[0, y - 0.16, (row - rowCenter) * stepZ]}
+          args={[size.x * 0.76, 0.08, Math.min(0.1, cellDepth * 0.28)]}
           radius={0.03}
           smoothness={2}
         >
@@ -56,11 +70,11 @@ export function SystolicArray({
           />
         </RoundedBox>
       ))}
-      {Array.from({ length: dimension }, (_, column) => (
+      {Array.from({ length: visible.columns }, (_, column) => (
         <RoundedBox
           key={`column-${column}`}
-          position={[(column - 1.5) * stepX, y - 0.16, 0]}
-          args={[0.1, 0.08, size.z * 0.68]}
+          position={[(column - columnCenter) * stepX, y - 0.16, 0]}
+          args={[Math.min(0.1, cellWidth * 0.28), 0.08, size.z * 0.72]}
           radius={0.03}
           smoothness={2}
         >
@@ -75,9 +89,13 @@ export function SystolicArray({
       {cells.map(({ row, column }, index) => (
         <RoundedBox
           key={`${row}:${column}`}
-          position={[(column - 1.5) * stepX, y, (row - 1.5) * stepZ]}
-          args={[size.x * 0.12, 0.5, size.z * 0.12]}
-          radius={0.11}
+          position={[
+            (column - columnCenter) * stepX,
+            y,
+            (row - rowCenter) * stepZ,
+          ]}
+          args={[cellWidth, 0.5, cellDepth]}
+          radius={Math.min(0.11, cellWidth * 0.35, cellDepth * 0.35)}
           smoothness={3}
           castShadow
         >
@@ -100,12 +118,14 @@ export function SystolicArray({
 export function VectorMacArray({
   size,
   active,
+  lanes,
 }: {
   readonly size: BrickSize;
   readonly active: boolean;
+  readonly lanes: number;
 }) {
   const materials = useRef<(MeshStandardMaterial | null)[]>([]);
-  const lanes = 8;
+  const visibleLanes = sampledLineCount(lanes);
   useFrame(({ clock }) => {
     const time = clock.getElapsedTime() * 2.6;
     materials.current.forEach((material, index) => {
@@ -115,13 +135,15 @@ export function VectorMacArray({
         : 0.08;
     });
   });
-  const step = (size.x * 0.76) / (lanes - 1);
+  const step = (size.x * 0.76) / Math.max(1, visibleLanes - 1);
   const cellWidth = Math.min(0.72, step * 0.72);
   const y = size.y * 0.92;
   return (
     <group>
       <Html position={[0, y + 0.62, 0]} center distanceFactor={12}>
-        <span className="engine-label engine-vector-label">8× MAC</span>
+        <span className="engine-label engine-vector-label">
+          {lanes}× MAC{visibleLanes < lanes ? " · LOD" : ""}
+        </span>
       </Html>
       <RoundedBox
         position={[0, y - 0.25, 0]}
@@ -135,8 +157,11 @@ export function VectorMacArray({
           roughness={0.26}
         />
       </RoundedBox>
-      {Array.from({ length: lanes }, (_, index) => (
-        <group key={index} position={[(index - 3.5) * step, y, 0]}>
+      {Array.from({ length: visibleLanes }, (_, index) => (
+        <group
+          key={index}
+          position={[(index - (visibleLanes - 1) / 2) * step, y, 0]}
+        >
           <RoundedBox
             args={[cellWidth, 0.56, size.z * 0.34]}
             radius={0.1}
@@ -167,12 +192,14 @@ export function VectorMacArray({
 export function TmaMemoryEngine({
   size,
   active,
+  channels,
 }: {
   readonly size: BrickSize;
   readonly active: boolean;
+  readonly channels: number;
 }) {
   const packets = useRef<(Group | null)[]>([]);
-  const lanes = 4;
+  const visibleChannels = sampledLineCount(channels, 8);
   const left = -size.x * 0.25;
   const right = size.x * 0.27;
   const y = size.y * 0.9;
@@ -180,7 +207,7 @@ export function TmaMemoryEngine({
     const time = clock.getElapsedTime() * 0.72;
     packets.current.forEach((packet, index) => {
       if (!packet) return;
-      const phase = active ? (time + index / lanes) % 2 : 0;
+      const phase = active ? (time + index / visibleChannels) % 2 : 0;
       const progress = phase <= 1 ? phase : 2 - phase;
       packet.position.x = left + (right - left) * progress;
       packet.visible = active;
@@ -189,7 +216,9 @@ export function TmaMemoryEngine({
   return (
     <group>
       <Html position={[left, y + 0.8, 0]} center distanceFactor={12}>
-        <span className="engine-label engine-tma-label">TMA</span>
+        <span className="engine-label engine-tma-label">
+          TMA · {channels} CH{visibleChannels < channels ? " · LOD" : ""}
+        </span>
       </Html>
       <Html position={[right, y + 1.15, 0]} center distanceFactor={12}>
         <span className="engine-label engine-ddr-label">DDR</span>
@@ -208,8 +237,9 @@ export function TmaMemoryEngine({
           roughness={0.2}
         />
       </RoundedBox>
-      {Array.from({ length: lanes }, (_, index) => {
-        const z = (index - 1.5) * size.z * 0.15;
+      {Array.from({ length: visibleChannels }, (_, index) => {
+        const laneStep = (size.z * 0.52) / Math.max(1, visibleChannels - 1);
+        const z = (index - (visibleChannels - 1) / 2) * laneStep;
         return (
           <group key={index}>
             <RoundedBox
